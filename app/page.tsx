@@ -1,64 +1,128 @@
 import Image from "next/image";
+import Link from "next/link";
+import { Navbar } from "@/components/layout/navbar";
+const navigationItems = [
+  {
+    label: "Beranda",
+    href: "/",
+    hasDropdown: false,
+  },
+  {
+    label: "Bahan Ajar",
+    href: "#bahan-ajar",
+    hasDropdown: true,
+  },
+  {
+    label: "Editor",
+    href: "#editor",
+    hasDropdown: true,
+  },
+  {
+    label: "Kelas",
+    href: "#kelas",
+    hasDropdown: true,
+  },
+  {
+    label: "Inspirasi",
+    href: "#inspirasi",
+    hasDropdown: true,
+  },
+];
+
+function ChevronDownIcon() {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" className="h-4 w-4">
+      <path
+        d="M6 9L12 15L18 9"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function MenuIcon() {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" className="h-6 w-6">
+      <path
+        d="M4 7H20M4 12H20M4 17H20"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
 
 export default function Home() {
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
+    <div className="min-h-screen bg-white text-[#171717]">
+      <Navbar />
+
+      <main>
+        <section className="relative overflow-hidden px-5 pb-12 pt-5 sm:px-8 lg:pb-16 lg:pt-8">
+          <div className="mx-auto flex w-full max-w-[1320px] flex-col items-center text-center">
+            <h1 className="font-serif text-[34px] leading-[1.16] tracking-[-0.6px] text-black sm:text-[42px] lg:text-[49px]">
+              <span className="text-[#21a447]">Transformasi Pertanian</span>
+
+              <br />
+
+              <span>
+                dengan <span className="text-[#21a447]">Teknologi XR</span> yang
+                Cerdas
+              </span>
+            </h1>
+
+            <div className="relative mt-6 flex w-full max-w-[1080px] items-center justify-center sm:h-[430px] lg:mt-7 lg:h-[455px]">
+              <div className="absolute left-[2%] top-[10%] hidden sm:block lg:left-[5%]">
+                <Image
+                  src="/images/landing/wheat.png"
+                  alt=""
+                  width={150}
+                  height={150}
+                  className="h-auto w-[105px] animate-bounce object-contain lg:w-[130px]"
+                />
+              </div>
+
+              <Image
+                src="/images/landing/hero-farm.png"
+                alt="Ilustrasi pertanian cerdas menggunakan teknologi Extended Reality"
+                width={560}
+                height={500}
+                priority
+                className="h-auto max-w-[620px] md:animate-none animate-bounce md:mt-0 mt-10 object-contain sm:max-w-[690px] lg:max-w-[735px]"
+              />
+
+              <div className="absolute bottom-[2%] right-[2%] hidden sm:block lg:right-[4%]">
+                <Image
+                  src="/images/landing/farmer.png"
+                  alt=""
+                  width={150}
+                  height={180}
+                  className="h-auto w-[105px] animate-bounce object-contain lg:w-[125px]"
+                />
+              </div>
+            </div>
+
+            <p className="mt-5 max-w-[980px] font-serif text-[16px] leading-[1.45] text-[#202020] sm:mt-6 sm:text-[18px] lg:mt-1 lg:text-[20px]">
+              <strong className="font-semibold">SmartAgriXR</strong>{" "}
+              menghadirkan solusi{" "}
+              <strong className="font-semibold">Extended Reality (XR)</strong>{" "}
+              untuk membantu petani, pelaku agribisnis, dan institusi pertanian
+              meningkatkan produktivitas, pembelajaran, serta pengambilan
+              keputusan berbasis teknologi.
+            </p>
+
+            <Link
+              href="#daftar"
+              className="mt-11 inline-flex h-[54px] min-w-[300px] items-center justify-center bg-[#22a447] px-10 font-serif text-[20px] font-semibold text-white transition-all hover:bg-[#198b3a] focus:outline-none focus:ring-2 focus:ring-[#22a447] focus:ring-offset-2 sm:min-w-[320px] sm:text-[22px]"
             >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
+              Coba Sekarang
+            </Link>
+          </div>
+        </section>
       </main>
     </div>
   );
