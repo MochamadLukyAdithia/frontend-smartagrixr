@@ -1,60 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Navbar } from "@/components/layout/navbar";
-const navigationItems = [
-  {
-    label: "Beranda",
-    href: "/",
-    hasDropdown: false,
-  },
-  {
-    label: "Bahan Ajar",
-    href: "#bahan-ajar",
-    hasDropdown: true,
-  },
-  {
-    label: "Editor",
-    href: "#editor",
-    hasDropdown: true,
-  },
-  {
-    label: "Kelas",
-    href: "#kelas",
-    hasDropdown: true,
-  },
-  {
-    label: "Inspirasi",
-    href: "#inspirasi",
-    hasDropdown: true,
-  },
-];
 
-function ChevronDownIcon() {
-  return (
-    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" className="h-4 w-4">
-      <path
-        d="M6 9L12 15L18 9"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
-function MenuIcon() {
-  return (
-    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" className="h-6 w-6">
-      <path
-        d="M4 7H20M4 12H20M4 17H20"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-      />
-    </svg>
-  );
-}
 
 export default function Home() {
   return (
