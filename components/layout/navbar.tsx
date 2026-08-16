@@ -1,8 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
-
+import { useState, useEffect } from "react";
 import { navigationItems } from "./navigation-data";
 import { NavigationDropdown } from "./navigation-dropdown";
 import { ChevronDownIcon } from "./navigation-icons";
@@ -32,6 +31,24 @@ export function Navbar() {
     string | null
   >(null);
 
+  const [isScrolled, setIsScrolled] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      if (window.scrollY > 10) {
+        setIsScrolled(true);
+      } else {
+        setIsScrolled(false);
+      }
+    };
+
+    window.addEventListener("scroll", handleScroll);
+
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+    };
+  }, []);
+
   function handleMobileMenuToggle() {
     setIsMobileMenuOpen((previousState) => !previousState);
     setActiveMobileDropdown(null);
@@ -50,7 +67,11 @@ export function Navbar() {
 
   return (
     <>
-      <header className="relative z-[60] w-full bg-white">
+      <header
+        className={`fixed z-[60]  w-full transition-all duration-300 ${
+          isScrolled ? "bg-white shadow-sm" : "bg-transparent"
+        }`}
+      >
         <div className="mx-auto flex h-[98px] w-full max-w-[1580px] items-center justify-between px-6 sm:px-8 lg:px-10">
           <Link
             href="/"
@@ -89,7 +110,7 @@ export function Navbar() {
 
             <Link
               href="/daftar"
-              className="inline-flex h-[42px] min-w-[138px] items-center justify-center bg-[#22a447] px-7 font-serif text-[18px] text-white transition-colors hover:bg-[#198b3a] xl:text-[20px]"
+              className="inline-flex rounded-full h-[42px] min-w-[138px] items-center justify-center bg-[#22a447] px-7 font-serif text-[18px] text-white transition-colors hover:bg-[#198b3a] xl:text-[20px]"
             >
               Daftar
             </Link>
