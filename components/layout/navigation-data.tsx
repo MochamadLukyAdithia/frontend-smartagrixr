@@ -64,7 +64,7 @@ export const navigationItems: NavigationItem[] = [
   },
   {
     label: "Editor",
-    href: "#editor",
+    href: "/editor",
     dropdown: {
       hasPreview: true,
       align: "left",
@@ -72,19 +72,19 @@ export const navigationItems: NavigationItem[] = [
         {
           label: "Buat Project Baru",
           description: "Lorem ipsum lorem ipsum lorem ip.",
-          href: "#buat-project",
+          href: "/editor",
           icon: "plus",
         },
         {
           label: "HDRI Background",
           description: "Lorem ipsum lorem ipsum lorem ip.",
-          href: "#hdri-background",
+          href: "/editor",
           icon: "background",
         },
         {
           label: "Objek 3D Saya",
           description: "Lorem ipsum lorem ipsum lorem ip.",
-          href: "#objek-3d",
+          href: "/editor",
           icon: "cube",
         },
       ],
