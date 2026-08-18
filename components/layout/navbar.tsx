@@ -73,13 +73,16 @@ export function Navbar() {
         }`}
       >
         <div className="mx-auto flex h-[98px] w-full max-w-[1580px] items-center justify-between px-6 sm:px-8 lg:px-10">
-          <Link
-            href="/"
-            onClick={handleMobileMenuClose}
-            className="shrink-0 font-serif text-[22px] font-semibold text-black sm:text-[25px] lg:text-[28px]"
-          >
-            SmartAgriXR UNEJ
-          </Link>
+          <div className="flex items-center gap-4">
+            <img src="/logo.png" alt="Logo" width={40} />
+            <Link
+              href="/"
+              onClick={handleMobileMenuClose}
+              className="shrink-0 font-serif text-[22px] font-semibold text-black sm:text-[25px] lg:text-[28px]"
+            >
+              SmartAgriXR UNEJ
+            </Link>
+          </div>
 
           <nav className="hidden flex-1 items-center lg:flex">
             <div className="ml-[70px] flex items-center gap-[38px] xl:ml-[92px] xl:gap-[43px]">

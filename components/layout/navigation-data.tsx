@@ -44,7 +44,7 @@ export const navigationItems: NavigationItem[] = [
         {
           label: "Topics Library",
           description: "Lorem ipsum lorem ipsum lorem ip.",
-          href: "#topics-library",
+          href: "/bahan-ajar/topics-library",
           icon: "cloud",
         },
         {
@@ -72,7 +72,7 @@ export const navigationItems: NavigationItem[] = [
         {
           label: "Buat Project Baru",
           description: "Lorem ipsum lorem ipsum lorem ip.",
-          href: "#buat-project",
+          href: "editor/buat-project",
           icon: "plus",
         },
         {
