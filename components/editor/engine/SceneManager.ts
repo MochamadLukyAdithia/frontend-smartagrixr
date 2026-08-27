@@ -17,9 +17,49 @@ export class SceneManager {
     this.updateAxis();
   }
 
+  public applyPreset(preset: "studio" | "farm" | "greenhouse" | "cyber" | "dark" | "custom") {
+    let bgColor = "#e8e8e8";
+    let gridVisible = true;
+    let intensity = 1.0;
+
+    switch (preset) {
+      case "studio":
+        bgColor = "#e8e8e8";
+        intensity = 1.2;
+        break;
+      case "farm":
+        bgColor = "#bbf7d0"; // Soft sky-green for farm
+        intensity = 1.5;
+        break;
+      case "greenhouse":
+        bgColor = "#ecfdf5";
+        intensity = 1.4;
+        break;
+      case "cyber":
+        bgColor = "#0f172a";
+        intensity = 1.0;
+        break;
+      case "dark":
+        bgColor = "#18181b";
+        intensity = 0.9;
+        break;
+      default:
+        break;
+    }
+
+    useEditorStore.getState().setEnvironment({
+      preset,
+      bgColor,
+      intensity,
+      gridVisible,
+    });
+
+    this.updateBackgroundColor();
+    this.updateGrid();
+  }
+
   public updateBackgroundColor() {
     const bgColor = useEditorStore.getState().environment.bgColor;
-    // Parse hex color
     const color = Color3.FromHexString(bgColor);
     this.editor.scene.clearColor = new Color4(color.r, color.g, color.b, 1.0);
   }
@@ -36,20 +76,13 @@ export class SceneManager {
       return;
     }
 
-    // Grid Material using Babylon GridMaterial or StandardMaterial lines
-    // To ensure compatibility without extra plugins, we can create a grid using standard lines or GridMaterial
-    // Let's use GridMaterial if it works, or fallback to creating standard line arrays for stability.
-    // Let's create lines or a GridMaterial. Babylon core contains GridMaterial sometimes, but standard lines are extremely reliable.
-    // Let's build a grid using lines for absolute safety, since GridMaterial is in a separate @babylonjs/materials package.
     const size = gridSettings.size;
     const spacing = gridSettings.spacing;
     const linesPoints: Vector3[][] = [];
 
     const halfSize = size / 2;
     for (let i = -halfSize; i <= halfSize; i += spacing) {
-      // X-aligned lines
       linesPoints.push([new Vector3(-halfSize, 0, i), new Vector3(halfSize, 0, i)]);
-      // Z-aligned lines
       linesPoints.push([new Vector3(i, 0, -halfSize), new Vector3(i, 0, halfSize)]);
     }
 
@@ -59,7 +92,10 @@ export class SceneManager {
       this.editor.scene
     );
     this.gridMesh.isPickable = false;
-    this.gridMesh.color = new Color3(0.3, 0.3, 0.3);
+
+    const env = useEditorStore.getState().environment;
+    const isDark = env.bgColor.toLowerCase() === "#0f172a" || env.bgColor.toLowerCase() === "#18181b";
+    this.gridMesh.color = isDark ? new Color3(0.2, 0.4, 0.3) : new Color3(0.65, 0.65, 0.65);
   }
 
   public updateAxis() {
@@ -74,7 +110,6 @@ export class SceneManager {
       return;
     }
 
-    // Create custom red/green/blue lines for X, Y, Z axes
     const axisX = MeshBuilder.CreateLines(
       "axisX",
       { points: [Vector3.Zero(), new Vector3(2, 0, 0)] },
@@ -102,3 +137,4 @@ export class SceneManager {
     this.axisLines = [axisX, axisY, axisZ];
   }
 }
+

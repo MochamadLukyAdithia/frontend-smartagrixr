@@ -8,6 +8,8 @@ import { MediaDrawer } from "./MediaDrawer";
 import { Viewport } from "./Viewport";
 import { TimelinePanel } from "./TimelinePanel";
 import { KeyboardShortcutManager } from "./KeyboardShortcutManager";
+import { ARModal } from "./ARModal";
+import { AnnotationOverlay } from "./AnnotationOverlay";
 
 export function EditorLayout() {
   const isPreviewMode = useEditorStore((state) => state.isPreviewMode);
@@ -16,6 +18,12 @@ export function EditorLayout() {
     <div className="flex flex-col w-screen h-screen bg-[#121212] font-sans text-white select-none overflow-hidden">
       {/* Keyboard shortcuts listener */}
       <KeyboardShortcutManager />
+
+      {/* AR Conversion Barcode / QR Modal */}
+      <ARModal />
+
+      {/* Interactive 3D Hotspot & Info Dialog Overlay */}
+      <AnnotationOverlay />
 
       {/* Top Navbar Toolbar */}
       <Toolbar />
@@ -48,3 +56,4 @@ export function EditorLayout() {
     </div>
   );
 }
+

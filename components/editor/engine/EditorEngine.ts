@@ -12,6 +12,7 @@ import { AnimationManager } from "./AnimationManager";
 import { HistoryManager } from "./HistoryManager";
 import { InteractionManager } from "./InteractionManager";
 import { PreviewManager } from "./PreviewManager";
+import { ARManager } from "./ar/ARManager";
 import { useEditorStore } from "../store/useEditorStore";
 
 export class EditorEngine {
@@ -33,6 +34,7 @@ export class EditorEngine {
   public historyManager: HistoryManager;
   public interactionManager: InteractionManager;
   public previewManager: PreviewManager;
+  public arManager: ARManager;
 
   // Runtime reference registry mapping objectId -> Babylon TransformNode / Node
   public nodesMap: Map<string, any> = new Map();
@@ -60,6 +62,7 @@ export class EditorEngine {
     this.animationManager = new AnimationManager(this);
     this.interactionManager = new InteractionManager(this);
     this.previewManager = new PreviewManager(this);
+    this.arManager = new ARManager(this);
     this.importManager = new ImportManager(this);
     this.exportManager = new ExportManager(this);
 

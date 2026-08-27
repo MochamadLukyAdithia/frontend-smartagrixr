@@ -1,4 +1,4 @@
-import { PBRMaterial, Color3, Texture, AbstractMesh } from "@babylonjs/core";
+import { PBRMaterial, StandardMaterial, Color3, Texture, AbstractMesh } from "@babylonjs/core";
 import { EditorEngine } from "./EditorEngine";
 import { useEditorStore } from "../store/useEditorStore";
 
@@ -9,6 +9,7 @@ export interface MaterialProperties {
   opacity: number;
   emissive: string;
   baseColorTexture?: string | null;
+  wireframe?: boolean;
 }
 
 export class MaterialManager {
@@ -31,12 +32,12 @@ export class MaterialManager {
       if (mat && !seenMaterials.has(mat.uniqueId.toString())) {
         seenMaterials.add(mat.uniqueId.toString());
 
-        // Extract properties (assuming PBR or Standard)
         let baseColor = "#ffffff";
         let metallic = 0.5;
         let roughness = 0.5;
         let opacity = 1.0;
         let emissive = "#000000";
+        let wireframe = mat.wireframe || false;
 
         if (mat instanceof PBRMaterial) {
           baseColor = mat.albedoColor ? mat.albedoColor.toHexString() : "#ffffff";
@@ -44,17 +45,22 @@ export class MaterialManager {
           roughness = mat.roughness ?? 0.5;
           opacity = mat.alpha ?? 1.0;
           emissive = mat.emissiveColor ? mat.emissiveColor.toHexString() : "#000000";
+        } else if (mat instanceof StandardMaterial) {
+          baseColor = mat.diffuseColor ? mat.diffuseColor.toHexString() : "#ffffff";
+          emissive = mat.emissiveColor ? mat.emissiveColor.toHexString() : "#000000";
+          opacity = mat.alpha ?? 1.0;
         }
 
         slots.push({
           slotId: mat.uniqueId.toString(),
-          name: mat.name || "Unnamed Material",
+          name: mat.name || "Material",
           properties: {
             baseColor,
             metallic,
             roughness,
             opacity,
             emissive,
+            wireframe,
           },
         });
       }
@@ -75,6 +81,10 @@ export class MaterialManager {
 
     const applyToMaterial = (mat: any) => {
       if (mat && mat.uniqueId.toString() === slotId) {
+        if (properties.wireframe !== undefined) {
+          mat.wireframe = properties.wireframe;
+        }
+
         if (mat instanceof PBRMaterial) {
           if (properties.baseColor !== undefined) {
             mat.albedoColor = Color3.FromHexString(properties.baseColor);
@@ -97,6 +107,16 @@ export class MaterialManager {
             } else {
               mat.albedoTexture = new Texture(properties.baseColorTexture, this.editor.scene);
             }
+          }
+        } else if (mat instanceof StandardMaterial) {
+          if (properties.baseColor !== undefined) {
+            mat.diffuseColor = Color3.FromHexString(properties.baseColor);
+          }
+          if (properties.emissive !== undefined) {
+            mat.emissiveColor = Color3.FromHexString(properties.emissive);
+          }
+          if (properties.opacity !== undefined) {
+            mat.alpha = properties.opacity;
           }
         }
       }
@@ -133,3 +153,4 @@ export class MaterialManager {
     }
   }
 }
+

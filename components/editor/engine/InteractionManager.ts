@@ -20,46 +20,65 @@ export class InteractionManager {
 
     obj.behaviours.forEach((behaviour) => {
       if (behaviour.trigger === "click") {
-        this.executeAction(behaviour);
+        this.executeAction(behaviour, obj);
       }
     });
   }
 
-  private executeAction(behaviour: Behaviour) {
-    const targetNode = this.editor.nodesMap.get(behaviour.target);
-    if (!targetNode) return;
+  // Triggered when scene starts in preview mode
+  public triggerSceneStart() {
+    const objects = useEditorStore.getState().getObjects();
+    objects.forEach((obj) => {
+      if (obj.behaviours) {
+        obj.behaviours.forEach((b) => {
+          if (b.trigger === "start") {
+            this.executeAction(b, obj);
+          }
+        });
+      }
+    });
+  }
+
+  public executeAction(behaviour: Behaviour, sourceObj?: any) {
+    const targetId = behaviour.target || (sourceObj ? sourceObj.id : "");
+    const targetNode = this.editor.nodesMap.get(targetId);
 
     switch (behaviour.action) {
       case "playAnimation":
         if (behaviour.animation) {
-          // Play target clip
           this.editor.animationManager.selectClip(behaviour.animation);
           this.editor.animationManager.play();
         }
         break;
       case "showObject":
-        this.editor.objectManager.setVisibility(behaviour.target, true);
+        this.editor.objectManager.setVisibility(targetId, true);
         break;
       case "hideObject":
-        this.editor.objectManager.setVisibility(behaviour.target, false);
+        this.editor.objectManager.setVisibility(targetId, false);
         break;
       case "moveObject":
-        if (behaviour.value && "position" in targetNode) {
-          const val = behaviour.value;
+        if (targetNode && "position" in targetNode) {
+          const val = behaviour.value || [0, 1, 0];
           targetNode.position.addInPlace(new Vector3(val[0], val[1], val[2]));
-          this.editor.objectManager.updateObjectStateFromBabylon(behaviour.target);
+          this.editor.objectManager.updateObjectStateFromBabylon(targetId);
         }
         break;
       case "rotateObject":
-        if (behaviour.value && "rotation" in targetNode) {
-          const val = behaviour.value;
+        if (targetNode && "rotation" in targetNode) {
+          const val = behaviour.value || [0, 45, 0];
           targetNode.rotation.addInPlace(new Vector3(
             (val[0] * Math.PI) / 180,
             (val[1] * Math.PI) / 180,
             (val[2] * Math.PI) / 180
           ));
-          this.editor.objectManager.updateObjectStateFromBabylon(behaviour.target);
+          this.editor.objectManager.updateObjectStateFromBabylon(targetId);
         }
+        break;
+      case "showInfo":
+        useEditorStore.getState().setActiveInfoDialog({
+          title: behaviour.infoTitle || sourceObj?.name || "Information",
+          content: behaviour.infoDescription || sourceObj?.description || "Smart Agriculture node interaction.",
+        });
         break;
       case "openUrl":
         if (behaviour.url) {
@@ -67,7 +86,6 @@ export class InteractionManager {
         }
         break;
       case "changeScene":
-        // Switch to the target scene
         if (behaviour.url) {
           useEditorStore.getState().setActiveSceneId(behaviour.url);
         }
@@ -77,3 +95,4 @@ export class InteractionManager {
     }
   }
 }
+

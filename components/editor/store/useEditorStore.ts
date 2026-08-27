@@ -2,14 +2,17 @@ import { create } from "zustand";
 
 export interface Behaviour {
   trigger: "click" | "hover" | "start" | "collision";
-  action: "playAnimation" | "moveObject" | "rotateObject" | "showObject" | "hideObject" | "openUrl" | "playAudio" | "changeScene";
+  action: "playAnimation" | "moveObject" | "rotateObject" | "showObject" | "hideObject" | "openUrl" | "playAudio" | "changeScene" | "showInfo";
   target: string; // Target object ID
   animation?: string;
   url?: string;
+  infoTitle?: string;
+  infoDescription?: string;
   value?: [number, number, number]; // Offset for move/rotate
 }
 
 export interface Annotation {
+  id?: string;
   title: string;
   description: string;
   position: [number, number, number];
@@ -18,7 +21,9 @@ export interface Annotation {
 export interface SceneObject {
   id: string;
   name: string;
-  type: "model" | "image" | "text" | "video" | "audio" | "group" | "light" | "camera" | "empty";
+  type: "model" | "primitive" | "agri" | "image" | "text" | "video" | "audio" | "group" | "light" | "camera" | "empty";
+  primitiveType?: "box" | "sphere" | "cylinder" | "cone" | "capsule" | "torus" | "plane" | "ground";
+  agriType?: "greenhouse" | "solar_sensor" | "water_tank" | "drone" | "crop_field" | "tractor" | "plant";
   parentId: string | null;
   visible: boolean;
   locked: boolean;
@@ -39,6 +44,7 @@ export interface SceneObject {
     font: string;
     size: number;
     color: string;
+    bgColor?: string;
     alignment: "left" | "center" | "right";
   };
 
@@ -65,6 +71,7 @@ export interface SceneObject {
       opacity: number;
       emissive: string;
       baseColorTexture?: string | null;
+      wireframe?: boolean;
     }>;
   };
 }
@@ -89,6 +96,8 @@ export interface EditorState {
   
   // Preview mode
   isPreviewMode: boolean;
+  isARModalOpen: boolean;
+  activeInfoDialog: { title: string; content: string } | null;
 
   selectedIds: string[];
   activeCameraId: string | null;
@@ -110,6 +119,7 @@ export interface EditorState {
   };
   axisVisible: boolean;
   environment: {
+    preset: "studio" | "farm" | "greenhouse" | "cyber" | "dark" | "custom";
     bgColor: string;
     intensity: number;
     hdrUrl: string | null;
@@ -128,15 +138,18 @@ export interface EditorState {
   };
   
   // Active tool on left toolbar
-  activeLeftTab: "none" | "objects" | "images" | "text" | "video" | "audio";
+  activeLeftTab: "none" | "objects" | "agri" | "images" | "text" | "video" | "audio" | "environment";
   
   // Actions
   setScenes: (scenes: SceneData[]) => void;
   setActiveSceneId: (id: string) => void;
   addScene: (name: string) => void;
+  renameScene: (id: string, name: string) => void;
   deleteScene: (id: string) => void;
   
   setIsPreviewMode: (enabled: boolean) => void;
+  setIsARModalOpen: (open: boolean) => void;
+  setActiveInfoDialog: (dialog: { title: string; content: string } | null) => void;
   setActiveLeftTab: (tab: EditorState["activeLeftTab"]) => void;
   
   // Objects relative to active scene
@@ -162,6 +175,8 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   activeSceneId: "scene_1",
   activeCameraId: "default_camera",
   isPreviewMode: false,
+  isARModalOpen: false,
+  activeInfoDialog: null,
   selectedIds: [],
   assets: [],
   gizmoMode: "translate",
@@ -182,6 +197,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   axisVisible: true,
   activeLeftTab: "none",
   environment: {
+    preset: "studio",
     bgColor: "#e8e8e8",
     intensity: 1.0,
     hdrUrl: null,
@@ -200,13 +216,16 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   setScenes: (scenes) => set({ scenes }),
   setActiveSceneId: (id) => set({ activeSceneId: id, selectedIds: [] }),
   addScene: (name) => set((state) => {
-    const id = "scene_" + Math.random().toString(36).substr(2, 9);
+    const id = "scene_" + Math.random().toString(36).substring(2, 9);
     return {
       scenes: [...state.scenes, { id, name, objects: [] }],
       activeSceneId: id,
       selectedIds: [],
     };
   }),
+  renameScene: (id, name) => set((state) => ({
+    scenes: state.scenes.map((s) => (s.id === id ? { ...s, name } : s)),
+  })),
   deleteScene: (id) => set((state) => {
     if (state.scenes.length <= 1) return {}; // Keep at least one scene
     const newScenes = state.scenes.filter((s) => s.id !== id);
@@ -218,6 +237,8 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   }),
 
   setIsPreviewMode: (enabled) => set({ isPreviewMode: enabled, selectedIds: [] }),
+  setIsARModalOpen: (open) => set({ isARModalOpen: open }),
+  setActiveInfoDialog: (dialog) => set({ activeInfoDialog: dialog }),
   setActiveLeftTab: (tab) => set((state) => ({ activeLeftTab: state.activeLeftTab === tab ? "none" : tab })),
 
   getObjects: () => {
