@@ -72,7 +72,7 @@ export const navigationItems: NavigationItem[] = [
         {
           label: "Buat Project Baru",
           description: "Lorem ipsum lorem ipsum lorem ip.",
-          href: "/editor/buat-project",
+          href: "/editor",
           icon: "plus",
         },
         {
