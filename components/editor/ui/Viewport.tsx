@@ -59,7 +59,28 @@ export function Viewport() {
       });
     });
 
+    // Auto-resize Babylon engine on any container or canvas dimensions change
+    const resizeEngine = () => {
+      if (engine && engine.engine) {
+        engine.engine.resize();
+      }
+    };
+
+    let resizeObserver: ResizeObserver | null = null;
+    if (typeof ResizeObserver !== "undefined") {
+      resizeObserver = new ResizeObserver(() => {
+        resizeEngine();
+      });
+      if (canvasRef.current.parentElement) {
+        resizeObserver.observe(canvasRef.current.parentElement);
+      }
+      resizeObserver.observe(canvasRef.current);
+    }
+
     return () => {
+      if (resizeObserver) {
+        resizeObserver.disconnect();
+      }
       engine.scene.onAfterRenderObservable.remove(observer);
       engine.dispose();
       setEditorInstance(null);

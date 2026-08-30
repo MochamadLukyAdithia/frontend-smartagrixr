@@ -30,13 +30,18 @@ export class SelectionManager {
       if (pointerInfo.type === PointerEventTypes.POINTERUP) {
         if (pointerInfo.event.button !== 0) return;
         
+        // Skip picking if a gizmo drag or transform is in progress
+        if (this.editor.transformManager.isTransforming()) {
+          return;
+        }
+
         // Calculate drag distance
         const dx = pointerInfo.event.clientX - startX;
         const dy = pointerInfo.event.clientY - startY;
         const distance = Math.sqrt(dx * dx + dy * dy);
         
-        // If the cursor moved more than 15 pixels, consider it an orbit/pan drag and skip picking
-        if (distance > 15) return;
+        // If the cursor moved more than 8 pixels, consider it an orbit/pan drag and skip picking
+        if (distance > 8) return;
 
         const pickResult = pointerInfo.pickInfo;
         if (pickResult && pickResult.hit && pickResult.pickedMesh) {

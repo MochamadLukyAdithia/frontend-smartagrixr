@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Quaternion } from "@babylonjs/core";
 import { useEditorStore, Behaviour, Annotation } from "../store/useEditorStore";
 import { getEditorInstance } from "../engine/editorInstance";
 import { 
@@ -104,17 +105,28 @@ export function InspectorPanel() {
     if (type === "position") {
       node.position[axis] = val;
     } else if (type === "rotation") {
-      node.rotation[axis] = (val * Math.PI) / 180;
+      const rad = (val * Math.PI) / 180;
+      if (node.rotationQuaternion) {
+        const euler = node.rotationQuaternion.toEulerAngles();
+        euler[axis] = rad;
+        node.rotationQuaternion = Quaternion.FromEulerAngles(euler.x, euler.y, euler.z);
+      } else {
+        node.rotation[axis] = rad;
+      }
     } else if (type === "scale") {
       node.scaling[axis] = val;
     }
 
+    const rot = node.rotationQuaternion
+      ? node.rotationQuaternion.toEulerAngles()
+      : node.rotation;
+
     updateObject(obj!.id, {
       position: [node.position.x, node.position.y, node.position.z],
       rotation: [
-        node.rotation.x * (180 / Math.PI),
-        node.rotation.y * (180 / Math.PI),
-        node.rotation.z * (180 / Math.PI),
+        (rot.x * 180) / Math.PI,
+        (rot.y * 180) / Math.PI,
+        (rot.z * 180) / Math.PI,
       ],
       scale: [node.scaling.x, node.scaling.y, node.scaling.z],
     });

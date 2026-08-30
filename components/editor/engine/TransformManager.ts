@@ -17,58 +17,13 @@ export class TransformManager {
     this.gizmoManager = new GizmoManager(this.editor.scene);
     this.gizmoManager.usePointerToAttachGizmos = false;
 
-    // Force instantiate gizmo meshes so setupGizmoListeners can bind to them
-    this.gizmoManager.positionGizmoEnabled = true;
-    this.gizmoManager.rotationGizmoEnabled = true;
-    this.gizmoManager.scaleGizmoEnabled = true;
+    // Enhance gizmo size for effortless precision
+    this.gizmoManager.scaleRatio = 1.3;
 
-    this.setupGizmoListeners();
-
-    this.gizmoManager.positionGizmoEnabled = false;
-    this.gizmoManager.rotationGizmoEnabled = false;
-    this.gizmoManager.scaleGizmoEnabled = false;
-
+    // Setup gizmos
     this.syncGizmoSettings();
-  }
 
-  private setupGizmoListeners() {
-    // Listen to changes in gizmo transforms to update Zustand store
-    const onDragEnd = () => {
-      this.isDragging = false;
-      this.applyCurrentTransformsToStore();
-    };
-
-    const onDragStart = () => {
-      this.isDragging = true;
-    };
-
-    const gizmos = this.gizmoManager.gizmos;
-    
-    // Bind position gizmo axes
-    if (gizmos.positionGizmo) {
-      [gizmos.positionGizmo.xGizmo, gizmos.positionGizmo.yGizmo, gizmos.positionGizmo.zGizmo].forEach((axis) => {
-        axis?.dragBehavior.onDragStartObservable.add(onDragStart);
-        axis?.dragBehavior.onDragEndObservable.add(onDragEnd);
-      });
-    }
-
-    // Bind rotation gizmo axes
-    if (gizmos.rotationGizmo) {
-      [gizmos.rotationGizmo.xGizmo, gizmos.rotationGizmo.yGizmo, gizmos.rotationGizmo.zGizmo].forEach((axis) => {
-        axis?.dragBehavior.onDragStartObservable.add(onDragStart);
-        axis?.dragBehavior.onDragEndObservable.add(onDragEnd);
-      });
-    }
-
-    // Bind scale gizmo axes
-    if (gizmos.scaleGizmo) {
-      [gizmos.scaleGizmo.xGizmo, gizmos.scaleGizmo.yGizmo, gizmos.scaleGizmo.zGizmo, (gizmos.scaleGizmo as any).uniformGizmo].forEach((axis) => {
-        axis?.dragBehavior.onDragStartObservable.add(onDragStart);
-        axis?.dragBehavior.onDragEndObservable.add(onDragEnd);
-      });
-    }
-
-    // Also observe engine frame rendering to update store coordinates interactively if dragging
+    // Observe engine frame rendering to update store coordinates interactively if dragging
     this.editor.scene.onBeforeRenderObservable.add(() => {
       if (this.isDragging) {
         this.applyCurrentTransformsToStore();
@@ -76,37 +31,130 @@ export class TransformManager {
     });
   }
 
+  public isTransforming(): boolean {
+    return this.isDragging;
+  }
+
+  private bindGizmoListeners() {
+    const onDragStart = () => {
+      this.isDragging = true;
+      // Detach active camera so mouse drag does not rotate/pan the camera while moving/rotating/scaling
+      if (this.editor.scene.activeCamera) {
+        this.editor.scene.activeCamera.detachControl();
+      }
+    };
+
+    const onDragEnd = () => {
+      this.isDragging = false;
+      // Re-attach active camera to canvas
+      if (this.editor.scene.activeCamera && this.editor.canvas) {
+        this.editor.scene.activeCamera.attachControl(this.editor.canvas, true);
+      }
+      this.applyCurrentTransformsToStore();
+    };
+
+    const onDrag = () => {
+      this.applyCurrentTransformsToStore();
+    };
+
+    const gizmos = this.gizmoManager.gizmos;
+    
+    // Bind position gizmo axes and plane handles
+    if (gizmos.positionGizmo) {
+      const pos = gizmos.positionGizmo;
+      [
+        pos.xGizmo, 
+        pos.yGizmo, 
+        pos.zGizmo, 
+        pos.xPlaneGizmo, 
+        pos.yPlaneGizmo, 
+        pos.zPlaneGizmo
+      ].forEach((axis) => {
+        if (axis && axis.dragBehavior) {
+          axis.dragBehavior.onDragStartObservable.removeCallback(onDragStart);
+          axis.dragBehavior.onDragStartObservable.add(onDragStart);
+          axis.dragBehavior.onDragObservable.removeCallback(onDrag);
+          axis.dragBehavior.onDragObservable.add(onDrag);
+          axis.dragBehavior.onDragEndObservable.removeCallback(onDragEnd);
+          axis.dragBehavior.onDragEndObservable.add(onDragEnd);
+        }
+      });
+    }
+
+    // Bind rotation gizmo axes
+    if (gizmos.rotationGizmo) {
+      const rot = gizmos.rotationGizmo;
+      [rot.xGizmo, rot.yGizmo, rot.zGizmo].forEach((axis) => {
+        if (axis && axis.dragBehavior) {
+          axis.dragBehavior.onDragStartObservable.removeCallback(onDragStart);
+          axis.dragBehavior.onDragStartObservable.add(onDragStart);
+          axis.dragBehavior.onDragObservable.removeCallback(onDrag);
+          axis.dragBehavior.onDragObservable.add(onDrag);
+          axis.dragBehavior.onDragEndObservable.removeCallback(onDragEnd);
+          axis.dragBehavior.onDragEndObservable.add(onDragEnd);
+        }
+      });
+    }
+
+    // Bind scale gizmo axes and uniform scale box
+    if (gizmos.scaleGizmo) {
+      const scl = gizmos.scaleGizmo;
+      [
+        scl.xGizmo, 
+        scl.yGizmo, 
+        scl.zGizmo, 
+        (scl as any).uniformGizmo
+      ].forEach((axis) => {
+        if (axis && axis.dragBehavior) {
+          axis.dragBehavior.onDragStartObservable.removeCallback(onDragStart);
+          axis.dragBehavior.onDragStartObservable.add(onDragStart);
+          axis.dragBehavior.onDragObservable.removeCallback(onDrag);
+          axis.dragBehavior.onDragObservable.add(onDrag);
+          axis.dragBehavior.onDragEndObservable.removeCallback(onDragEnd);
+          axis.dragBehavior.onDragEndObservable.add(onDragEnd);
+        }
+      });
+    }
+  }
+
   public syncGizmoSettings() {
     const store = useEditorStore.getState();
     
+    // Gizmo Mode
+    const mode = store.gizmoMode;
+    this.gizmoManager.positionGizmoEnabled = mode === "translate";
+    this.gizmoManager.rotationGizmoEnabled = mode === "rotate";
+    this.gizmoManager.scaleGizmoEnabled = mode === "scale";
+
     // Snapping configuration
     const snap = store.snapping;
+    const isWorld = store.gizmoSpace === "world";
     
     const posGizmo = this.gizmoManager.gizmos.positionGizmo;
     if (posGizmo) {
       posGizmo.snapDistance = snap.translateEnabled ? snap.translateValue : 0;
+      posGizmo.planarGizmoEnabled = true;
+      posGizmo.updateGizmoRotationToMatchAttachedMesh = !isWorld;
     }
 
     const rotGizmo = this.gizmoManager.gizmos.rotationGizmo;
     if (rotGizmo) {
       // Rotation snap distance is specified in radians
       rotGizmo.snapDistance = snap.rotateEnabled ? (snap.rotateValue * Math.PI) / 180 : 0;
+      rotGizmo.updateGizmoRotationToMatchAttachedMesh = !isWorld;
     }
 
     const sclGizmo = this.gizmoManager.gizmos.scaleGizmo;
     if (sclGizmo) {
       sclGizmo.snapDistance = snap.scaleEnabled ? snap.scaleValue : 0;
+      sclGizmo.sensitivity = 1;
     }
 
     // Space: Local vs World
-    const isWorld = store.gizmoSpace === "world";
     this.gizmoManager.coordinatesMode = isWorld ? 0 : 1; // 0 = World, 1 = Local
 
-    // Gizmo Mode
-    const mode = store.gizmoMode;
-    this.gizmoManager.positionGizmoEnabled = mode === "translate";
-    this.gizmoManager.rotationGizmoEnabled = mode === "rotate";
-    this.gizmoManager.scaleGizmoEnabled = mode === "scale";
+    // Bind drag behavior callbacks to currently active gizmos
+    this.bindGizmoListeners();
   }
 
   public attachGizmo(ids: string[]) {
@@ -121,8 +169,6 @@ export class TransformManager {
       if (node && node instanceof AbstractMesh) {
         this.gizmoManager.attachToMesh(node);
       } else if (node && "position" in node) {
-        // For cameras or lights, we attach gizmo to a placeholder mesh or we can use custom attachments
-        // If it's a transform node, we can cast it or wrap it
         this.gizmoManager.attachToNode(node);
       }
     } else {
@@ -194,13 +240,21 @@ export class TransformManager {
       const scl = node.scaling;
 
       useEditorStore.getState().updateObject(id, {
-        position: [pos.x, pos.y, pos.z],
-        rotation: [
-          rot.x * (180 / Math.PI),
-          rot.y * (180 / Math.PI),
-          rot.z * (180 / Math.PI)
+        position: [
+          Number(pos.x.toFixed(3)),
+          Number(pos.y.toFixed(3)),
+          Number(pos.z.toFixed(3))
         ],
-        scale: [scl.x, scl.y, scl.z]
+        rotation: [
+          Number(((rot.x * 180) / Math.PI).toFixed(2)),
+          Number(((rot.y * 180) / Math.PI).toFixed(2)),
+          Number(((rot.z * 180) / Math.PI).toFixed(2))
+        ],
+        scale: [
+          Number(scl.x.toFixed(3)),
+          Number(scl.y.toFixed(3)),
+          Number(scl.z.toFixed(3))
+        ]
       });
     });
   }
