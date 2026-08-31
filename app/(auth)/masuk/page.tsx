@@ -115,6 +115,9 @@ export default function Masuk() {
 
           {/* Tombol Submit Masuk */}
           <button
+            onClick={() => {
+              window.location.href = "/dashboard/beranda";
+            }}
             type="button"
             className="mt-2 w-full rounded-full border border-gray-300 py-3.5 font-serif text-[16px] font-bold text-black transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#21a447] focus:ring-offset-2"
           >

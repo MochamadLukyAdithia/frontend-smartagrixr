@@ -48,7 +48,7 @@ export const navigationItems: NavigationItem[] = [
           icon: "cloud",
         },
         {
-          label: "Asset Belajar",
+          label: "Aset Belajar",
           description: "Buat aset belajar 3d dan Ar kamu sendiri",
           href: "#materi-saya",
           icon: "book",
