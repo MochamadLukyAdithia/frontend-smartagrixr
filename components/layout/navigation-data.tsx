@@ -86,14 +86,14 @@ export const navigationItems: NavigationItem[] = [
   },
   {
     label: "Kelas",
-    href: "#kelas",
+    href: "kelas",
     dropdown: {
       align: "left",
       items: [
         {
           label: "Kelas Saya",
           description: "Lihat dan kelola daftar kelas",
-          href: "#kelas-saya",
+          href: "kelas",
           icon: "class",
         },
         {
