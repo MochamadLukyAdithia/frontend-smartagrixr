@@ -5,6 +5,7 @@ import { useState, useEffect } from "react";
 import { navigationItems } from "./navigation-data";
 import { NavigationDropdown } from "./navigation-dropdown";
 import { ChevronDownIcon } from "./navigation-icons";
+import Image from "next/image";
 
 function HamburgerIcon({ isOpen }: { isOpen: boolean }) {
   return (
@@ -74,13 +75,18 @@ export function Navbar() {
       >
         <div className="mx-auto flex h-[98px] w-full max-w-[1580px] items-center justify-between px-6 sm:px-8 lg:px-10">
           <div className="flex items-center gap-4">
-            <img src="/logo.png" alt="Logo" width={40} />
             <Link
               href="/"
               onClick={handleMobileMenuClose}
               className="shrink-0 font-serif text-[22px] font-semibold text-black sm:text-[25px] lg:text-[28px]"
             >
-              SmartAgriXR UNEJ
+              <Image
+                src="/logo-fixed.png"
+                width={40}
+                height={40}
+                className="w-40"
+                alt="Logo"
+              />
             </Link>
           </div>
 

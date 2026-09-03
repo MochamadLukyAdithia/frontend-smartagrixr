@@ -3,6 +3,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
 import { Navbar } from "@/components/layout/navbar";
+import Footer from "@/components/layout/footer";
 
 const TESTIMONI_DATA = [
   {
@@ -24,9 +25,6 @@ const TESTIMONI_DATA = [
     role: "Pelaku UMKM Pertanian",
   },
 ];
-
-const FOOTER_LINKS = ["Beranda", "Bahan Ajar", "Editor", "Kelas", "Tutorial"];
-const FOOTER_SUPPORT = ["Help Center", "Community", "FAQ"];
 
 export default function Home() {
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -111,10 +109,11 @@ export default function Home() {
             </div>
 
             <p className="mt-5 max-w-[980px] font-serif text-[16px] leading-[1.45] text-[#202020] sm:mt-6 sm:text-[18px] lg:mt-1 lg:text-[20px]">
-              <strong className="font-semibold">SmartAgriXR</strong> menghadirkan
-              solusi Extended Reality (XR) untuk membantu petani, pelaku
-              agribisnis, dan institusi pertanian meningkatkan produktivitas,
-              pembelajaran, serta pengambilan keputusan berbasis teknologi.
+              <strong className="font-semibold">SmartAgriXR</strong>{" "}
+              menghadirkan solusi Extended Reality (XR) untuk membantu petani,
+              pelaku agribisnis, dan institusi pertanian meningkatkan
+              produktivitas, pembelajaran, serta pengambilan keputusan berbasis
+              teknologi.
             </p>
 
             <Link
@@ -130,11 +129,11 @@ export default function Home() {
             <div className="w-full lg:w-1/2">
               <div className="relative rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.05)] sm:p-3">
                 <Image
-                  src="/images/landing/visi/visi.svg"
+                  src="/images/landing/visi/visi.png"
                   alt="Ilustrasi dashboard dan lahan pertanian SmartAgriXR"
                   width={800}
                   height={500}
-                  className="h-auto w-full rounded-2xl object-cover"
+                  className="h-auto w-full shadow-xl border-2 border-green-400 rounded-2xl object-cover"
                 />
               </div>
             </div>
@@ -387,9 +386,8 @@ export default function Home() {
               Buat Simulasi Pembelajaran Imersif
             </h2>
             <p className="mx-auto mt-4 max-w-[640px] font-serif text-[15px] leading-[1.65] text-white/85 sm:text-[17px]">
-              Ubah materi pembelajaran menjadi simulasi imersif yang menarik
-              dan mudah dipahami. Tidak perlu coding, cukup desain dan
-              publikasikan.
+              Ubah materi pembelajaran menjadi simulasi imersif yang menarik dan
+              mudah dipahami. Tidak perlu coding, cukup desain dan publikasikan.
             </p>
             <Link
               href="#daftar"
@@ -401,83 +399,7 @@ export default function Home() {
         </section>
       </main>
 
-      {/* --- FOOTER --- */}
-      <footer className="border-t border-gray-100 px-5 pb-10 pt-14 sm:px-8">
-        <div className="mx-auto flex w-full max-w-[1320px] flex-col gap-12 lg:flex-row lg:justify-between lg:gap-10">
-          <div className="max-w-[320px]">
-            <div className="flex items-center gap-2">
-              <Image
-                src="/logo.png"
-                alt="Logo UNEJ SmartAgriXR"
-                width={36}
-                height={36}
-                className="h-12 w-12 object-contain"
-              />
-              <div className="flex flex-col leading-tight">
-                <span className="font-serif text-[15px] font-bold text-black">
-                  UNEJ
-                </span>
-                <span className="font-serif text-[15px] font-bold text-[#21a447]">
-                  SmartAgriXR
-                </span>
-              </div>
-            </div>
-            <p className="mt-4 font-serif text-[14px] leading-[1.65] text-gray-500">
-              Platform pembelajaran imersif yang menggabungkan teknologi XR
-              dan pertanian untuk menghadirkan pengalaman belajar yang lebih
-              interaktif, praktis, dan menyenangkan.
-            </p>
-          </div>
-
-          <div className="flex flex-wrap gap-12 sm:gap-20">
-            <div>
-              <h4 className="font-serif text-[16px] font-bold text-black">
-                Link
-              </h4>
-              <ul className="mt-4 flex flex-col gap-2 font-serif text-[14px] text-gray-500">
-                {FOOTER_LINKS.map((label) => (
-                  <li key={label}>
-                    <Link href="#" className="hover:text-[#21a447]">
-                      {label}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            <div>
-              <h4 className="font-serif text-[16px] font-bold text-black">
-                Support
-              </h4>
-              <ul className="mt-4 flex flex-col gap-2 font-serif text-[14px] text-gray-500">
-                {FOOTER_SUPPORT.map((label) => (
-                  <li key={label}>
-                    <Link href="#" className="hover:text-[#21a447]">
-                      {label}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            <div>
-              <h4 className="font-serif text-[16px] font-bold text-black">
-                Contact
-              </h4>
-              <p className="mt-4 max-w-[240px] font-serif text-[14px] leading-[1.65] text-gray-500">
-                Jalan Kalimantan No. 37, Kampus Tegalboto, Kecamatan
-                Sumbersari, Kabupaten Jember, Jawa Timur 68121.
-                <br />
-                (0331) 330224
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div className="mx-auto mt-10 w-full max-w-[1320px] border-t border-gray-100 pt-6 text-center font-serif text-[13px] text-gray-400">
-          ©2026 SmartAgriXR, All Rights Reserved
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 }
