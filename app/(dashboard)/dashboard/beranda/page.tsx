@@ -170,7 +170,7 @@ export default function DashboardBeranda() {
             {LEARNING_MODULES.map((modul) => (
               <Link
                 key={modul.id}
-                href={`/bahan-ajar/topics-library/${modul.id}`}
+                href={`/dashboard/bahan-ajar/topics-library/${modul.id}`}
                 className="group flex flex-col overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md hover:border-[#21a447]/50"
               >
                 <div className="relative h-[150px] w-full overflow-hidden bg-gray-100">
