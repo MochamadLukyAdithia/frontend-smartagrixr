@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { Quaternion } from "@babylonjs/core";
 import { useEditorStore, Behaviour, Annotation } from "../store/useEditorStore";
-import { getEditorInstance } from "../engine/editorInstance";
+import { getEditorInstance, useEditorInstance } from "../engine/editorInstance";
 import { 
   Settings, 
   Eye, 
@@ -27,7 +27,7 @@ export function InspectorPanel() {
   const sceneObjects = getObjects();
   const obj = sceneObjects.find((o) => o.id === selectedId);
 
-  const editor = getEditorInstance();
+  const editor = useEditorInstance();
 
   // Local state for transforms
   const [posX, setPosX] = useState(0);
@@ -84,66 +84,90 @@ export function InspectorPanel() {
         setTextSize(obj.textConfig.size);
       }
 
-      if (editor) {
-        const slots = editor.materialManager.getMaterialSlots(obj.id);
+      const ed = getEditorInstance();
+      if (ed) {
+        const slots = ed.materialManager.getMaterialSlots(obj.id);
         setMaterialSlots(slots);
         if (slots.length > 0) {
           setActiveSlotId(slots[0].slotId);
         }
       }
     }
-  }, [obj, selectedId]);
+  }, [obj, selectedId, editor]);
 
   const updateTransform = (
     axis: "x" | "y" | "z",
     val: number,
     type: "position" | "rotation" | "scale"
   ) => {
-    const node = editor?.nodesMap.get(obj!.id);
-    if (!node) return;
+    if (!obj) return;
+    const ed = getEditorInstance();
+    ed?.historyManager.recordSnapshot();
+    const node = ed?.nodesMap.get(obj.id);
 
-    if (type === "position") {
-      node.position[axis] = val;
-    } else if (type === "rotation") {
-      const rad = (val * Math.PI) / 180;
-      if (node.rotationQuaternion) {
-        const euler = node.rotationQuaternion.toEulerAngles();
-        euler[axis] = rad;
-        node.rotationQuaternion = Quaternion.FromEulerAngles(euler.x, euler.y, euler.z);
-      } else {
-        node.rotation[axis] = rad;
+    if (node) {
+      if (type === "position") {
+        node.position[axis] = val;
+      } else if (type === "rotation") {
+        const rad = (val * Math.PI) / 180;
+        if (node.rotationQuaternion) {
+          const euler = node.rotationQuaternion.toEulerAngles();
+          euler[axis] = rad;
+          node.rotationQuaternion = Quaternion.FromEulerAngles(euler.x, euler.y, euler.z);
+        } else {
+          node.rotation[axis] = rad;
+        }
+      } else if (type === "scale") {
+        node.scaling[axis] = val;
       }
-    } else if (type === "scale") {
-      node.scaling[axis] = val;
+
+      const rot = node.rotationQuaternion
+        ? node.rotationQuaternion.toEulerAngles()
+        : node.rotation;
+
+      updateObject(obj.id, {
+        position: [node.position.x, node.position.y, node.position.z],
+        rotation: [
+          (rot.x * 180) / Math.PI,
+          (rot.y * 180) / Math.PI,
+          (rot.z * 180) / Math.PI,
+        ],
+        scale: [node.scaling.x, node.scaling.y, node.scaling.z],
+      });
+    } else {
+      const currentPos = [...obj.position] as [number, number, number];
+      const currentRot = [...obj.rotation] as [number, number, number];
+      const currentScl = [...obj.scale] as [number, number, number];
+      const axisIdx = axis === "x" ? 0 : axis === "y" ? 1 : 2;
+
+      if (type === "position") currentPos[axisIdx] = val;
+      if (type === "rotation") currentRot[axisIdx] = val;
+      if (type === "scale") currentScl[axisIdx] = val;
+
+      updateObject(obj.id, {
+        position: currentPos,
+        rotation: currentRot,
+        scale: currentScl,
+      });
     }
-
-    const rot = node.rotationQuaternion
-      ? node.rotationQuaternion.toEulerAngles()
-      : node.rotation;
-
-    updateObject(obj!.id, {
-      position: [node.position.x, node.position.y, node.position.z],
-      rotation: [
-        (rot.x * 180) / Math.PI,
-        (rot.y * 180) / Math.PI,
-        (rot.z * 180) / Math.PI,
-      ],
-      scale: [node.scaling.x, node.scaling.y, node.scaling.z],
-    });
   };
 
   const handleMaterialChange = (prop: string, val: any) => {
-    if (editor && activeSlotId && obj) {
-      editor.materialManager.updateMaterialSlot(obj.id, activeSlotId, {
+    const ed = getEditorInstance();
+    if (ed && activeSlotId && obj) {
+      ed.historyManager.recordSnapshot();
+      ed.materialManager.updateMaterialSlot(obj.id, activeSlotId, {
         [prop]: val,
       });
-      const slots = editor.materialManager.getMaterialSlots(obj.id);
+      const slots = ed.materialManager.getMaterialSlots(obj.id);
       setMaterialSlots(slots);
     }
   };
 
   const handleAddBehaviour = () => {
     if (!obj) return;
+    const ed = getEditorInstance();
+    ed?.historyManager.recordSnapshot();
     const newBehaviour: Behaviour = {
       trigger,
       action,
@@ -163,6 +187,8 @@ export function InspectorPanel() {
 
   const handleAddAnnotation = () => {
     if (!obj || !annoTitle) return;
+    const ed = getEditorInstance();
+    ed?.historyManager.recordSnapshot();
     const newAnno: Annotation = {
       id: "anno_" + Math.random().toString(36).substring(2, 9),
       title: annoTitle,
@@ -177,11 +203,14 @@ export function InspectorPanel() {
   };
 
   const handleUpdateText = (newText: string, newColor: string, newSize: number) => {
-    if (!obj || !editor) return;
+    if (!obj) return;
     setTextVal(newText);
     setTextColor(newColor);
     setTextSize(newSize);
-    editor.objectManager.updateText(obj.id, { text: newText, color: newColor, size: newSize });
+    const ed = getEditorInstance();
+    if (ed) {
+      ed.objectManager.updateText(obj.id, { text: newText, color: newColor, size: newSize });
+    }
   };
 
   // If nothing is selected, show Scene Overview
@@ -207,7 +236,14 @@ export function InspectorPanel() {
               {sceneObjects.map((sObj) => (
                 <div
                   key={sObj.id}
-                  onClick={() => editor?.selectionManager.selectObject(sObj.id)}
+                  onClick={() => {
+                    const ed = getEditorInstance();
+                    if (ed) {
+                      ed.selectionManager.selectObject(sObj.id);
+                    } else {
+                      useEditorStore.getState().setSelectedIds([sObj.id]);
+                    }
+                  }}
                   className="px-3 py-2.5 bg-[#202024] hover:bg-[#28282d] rounded-xl text-xs cursor-pointer flex items-center justify-between border border-white/5 transition-colors"
                 >
                   <span className="font-semibold text-gray-200 truncate">{sObj.name}</span>
@@ -230,7 +266,14 @@ export function InspectorPanel() {
       {/* Top Header */}
       <div className="p-4 border-b border-[#2d2d30] flex items-center justify-between bg-[#121214]">
         <button
-          onClick={() => editor?.selectionManager.clearSelection()}
+          onClick={() => {
+            const ed = getEditorInstance();
+            if (ed) {
+              ed.selectionManager.clearSelection();
+            } else {
+              useEditorStore.getState().setSelectedIds([]);
+            }
+          }}
           className="flex items-center gap-1 text-xs text-gray-400 hover:text-white transition-colors cursor-pointer font-bold"
         >
           <ArrowLeft className="w-3.5 h-3.5" /> Back
@@ -250,7 +293,8 @@ export function InspectorPanel() {
             value={obj.name}
             onChange={(e) => {
               updateObject(obj.id, { name: e.target.value });
-              const node = editor?.nodesMap.get(obj.id);
+              const ed = getEditorInstance();
+              const node = ed?.nodesMap.get(obj.id);
               if (node) node.name = e.target.value;
             }}
             className="bg-[#242429] text-xs text-white px-3 py-2 rounded-xl outline-none border border-white/10 focus:border-[#22a447]"
@@ -260,19 +304,26 @@ export function InspectorPanel() {
         {/* Quick Object Actions */}
         <div className="flex gap-2 mt-1">
           <button
-            onClick={() => editor?.objectManager.duplicateObject(obj.id)}
+            onClick={() => {
+              const ed = getEditorInstance();
+              if (ed) ed.objectManager.duplicateObject(obj.id);
+            }}
             className="flex-1 py-1.5 bg-[#242429] hover:bg-[#2e2e36] text-xs font-bold rounded-lg text-gray-200 flex items-center justify-center gap-1 border border-white/5 transition-colors cursor-pointer"
           >
             <Copy className="w-3.5 h-3.5" /> Duplicate
           </button>
           <button
-            onClick={() => editor?.objectManager.deleteObject(obj.id)}
+            onClick={() => {
+              const ed = getEditorInstance();
+              if (ed) ed.objectManager.deleteObject(obj.id);
+            }}
             className="flex-1 py-1.5 bg-red-950/40 hover:bg-red-900/60 text-xs font-bold rounded-lg text-red-400 flex items-center justify-center gap-1 border border-red-500/20 transition-colors cursor-pointer"
           >
             <Trash2 className="w-3.5 h-3.5" /> Delete
           </button>
         </div>
       </div>
+
 
       {/* 2. Text 3D Customizer */}
       {obj.type === "text" && obj.textConfig && (
@@ -550,6 +601,85 @@ export function InspectorPanel() {
         </div>
       )}
 
+      {/* 4.5. 3D Text Configuration */}
+      {obj.type === "text" && obj.textConfig && (
+        <div className="p-4 border-b border-[#2d2d30] flex flex-col gap-3">
+          <h4 className="text-xs font-bold text-zinc-400 uppercase tracking-wider">
+            3D Text Properties
+          </h4>
+
+          <div className="flex flex-col gap-2.5 text-xs">
+            <div className="flex flex-col gap-1">
+              <span className="text-zinc-400">Content</span>
+              <input
+                type="text"
+                value={obj.textConfig.text}
+                onChange={(e) => {
+                  const ed = getEditorInstance();
+                  if (ed) {
+                    ed.objectManager.updateTextConfig(obj.id, { text: e.target.value });
+                  }
+                }}
+                className="bg-[#242429] text-white px-2.5 py-1.5 rounded-lg outline-none border border-zinc-700 focus:border-zinc-500"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-2">
+              <div className="flex flex-col gap-1">
+                <span className="text-zinc-400">Color</span>
+                <input
+                  type="color"
+                  value={obj.textConfig.color}
+                  onChange={(e) => {
+                    const ed = getEditorInstance();
+                    if (ed) {
+                      ed.objectManager.updateTextConfig(obj.id, { color: e.target.value });
+                    }
+                  }}
+                  className="w-full h-8 bg-transparent border-0 cursor-pointer rounded"
+                />
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <span className="text-zinc-400">Background</span>
+                <input
+                  type="color"
+                  value={obj.textConfig.bgColor || "#18181b"}
+                  onChange={(e) => {
+                    const ed = getEditorInstance();
+                    if (ed) {
+                      ed.objectManager.updateTextConfig(obj.id, { bgColor: e.target.value });
+                    }
+                  }}
+                  className="w-full h-8 bg-transparent border-0 cursor-pointer rounded"
+                />
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-1">
+              <div className="flex justify-between text-zinc-400">
+                <span>Font Size</span>
+                <span>{obj.textConfig.size}px</span>
+              </div>
+              <input
+                type="range"
+                min="20"
+                max="120"
+                step="2"
+                value={obj.textConfig.size}
+                onChange={(e) => {
+                  const ed = getEditorInstance();
+                  if (ed) {
+                    ed.objectManager.updateTextConfig(obj.id, { size: parseInt(e.target.value) });
+                  }
+                }}
+                className="accent-emerald-500"
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* 5. Motion & Animation Presets */}
       <div className="p-4 border-b border-[#2d2d30] flex flex-col gap-3">
         <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
@@ -561,8 +691,9 @@ export function InspectorPanel() {
             <span className="text-gray-300 font-semibold">Motion Preset</span>
             <select
               onChange={(e) => {
-                if (editor) {
-                  editor.animationManager.applyMotionPreset(obj.id, e.target.value as any);
+                const ed = getEditorInstance();
+                if (ed) {
+                  ed.animationManager.applyMotionPreset(obj.id, e.target.value as any);
                 }
               }}
               defaultValue="none"
@@ -583,7 +714,8 @@ export function InspectorPanel() {
               <select
                 value={animationState.activeClip || ""}
                 onChange={(e) => {
-                  if (editor) editor.animationManager.selectClip(e.target.value);
+                  const ed = getEditorInstance();
+                  if (ed) ed.animationManager.selectClip(e.target.value);
                 }}
                 className="bg-[#242429] text-white px-2 py-1 rounded outline-none w-36 text-xs"
               >
@@ -600,11 +732,12 @@ export function InspectorPanel() {
           <div className="flex gap-2 mt-2">
             <button
               onClick={() => {
-                if (editor) {
+                const ed = getEditorInstance();
+                if (ed) {
                   if (animationState.playing) {
-                    editor.animationManager.pause();
+                    ed.animationManager.pause();
                   } else {
-                    editor.animationManager.play(animationState.loop);
+                    ed.animationManager.play(animationState.loop);
                   }
                 }
               }}
@@ -614,7 +747,8 @@ export function InspectorPanel() {
             </button>
             <button
               onClick={() => {
-                if (editor) editor.animationManager.stop();
+                const ed = getEditorInstance();
+                if (ed) ed.animationManager.stop();
               }}
               className="px-3 py-2 bg-[#242429] hover:bg-[#2e2e36] font-bold rounded-lg text-xs text-gray-300 transition-all cursor-pointer"
             >
@@ -623,6 +757,7 @@ export function InspectorPanel() {
           </div>
         </div>
       </div>
+
 
       {/* 6. Interactivity & Behaviours */}
       <div className="p-4 border-b border-[#2d2d30] flex flex-col gap-3">

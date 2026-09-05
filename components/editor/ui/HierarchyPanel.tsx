@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useEditorStore, SceneObject } from "../store/useEditorStore";
-import { getEditorInstance } from "../engine/editorInstance";
+import { getEditorInstance, useEditorInstance } from "../engine/editorInstance";
 import { 
   Eye, EyeOff, Lock, Unlock, Trash2, FolderPlus, HelpCircle, Lightbulb, Camera, Search, ChevronRight, ChevronDown
 } from "lucide-react";
@@ -15,13 +15,16 @@ export function HierarchyPanel() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
 
-  const editor = getEditorInstance();
+  const editor = useEditorInstance();
 
   const handleSelect = (id: string, event: React.MouseEvent) => {
     event.stopPropagation();
-    if (editor) {
-      const isMulti = event.ctrlKey || event.metaKey;
-      editor.selectionManager.selectObject(id, isMulti);
+    const ed = getEditorInstance();
+    const isMulti = event.ctrlKey || event.metaKey;
+    if (ed) {
+      ed.selectionManager.selectObject(id, isMulti);
+    } else {
+      setSelectedIds(isMulti ? [...selectedIds, id] : [id]);
     }
   };
 
@@ -33,23 +36,26 @@ export function HierarchyPanel() {
   const toggleVisibility = (id: string, event: React.MouseEvent) => {
     event.stopPropagation();
     const obj = objects.find(o => o.id === id);
-    if (obj && editor) {
-      editor.objectManager.setVisibility(id, !obj.visible);
+    const ed = getEditorInstance();
+    if (obj && ed) {
+      ed.objectManager.setVisibility(id, !obj.visible);
     }
   };
 
   const toggleLock = (id: string, event: React.MouseEvent) => {
     event.stopPropagation();
     const obj = objects.find(o => o.id === id);
-    if (obj && editor) {
-      editor.objectManager.setLocked(id, !obj.locked);
+    const ed = getEditorInstance();
+    if (obj && ed) {
+      ed.objectManager.setLocked(id, !obj.locked);
     }
   };
 
   const handleDelete = (id: string, event: React.MouseEvent) => {
     event.stopPropagation();
-    if (editor) {
-      editor.objectManager.deleteObject(id);
+    const ed = getEditorInstance();
+    if (ed) {
+      ed.objectManager.deleteObject(id);
     }
   };
 
@@ -62,13 +68,15 @@ export function HierarchyPanel() {
   const finishRename = () => {
     if (editingId && editName.trim() !== "") {
       useEditorStore.getState().updateObject(editingId, { name: editName });
-      const node = editor?.nodesMap.get(editingId);
+      const ed = getEditorInstance();
+      const node = ed?.nodesMap.get(editingId);
       if (node) {
         node.name = editName;
       }
     }
     setEditingId(null);
   };
+
 
   // Helper icons for different object types
   const getIcon = (type: string) => {

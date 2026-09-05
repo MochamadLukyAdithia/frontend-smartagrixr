@@ -10,7 +10,9 @@ import {
   SunMedium, 
   Video, 
   Music,
-  Sliders
+  Cloud,
+  FolderOpen,
+  Wand2
 } from "lucide-react";
 import Link from "next/link";
 
@@ -18,6 +20,8 @@ export function LeftToolbar() {
   const { activeLeftTab, setActiveLeftTab } = useEditorStore();
 
   const menuItems = [
+    { id: "storage", label: "Cloud & Browse Assets", icon: <Cloud className="w-5 h-5" /> },
+    { id: "text2model", label: "Text to 3D (Tripo3D)", icon: <Wand2 className="w-5 h-5" /> },
     { id: "agri", label: "Smart Agri", icon: <Sprout className="w-5 h-5" /> },
     { id: "objects", label: "3D Primitives", icon: <Box className="w-5 h-5" /> },
     { id: "text", label: "3D Text", icon: <Type className="w-5 h-5" /> },
@@ -28,39 +32,37 @@ export function LeftToolbar() {
   ] as const;
 
   return (
-    <div className="w-16 bg-[#161618] border-r border-[#2d2d30] flex flex-col items-center py-3 justify-between select-none z-20">
+    <div className="w-14 bg-[#121214] border-r border-[#242427] flex flex-col items-center py-2.5 justify-between select-none z-20">
       {/* Top logo/home */}
       <Link
         href="/"
-        className="w-10 h-10 rounded-xl bg-gradient-to-tr from-[#22a447] to-emerald-400 flex items-center justify-center text-white shadow-md hover:scale-105 transition-transform"
-        title="SmartAgriXR Home"
+        className="w-9 h-9 rounded-lg bg-zinc-800/80 border border-zinc-700/60 flex items-center justify-center text-zinc-300 hover:text-white hover:bg-zinc-700 transition-colors"
+        title="Home"
       >
-        <Home className="w-5 h-5" />
+        <Home className="w-4 h-4" />
       </Link>
 
       {/* Middle tabs */}
-      <div className="flex flex-col gap-2.5">
+      <div className="flex flex-col gap-1.5 w-full px-1.5">
         {menuItems.map((item) => (
           <button
             key={item.id}
             onClick={() => setActiveLeftTab(item.id)}
-            className={`w-12 h-12 rounded-xl flex flex-col items-center justify-center gap-0.5 transition-all cursor-pointer ${
+            className={`w-full h-11 rounded-lg flex flex-col items-center justify-center gap-0.5 transition-colors cursor-pointer ${
               activeLeftTab === item.id 
-                ? "bg-[#22a447] text-white shadow-lg shadow-[#22a447]/30 scale-105" 
-                : "text-gray-400 hover:bg-[#252528] hover:text-white"
+                ? "bg-zinc-800 text-emerald-400 border border-zinc-700" 
+                : "text-zinc-400 hover:bg-zinc-800/50 hover:text-zinc-200"
             }`}
             title={item.label}
           >
             {item.icon}
-            <span className="text-[8px] font-bold uppercase tracking-tight">{item.id.slice(0, 5)}</span>
+            <span className="text-[7.5px] font-medium tracking-tight uppercase">{item.id.slice(0, 5)}</span>
           </button>
         ))}
       </div>
 
-      {/* Bottom version badge */}
-      <div className="text-[10px] font-mono text-emerald-500/60 font-bold">
-        XR 1.0
-      </div>
+      {/* Bottom subtle status dot */}
+      <div className="w-1.5 h-1.5 rounded-full bg-emerald-500/80 mb-1" title="Engine Active" />
     </div>
   );
 }

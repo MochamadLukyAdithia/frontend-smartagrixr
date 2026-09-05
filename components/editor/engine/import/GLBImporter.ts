@@ -21,10 +21,15 @@ export class GLBImporter {
 
     if (source instanceof File) {
       url = URL.createObjectURL(source);
-      extension = source.name.endsWith(".gltf") ? ".gltf" : ".glb";
+      extension = source.name.toLowerCase().endsWith(".gltf") ? ".gltf" : ".glb";
     } else {
-      url = source;
-      extension = url.endsWith(".gltf") ? ".gltf" : ".glb";
+      const cleanUrl = source.toLowerCase().split("?")[0];
+      extension = cleanUrl.endsWith(".gltf") ? ".gltf" : ".glb";
+      if (source.startsWith("http://") || source.startsWith("https://")) {
+        url = `/api/proxy-model?url=${encodeURIComponent(source)}`;
+      } else {
+        url = source;
+      }
     }
 
     try {
@@ -46,15 +51,45 @@ export class GLBImporter {
       const rootNode = new TransformNode(assetId, this.editor.scene);
       rootNode.name = name;
 
-      // Parent all top-level imported meshes to our logical root node
+      // Compute bounding box of imported meshes and normalize to rootNode origin
+      let min = new Vector3(Number.MAX_VALUE, Number.MAX_VALUE, Number.MAX_VALUE);
+      let max = new Vector3(-Number.MAX_VALUE, -Number.MAX_VALUE, -Number.MAX_VALUE);
+      let hasBounds = false;
+
       result.meshes.forEach((mesh) => {
-        if (!mesh.parent) {
-          mesh.setParent(rootNode);
+        mesh.isPickable = true;
+        if (mesh.getTotalVertices && mesh.getTotalVertices() > 0) {
+          mesh.computeWorldMatrix(true);
+          const boundingInfo = mesh.getBoundingInfo();
+          min = Vector3.Minimize(min, boundingInfo.boundingBox.minimumWorld);
+          max = Vector3.Maximize(max, boundingInfo.boundingBox.maximumWorld);
+          hasBounds = true;
         }
       });
 
+      if (hasBounds) {
+        const center = min.add(max).scale(0.5);
+        const bottomY = min.y;
+
+        result.meshes.forEach((mesh) => {
+          if (!mesh.parent) {
+            mesh.position.x -= center.x;
+            mesh.position.y -= bottomY;
+            mesh.position.z -= center.z;
+            mesh.setParent(rootNode);
+          }
+        });
+      } else {
+        result.meshes.forEach((mesh) => {
+          if (!mesh.parent) {
+            mesh.setParent(rootNode);
+          }
+        });
+      }
+
       // Register root node in editor map
       this.editor.nodesMap.set(assetId, rootNode);
+
 
       // Add to Zustand
       const stateObj: SceneObject = {
@@ -68,6 +103,7 @@ export class GLBImporter {
         rotation: [rootNode.rotation.x, rootNode.rotation.y, rootNode.rotation.z],
         scale: [rootNode.scaling.x, rootNode.scaling.y, rootNode.scaling.z],
         assetId: assetId,
+        mediaUrl: typeof source === "string" ? source : undefined,
         metadata: {
           importedAt: new Date().toISOString(),
           meshCount: result.meshes.length,
@@ -82,6 +118,9 @@ export class GLBImporter {
         url: source instanceof File ? source.name : source,
         type: extension === ".gltf" ? "gltf" : "glb",
       });
+
+      // Record undo snapshot before adding imported asset
+      this.editor.historyManager.recordSnapshot();
 
       useEditorStore.getState().addObject(stateObj);
 

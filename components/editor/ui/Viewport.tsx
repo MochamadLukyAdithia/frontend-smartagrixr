@@ -38,7 +38,37 @@ export function Viewport() {
       const camera = engine.scene.activeCamera;
       if (!camera) return;
 
-      const pos = node.absolutePosition || node.position || Vector3.Zero();
+      let topY = node.absolutePosition ? node.absolutePosition.y : (node.position ? node.position.y : 0);
+      let posX = node.absolutePosition ? node.absolutePosition.x : (node.position ? node.position.x : 0);
+      let posZ = node.absolutePosition ? node.absolutePosition.z : (node.position ? node.position.z : 0);
+
+      const childMeshes = node.getChildMeshes ? node.getChildMeshes() : (node.getBoundingInfo ? [node] : []);
+      if (childMeshes.length > 0) {
+        let maxWorldY = -Number.MAX_VALUE;
+        let sumX = 0;
+        let sumZ = 0;
+        let validCount = 0;
+
+        childMeshes.forEach((m: any) => {
+          if (m.getBoundingInfo) {
+            const b = m.getBoundingInfo().boundingBox;
+            maxWorldY = Math.max(maxWorldY, b.maximumWorld.y);
+            sumX += b.centerWorld.x;
+            sumZ += b.centerWorld.z;
+            validCount++;
+          }
+        });
+
+        if (maxWorldY !== -Number.MAX_VALUE) {
+          topY = maxWorldY;
+        }
+        if (validCount > 0) {
+          posX = sumX / validCount;
+          posZ = sumZ / validCount;
+        }
+      }
+
+      const topPos = new Vector3(posX, topY, posZ);
       const transformMatrix = engine.scene.getTransformMatrix();
       const viewport = camera.viewport.toGlobal(
         engine.engine.getRenderWidth(),
@@ -46,7 +76,7 @@ export function Viewport() {
       );
 
       const projected = Vector3.Project(
-        pos,
+        topPos,
         Matrix.IdentityReadOnly || Matrix.Identity(),
         transformMatrix,
         viewport
@@ -55,9 +85,10 @@ export function Viewport() {
       // Offset position slightly above the object
       setMenuPos({
         x: projected.x,
-        y: projected.y - 60,
+        y: projected.y - 40,
       });
     });
+
 
     // Auto-resize Babylon engine on any container or canvas dimensions change
     const resizeEngine = () => {
@@ -96,14 +127,19 @@ export function Viewport() {
   }, [isPreviewMode]);
 
   const activeSceneId = useEditorStore((state) => state.activeSceneId);
+  const prevSceneIdRef = useRef(activeSceneId);
 
   // Reload scene when activeSceneId changes
   useEffect(() => {
-    const editor = getEditorInstance();
-    if (editor) {
-      editor.objectManager.loadActiveScene();
+    if (prevSceneIdRef.current !== activeSceneId) {
+      prevSceneIdRef.current = activeSceneId;
+      const editor = getEditorInstance();
+      if (editor) {
+        editor.objectManager.loadActiveScene();
+      }
     }
   }, [activeSceneId]);
+
 
   const activeSelectedId = selectedIds.length === 1 ? selectedIds[0] : null;
 

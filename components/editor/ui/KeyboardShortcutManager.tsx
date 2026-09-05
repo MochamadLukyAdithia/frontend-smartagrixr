@@ -8,10 +8,10 @@ let clipboardIds: string[] = [];
 
 export function KeyboardShortcutManager() {
   const { selectedIds } = useEditorStore();
-  const editor = getEditorInstance();
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      const editor = getEditorInstance();
       // Avoid triggering shortcuts while typing inside inputs, selects, or textareas
       const activeEl = document.activeElement;
       if (
@@ -108,8 +108,8 @@ export function KeyboardShortcutManager() {
         if (editor) editor.historyManager.undo();
       }
 
-      // Ctrl + Shift + Z -> Redo
-      if (isCtrlOrCmd && e.shiftKey && e.key.toLowerCase() === "z") {
+      // Ctrl + Shift + Z or Ctrl + Y -> Redo
+      if (isCtrlOrCmd && ((e.shiftKey && e.key.toLowerCase() === "z") || e.key.toLowerCase() === "y")) {
         e.preventDefault();
         if (editor) editor.historyManager.redo();
       }
@@ -119,7 +119,8 @@ export function KeyboardShortcutManager() {
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [selectedIds, editor]);
+  }, [selectedIds]);
 
   return null;
 }
+

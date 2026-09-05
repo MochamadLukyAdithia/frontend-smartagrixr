@@ -1,7 +1,7 @@
 "use client";
 
 import { useEditorStore } from "../store/useEditorStore";
-import { Info, X, Sparkles } from "lucide-react";
+import { Info, X } from "lucide-react";
 
 export function AnnotationOverlay() {
   const { activeInfoDialog, setActiveInfoDialog } = useEditorStore();
@@ -9,43 +9,43 @@ export function AnnotationOverlay() {
   if (!activeInfoDialog) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 select-none animate-in fade-in zoom-in-95 duration-150">
-      <div className="relative w-full max-w-md bg-[#1c1c20] border border-[#22a447]/30 rounded-2xl shadow-2xl overflow-hidden text-white p-6">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 select-none animate-in fade-in duration-100">
+      <div className="relative w-full max-w-sm bg-[#18181b] border border-zinc-800 rounded-lg shadow-2xl overflow-hidden text-white p-5">
         
         {/* Close Button */}
         <button
           onClick={() => setActiveInfoDialog(null)}
-          className="absolute top-4 right-4 p-1.5 text-gray-400 hover:text-white rounded-full hover:bg-white/10 transition-colors"
+          className="absolute top-3.5 right-3.5 p-1 text-zinc-400 hover:text-white rounded hover:bg-zinc-800 transition-colors"
         >
-          <X className="w-5 h-5" />
+          <X className="w-4 h-4" />
         </button>
 
         {/* Icon & Title */}
-        <div className="flex items-center gap-3 mb-4">
-          <div className="w-10 h-10 rounded-xl bg-[#22a447]/20 border border-[#22a447]/40 flex items-center justify-center text-[#22a447]">
-            <Sparkles className="w-5 h-5" />
+        <div className="flex items-center gap-2.5 mb-3">
+          <div className="w-7 h-7 rounded bg-zinc-800 border border-zinc-700/60 flex items-center justify-center text-emerald-400">
+            <Info className="w-4 h-4" />
           </div>
           <div>
-            <h3 className="text-base font-bold text-white tracking-tight">
+            <h3 className="text-sm font-semibold text-zinc-100 tracking-tight">
               {activeInfoDialog.title}
             </h3>
-            <span className="text-[10px] text-[#22a447] font-semibold uppercase tracking-wider">
-              Smart Agriculture Node
+            <span className="text-[10px] text-zinc-400 font-mono">
+              Node Info
             </span>
           </div>
         </div>
 
         {/* Content */}
-        <div className="bg-[#141416] p-4 rounded-xl border border-white/5 text-xs text-gray-300 leading-relaxed max-h-60 overflow-y-auto">
+        <div className="bg-[#111113] p-3 rounded border border-zinc-800 text-xs text-zinc-300 leading-relaxed max-h-56 overflow-y-auto">
           {activeInfoDialog.content}
         </div>
 
         {/* Action button */}
         <button
           onClick={() => setActiveInfoDialog(null)}
-          className="mt-4 w-full py-2.5 bg-[#22a447] hover:bg-[#198b3a] text-white text-xs font-bold rounded-xl transition-all shadow-md"
+          className="mt-3.5 w-full py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-medium rounded transition-colors"
         >
-          Got it
+          Close
         </button>
       </div>
     </div>

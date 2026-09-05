@@ -43,7 +43,25 @@ export class SelectionManager {
         // If the cursor moved more than 8 pixels, consider it an orbit/pan drag and skip picking
         if (distance > 8) return;
 
-        const pickResult = pointerInfo.pickInfo;
+        let pickResult = pointerInfo.pickInfo;
+        if (!pickResult || !pickResult.hit || !pickResult.pickedMesh) {
+          pickResult = this.editor.scene.pick(
+            this.editor.scene.pointerX,
+            this.editor.scene.pointerY,
+            (mesh) => {
+              if (
+                mesh.name.indexOf("Gizmo") !== -1 ||
+                mesh.name.indexOf("helper") !== -1 ||
+                mesh.name.indexOf("editor_grid") !== -1 ||
+                mesh.name.indexOf("axis") !== -1
+              ) {
+                return false;
+              }
+              return mesh.isPickable && mesh.isVisible;
+            }
+          );
+        }
+
         if (pickResult && pickResult.hit && pickResult.pickedMesh) {
           const mesh = pickResult.pickedMesh;
           if (
@@ -88,7 +106,7 @@ export class SelectionManager {
     let current: any = mesh;
     while (current) {
       for (const [id, node] of this.editor.nodesMap.entries()) {
-        if (node === current) {
+        if (node === current || (current.id && current.id === id)) {
           const obj = useEditorStore.getState().getObjects().find(o => o.id === id);
           if (obj && obj.locked) {
             // Locked objects cannot be picked
@@ -101,6 +119,7 @@ export class SelectionManager {
     }
     return null;
   }
+
 
   public selectObject(id: string, multiSelect: boolean = false) {
     const store = useEditorStore.getState();

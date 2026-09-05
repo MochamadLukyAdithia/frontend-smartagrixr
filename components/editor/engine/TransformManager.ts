@@ -38,6 +38,8 @@ export class TransformManager {
   private bindGizmoListeners() {
     const onDragStart = () => {
       this.isDragging = true;
+      // Record undo snapshot before transform begins
+      this.editor.historyManager.recordSnapshot();
       // Detach active camera so mouse drag does not rotate/pan the camera while moving/rotating/scaling
       if (this.editor.scene.activeCamera) {
         this.editor.scene.activeCamera.detachControl();

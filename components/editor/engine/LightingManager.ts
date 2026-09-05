@@ -1,23 +1,30 @@
-import { DirectionalLight, PointLight, SpotLight, Vector3, Color3 } from "@babylonjs/core";
+import { DirectionalLight, HemisphericLight, PointLight, SpotLight, Vector3, Color3 } from "@babylonjs/core";
 import { EditorEngine } from "./EditorEngine";
 import { SceneObject, useEditorStore } from "../store/useEditorStore";
 
 export class LightingManager {
   private editor: EditorEngine;
-  private lights: Map<string, DirectionalLight | PointLight | SpotLight> = new Map();
+  private lights: Map<string, DirectionalLight | PointLight | SpotLight | HemisphericLight> = new Map();
 
   constructor(editor: EditorEngine) {
     this.editor = editor;
   }
 
   public createDefaultLights() {
-    // Standard hemispheric light or directional light for viewing the grid
+    // 1. Ambient Hemispheric Light (Illuminates all models & materials from sky & ground)
+    const hemiLight = new HemisphericLight("ambient_hemi_light", new Vector3(0, 1, 0), this.editor.scene);
+    hemiLight.intensity = 1.0;
+    hemiLight.diffuse = new Color3(1, 1, 1);
+    hemiLight.groundColor = new Color3(0.35, 0.35, 0.38);
+    this.lights.set("ambient_hemi_light", hemiLight);
+
+    // 2. Directional Sun Light (for directional cast shadows and depth)
     const mainLightId = "main_directional_light";
     const dir = new Vector3(-1, -2, -1);
     const light = new DirectionalLight(mainLightId, dir, this.editor.scene);
-    light.intensity = 1.5;
+    light.intensity = 1.2;
     light.diffuse = new Color3(1, 1, 1);
-    light.specular = new Color3(0.5, 0.5, 0.5);
+    light.specular = new Color3(0.3, 0.3, 0.3);
 
     this.lights.set(mainLightId, light);
     this.editor.nodesMap.set(mainLightId, light);
@@ -35,7 +42,7 @@ export class LightingManager {
       lightSettings: {
         type: "directional",
         color: "#ffffff",
-        intensity: 1.5,
+        intensity: 1.2,
         shadows: false,
       },
     };

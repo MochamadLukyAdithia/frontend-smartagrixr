@@ -7,13 +7,16 @@ import {
   Color3, 
   Texture, 
   DynamicTexture, 
-  StandardMaterial 
+  StandardMaterial,
+  SceneLoader
 } from "@babylonjs/core";
+import "@babylonjs/loaders/glTF";
 import { EditorEngine } from "./EditorEngine";
 import { SceneObject, useEditorStore } from "../store/useEditorStore";
 
 export class ObjectManager {
   private editor: EditorEngine;
+  private isLoadingScene: boolean = false;
 
   constructor(editor: EditorEngine) {
     this.editor = editor;
@@ -36,40 +39,69 @@ export class ObjectManager {
   }
 
   public async loadActiveScene() {
-    this.clearSceneRuntime();
-    const objects = useEditorStore.getState().getObjects();
-    
-    // Sort to ensure parents are created before child nodes
-    const sorted = [...objects].sort((a, b) => {
-      if (a.parentId === null && b.parentId !== null) return -1;
-      if (a.parentId !== null && b.parentId === null) return 1;
-      return 0;
-    });
+    if (this.isLoadingScene) return;
+    this.isLoadingScene = true;
 
-    for (const obj of sorted) {
-      if (obj.type === "empty" || obj.type === "group") {
-        const node = new TransformNode(obj.id, this.editor.scene);
-        node.name = obj.name;
-        node.position.set(obj.position[0], obj.position[1], obj.position[2]);
-        node.rotation.set((obj.rotation[0] * Math.PI) / 180, (obj.rotation[1] * Math.PI) / 180, (obj.rotation[2] * Math.PI) / 180);
-        node.scaling.set(obj.scale[0], obj.scale[1], obj.scale[2]);
-        this.editor.nodesMap.set(obj.id, node);
-      } else if (obj.type === "primitive" && obj.primitiveType) {
-        this.reconstructPrimitive(obj);
-      } else if (obj.type === "agri" && obj.agriType) {
-        this.reconstructAgriPreset(obj);
-      } else if (obj.type === "text" && obj.textConfig) {
-        this.reconstructText(obj);
+    try {
+      this.clearSceneRuntime();
+      const objects = useEditorStore.getState().getObjects();
+      
+      // Sort to ensure parents are created before child nodes
+      const sorted = [...objects].sort((a, b) => {
+        if (a.parentId === null && b.parentId !== null) return -1;
+        if (a.parentId !== null && b.parentId === null) return 1;
+        return 0;
+      });
+
+      for (const obj of sorted) {
+        if (obj.type === "empty" || obj.type === "group") {
+          const node = new TransformNode(obj.id, this.editor.scene);
+          node.name = obj.name;
+          node.position.set(obj.position[0], obj.position[1], obj.position[2]);
+          node.rotation.set((obj.rotation[0] * Math.PI) / 180, (obj.rotation[1] * Math.PI) / 180, (obj.rotation[2] * Math.PI) / 180);
+          node.scaling.set(obj.scale[0], obj.scale[1], obj.scale[2]);
+          this.editor.nodesMap.set(obj.id, node);
+        } else if (obj.type === "primitive" && obj.primitiveType) {
+          this.reconstructPrimitive(obj);
+        } else if (obj.type === "agri" && obj.agriType) {
+          this.reconstructAgriPreset(obj);
+        } else if (obj.type === "text" && obj.textConfig) {
+          this.reconstructText(obj);
+        } else if (obj.type === "image" && obj.mediaUrl) {
+          this.reconstructImage(obj);
+        } else if (obj.type === "video" && obj.mediaUrl) {
+          this.reconstructVideo(obj);
+        } else if (obj.type === "audio" && obj.mediaUrl) {
+          this.reconstructAudio(obj);
+        } else if (obj.type === "model" && (obj.mediaUrl || obj.assetId)) {
+          await this.reconstructModel(obj);
+        }
       }
+
+      // Set parenting relationships and visibility
+      sorted.forEach((obj) => {
+        if (obj.parentId) {
+          this.setParent(obj.id, obj.parentId);
+        }
+        if (obj.visible === false) {
+          const node = this.editor.nodesMap.get(obj.id);
+          if (node && "setEnabled" in node) {
+            node.setEnabled(false);
+          }
+        }
+      });
+
+      // Re-sync current selection if any
+      const selectedIds = useEditorStore.getState().selectedIds;
+      if (selectedIds.length > 0) {
+        this.editor.selectionManager.updateHighlighting(selectedIds);
+        this.editor.transformManager.attachGizmo(selectedIds);
+      }
+    } finally {
+      this.isLoadingScene = false;
     }
-
-    // Set parenting relationships
-    sorted.forEach((obj) => {
-      if (obj.parentId) {
-        this.setParent(obj.id, obj.parentId);
-      }
-    });
   }
+
 
   // ----------------------------------------------------
   // Basic Primitives (Cube, Sphere, Cylinder, etc.)
@@ -78,6 +110,7 @@ export class ObjectManager {
     type: "box" | "sphere" | "cylinder" | "cone" | "capsule" | "torus" | "plane" | "ground", 
     name?: string
   ): string {
+    this.editor.historyManager.recordSnapshot();
     const id = `${type}_` + Math.random().toString(36).substring(2, 9);
     const objectName = name || (type.charAt(0).toUpperCase() + type.slice(1));
     let mesh: Mesh;
@@ -199,8 +232,10 @@ export class ObjectManager {
       mat.roughness = 0.5;
     }
     mesh.material = mat;
+    mesh.isPickable = true;
     this.editor.nodesMap.set(obj.id, mesh);
   }
+
 
   // ----------------------------------------------------
   // Smart Agriculture 3D Presets (Greenhouse, IoT Sensor, etc.)
@@ -209,6 +244,7 @@ export class ObjectManager {
     type: "greenhouse" | "solar_sensor" | "water_tank" | "drone" | "crop_field" | "tractor" | "plant",
     name?: string
   ): string {
+    this.editor.historyManager.recordSnapshot();
     const id = `agri_${type}_` + Math.random().toString(36).substring(2, 9);
     const rootNode = new TransformNode(id, this.editor.scene);
     const defaultName = name || this.getAgriPresetDisplayName(type);
@@ -287,8 +323,13 @@ export class ObjectManager {
       case "plant": this.buildPlantModel(obj.id, rootNode); break;
     }
 
+    rootNode.getChildMeshes?.().forEach((m) => {
+      m.isPickable = true;
+    });
+
     this.editor.nodesMap.set(obj.id, rootNode);
   }
+
 
   private getAgriPresetDisplayName(type: string): string {
     switch (type) {
@@ -562,27 +603,51 @@ export class ObjectManager {
   }
 
   // ----------------------------------------------------
-  // Text 3D / Media
+  // Text 3D / Dynamic Text Mesh
   // ----------------------------------------------------
-  public createText(text: string, color: string = "#000000", size: number = 40, bgColor: string = "#ffffff"): string {
+  public createText(
+    text: string = "SmartAgri 3D",
+    color: string = "#10b981",
+    size: number = 48,
+    bgColor: string = "#18181b"
+  ): string {
+    this.editor.historyManager.recordSnapshot();
     const id = "text_" + Math.random().toString(36).substring(2, 9);
+    const name = `Text (${text.slice(0, 10)})`;
     
-    const plane = MeshBuilder.CreatePlane(id, { width: 3.5, height: 1.5, sideOrientation: Mesh.DOUBLESIDE }, this.editor.scene);
-    plane.name = `Text: ${text.substring(0, 12)}`;
-    
-    const dynamicTexture = new DynamicTexture(id + "_texture", { width: 512, height: 256 }, this.editor.scene, true);
+    const textureWidth = 1024;
+    const textureHeight = 512;
+    const dynamicTexture = new DynamicTexture(
+      id + "_texture",
+      { width: textureWidth, height: textureHeight },
+      this.editor.scene,
+      false
+    );
+    dynamicTexture.hasAlpha = true;
+
+    const font = `bold ${size * 2}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
+    dynamicTexture.drawText(text, null, null, font, color, bgColor || "transparent", true);
+
+    const plane = MeshBuilder.CreatePlane(
+      id,
+      { width: 4, height: 2, sideOrientation: Mesh.DOUBLESIDE },
+      this.editor.scene
+    );
+    plane.name = name;
+    plane.position.y = 1.5;
+
     const mat = new StandardMaterial(id + "_material", this.editor.scene);
     mat.diffuseTexture = dynamicTexture;
-    mat.specularColor = new Color3(0, 0, 0);
+    mat.emissiveColor = Color3.FromHexString(color).scale(0.3);
+    mat.specularColor = Color3.Black();
+    mat.backFaceCulling = false;
     plane.material = mat;
-    
-    dynamicTexture.drawText(text, null, 140, `bold ${size}px sans-serif`, color, bgColor, true, true);
 
     this.editor.nodesMap.set(id, plane);
 
     const stateObj: SceneObject = {
       id,
-      name: `Text: ${text.substring(0, 10)}`,
+      name,
       type: "text",
       parentId: null,
       visible: true,
@@ -607,57 +672,75 @@ export class ObjectManager {
   }
 
   public updateText(id: string, textConfig: { text: string; color: string; size: number; bgColor?: string }) {
-    const node = this.editor.nodesMap.get(id);
-    if (!node || !(node instanceof Mesh)) return;
+    this.updateTextConfig(id, textConfig);
+  }
 
-    const mat = node.material as StandardMaterial;
-    if (mat && mat.diffuseTexture instanceof DynamicTexture) {
-      const dynamicTexture = mat.diffuseTexture;
-      dynamicTexture.drawText(
-        textConfig.text, 
-        null, 
-        140, 
-        `bold ${textConfig.size}px sans-serif`, 
-        textConfig.color, 
-        textConfig.bgColor || "#ffffff", 
-        true, 
-        true
-      );
-      const objects = useEditorStore.getState().getObjects();
-      const existingObj = objects.find(o => o.id === id);
-      const fullTextConfig = {
-        font: "sans-serif",
-        alignment: "center" as const,
-        ...existingObj?.textConfig,
-        ...textConfig,
-      };
-      useEditorStore.getState().updateObject(id, { textConfig: fullTextConfig });
+  public updateTextConfig(id: string, partial: Partial<NonNullable<SceneObject["textConfig"]>>) {
+    this.editor.historyManager.recordSnapshot();
+    const mesh = this.editor.nodesMap.get(id);
+    const objects = useEditorStore.getState().getObjects();
+    const obj = objects.find((o) => o.id === id);
+    if (!obj || !obj.textConfig) return;
+
+    const updatedConfig = { ...obj.textConfig, ...partial };
+    useEditorStore.getState().updateObject(id, { textConfig: updatedConfig });
+
+    if (mesh && mesh.material && mesh.material.diffuseTexture) {
+      const dt = mesh.material.diffuseTexture as DynamicTexture;
+      const font = `bold ${updatedConfig.size * 2}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
+      dt.drawText(updatedConfig.text, null, null, font, updatedConfig.color, updatedConfig.bgColor || "transparent", true);
+      mesh.material.emissiveColor = Color3.FromHexString(updatedConfig.color).scale(0.3);
     }
   }
 
   private reconstructText(obj: SceneObject) {
-    if (!obj.textConfig) return;
-    const { text, color, size, bgColor } = obj.textConfig;
-    const plane = MeshBuilder.CreatePlane(obj.id, { width: 3.5, height: 1.5, sideOrientation: Mesh.DOUBLESIDE }, this.editor.scene);
+    const textConfig = obj.textConfig || {
+      text: "SmartAgri 3D",
+      size: 48,
+      color: "#10b981",
+      bgColor: "#18181b",
+    };
+    
+    const textureWidth = 1024;
+    const textureHeight = 512;
+    const dynamicTexture = new DynamicTexture(
+      obj.id + "_texture",
+      { width: textureWidth, height: textureHeight },
+      this.editor.scene,
+      false
+    );
+    dynamicTexture.hasAlpha = true;
+
+    const font = `bold ${textConfig.size * 2}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
+    dynamicTexture.drawText(textConfig.text, null, null, font, textConfig.color, textConfig.bgColor || "transparent", true);
+
+    const plane = MeshBuilder.CreatePlane(
+      obj.id,
+      { width: 4, height: 2, sideOrientation: Mesh.DOUBLESIDE },
+      this.editor.scene
+    );
     plane.name = obj.name;
     plane.position.set(obj.position[0], obj.position[1], obj.position[2]);
     plane.rotation.set((obj.rotation[0] * Math.PI) / 180, (obj.rotation[1] * Math.PI) / 180, (obj.rotation[2] * Math.PI) / 180);
     plane.scaling.set(obj.scale[0], obj.scale[1], obj.scale[2]);
 
-    const dynamicTexture = new DynamicTexture(obj.id + "_texture", { width: 512, height: 256 }, this.editor.scene, true);
     const mat = new StandardMaterial(obj.id + "_material", this.editor.scene);
     mat.diffuseTexture = dynamicTexture;
-    mat.specularColor = new Color3(0, 0, 0);
+    mat.emissiveColor = Color3.FromHexString(textConfig.color).scale(0.3);
+    mat.specularColor = Color3.Black();
+    mat.backFaceCulling = false;
     plane.material = mat;
+    plane.isPickable = true;
 
-    dynamicTexture.drawText(text, null, 140, `bold ${size}px sans-serif`, color, bgColor || "#ffffff", true, true);
     this.editor.nodesMap.set(obj.id, plane);
   }
+
 
   // ----------------------------------------------------
   // Hierarchy, Groups, Parenting & Standard Actions
   // ----------------------------------------------------
   public createEmpty(name: string = "Empty Node", parentId: string | null = null): string {
+    this.editor.historyManager.recordSnapshot();
     const id = "empty_" + Math.random().toString(36).substring(2, 9);
     const node = new TransformNode(id, this.editor.scene);
     node.name = name;
@@ -686,6 +769,7 @@ export class ObjectManager {
   }
 
   public createGroup(name: string = "Group"): string {
+    this.editor.historyManager.recordSnapshot();
     const id = "group_" + Math.random().toString(36).substring(2, 9);
     const node = new TransformNode(id, this.editor.scene);
     node.name = name;
@@ -807,6 +891,7 @@ export class ObjectManager {
   }
 
   public deleteObject(id: string) {
+    this.editor.historyManager.recordSnapshot();
     const objects = useEditorStore.getState().getObjects();
     const children = objects.filter(o => o.parentId === id);
     children.forEach(child => this.deleteObject(child.id));
@@ -821,6 +906,7 @@ export class ObjectManager {
   }
 
   public duplicateObject(id: string): string | null {
+    this.editor.historyManager.recordSnapshot();
     const obj = useEditorStore.getState().getObjects().find(o => o.id === id);
     const originalNode = this.editor.nodesMap.get(id);
     if (!obj || !originalNode) return null;
@@ -868,12 +954,14 @@ export class ObjectManager {
     return newId;
   }
 
-  public createImage(file: File): string {
+  public createImage(source: File | string, customName?: string): string {
+    this.editor.historyManager.recordSnapshot();
     const id = "image_" + Math.random().toString(36).substring(2, 9);
-    const url = URL.createObjectURL(file);
+    const url = source instanceof File ? URL.createObjectURL(source) : source;
+    const name = customName || (source instanceof File ? source.name : "Image " + id.slice(-4));
     
     const plane = MeshBuilder.CreatePlane(id, { size: 2, sideOrientation: Mesh.DOUBLESIDE }, this.editor.scene);
-    plane.name = file.name;
+    plane.name = name;
     
     const mat = new PBRMaterial(id + "_material", this.editor.scene);
     mat.albedoTexture = new Texture(url, this.editor.scene);
@@ -885,7 +973,7 @@ export class ObjectManager {
 
     const stateObj: SceneObject = {
       id,
-      name: file.name,
+      name,
       type: "image",
       parentId: null,
       visible: true,
@@ -900,14 +988,16 @@ export class ObjectManager {
     return id;
   }
 
-  public createVideo(file: File): string {
+  public createVideo(source: File | string, customName?: string): string {
+    this.editor.historyManager.recordSnapshot();
     const id = "video_" + Math.random().toString(36).substring(2, 9);
-    const url = URL.createObjectURL(file);
+    const url = source instanceof File ? URL.createObjectURL(source) : source;
+    const name = customName || (source instanceof File ? source.name : "Video " + id.slice(-4));
     
     const { VideoTexture } = require("@babylonjs/core");
     
     const plane = MeshBuilder.CreatePlane(id, { size: 3 }, this.editor.scene);
-    plane.name = file.name;
+    plane.name = name;
     
     const mat = new StandardMaterial(id + "_material", this.editor.scene);
     mat.diffuseTexture = new VideoTexture(id + "_texture", url, this.editor.scene, true, false);
@@ -917,7 +1007,7 @@ export class ObjectManager {
 
     const stateObj: SceneObject = {
       id,
-      name: file.name,
+      name,
       type: "video",
       parentId: null,
       visible: true,
@@ -932,14 +1022,16 @@ export class ObjectManager {
     return id;
   }
 
-  public createAudio(file: File): string {
+  public createAudio(source: File | string, customName?: string): string {
+    this.editor.historyManager.recordSnapshot();
     const id = "audio_" + Math.random().toString(36).substring(2, 9);
-    const url = URL.createObjectURL(file);
+    const url = source instanceof File ? URL.createObjectURL(source) : source;
+    const name = customName || (source instanceof File ? source.name : "Audio " + id.slice(-4));
     
     const { Sound } = require("@babylonjs/core");
     
     const node = new TransformNode(id, this.editor.scene);
-    node.name = file.name;
+    node.name = name;
     
     const sound = new Sound(id + "_sound", url, this.editor.scene, () => {
       sound.play();
@@ -950,7 +1042,7 @@ export class ObjectManager {
 
     const stateObj: SceneObject = {
       id,
-      name: file.name,
+      name,
       type: "audio",
       parentId: null,
       visible: true,
@@ -964,5 +1056,122 @@ export class ObjectManager {
     useEditorStore.getState().addObject(stateObj);
     return id;
   }
+
+  private reconstructImage(obj: SceneObject) {
+    if (!obj.mediaUrl) return;
+    const plane = MeshBuilder.CreatePlane(obj.id, { size: 2, sideOrientation: Mesh.DOUBLESIDE }, this.editor.scene);
+    plane.name = obj.name;
+    plane.position.set(obj.position[0], obj.position[1], obj.position[2]);
+    plane.rotation.set((obj.rotation[0] * Math.PI) / 180, (obj.rotation[1] * Math.PI) / 180, (obj.rotation[2] * Math.PI) / 180);
+    plane.scaling.set(obj.scale[0], obj.scale[1], obj.scale[2]);
+
+    const mat = new PBRMaterial(obj.id + "_material", this.editor.scene);
+    mat.albedoTexture = new Texture(obj.mediaUrl, this.editor.scene);
+    mat.roughness = 0.8;
+    mat.metallic = 0.1;
+    plane.material = mat;
+    plane.isPickable = true;
+
+    this.editor.nodesMap.set(obj.id, plane);
+  }
+
+  private reconstructVideo(obj: SceneObject) {
+    if (!obj.mediaUrl) return;
+    const { VideoTexture } = require("@babylonjs/core");
+    const plane = MeshBuilder.CreatePlane(obj.id, { size: 3 }, this.editor.scene);
+    plane.name = obj.name;
+    plane.position.set(obj.position[0], obj.position[1], obj.position[2]);
+    plane.rotation.set((obj.rotation[0] * Math.PI) / 180, (obj.rotation[1] * Math.PI) / 180, (obj.rotation[2] * Math.PI) / 180);
+    plane.scaling.set(obj.scale[0], obj.scale[1], obj.scale[2]);
+
+    const mat = new StandardMaterial(obj.id + "_material", this.editor.scene);
+    mat.diffuseTexture = new VideoTexture(obj.id + "_texture", obj.mediaUrl, this.editor.scene, true, false);
+    plane.material = mat;
+    plane.isPickable = true;
+
+    this.editor.nodesMap.set(obj.id, plane);
+  }
+
+
+  private reconstructAudio(obj: SceneObject) {
+    if (!obj.mediaUrl) return;
+    const { Sound } = require("@babylonjs/core");
+    const node = new TransformNode(obj.id, this.editor.scene);
+    node.name = obj.name;
+    node.position.set(obj.position[0], obj.position[1], obj.position[2]);
+    node.rotation.set((obj.rotation[0] * Math.PI) / 180, (obj.rotation[1] * Math.PI) / 180, (obj.rotation[2] * Math.PI) / 180);
+    node.scaling.set(obj.scale[0], obj.scale[1], obj.scale[2]);
+
+    const sound = new Sound(obj.id + "_sound", obj.mediaUrl, this.editor.scene, () => {
+      sound.play();
+    }, { loop: true, autoplay: true, spatialSound: true, maxDistance: 10 });
+    sound.attachToMesh(node);
+
+    this.editor.nodesMap.set(obj.id, node);
+  }
+
+  private async reconstructModel(obj: SceneObject) {
+    const url = obj.mediaUrl;
+    if (!url || url.startsWith("blob:")) return;
+    try {
+      const cleanUrl = url.toLowerCase().split("?")[0];
+      const extension = cleanUrl.endsWith(".gltf") ? ".gltf" : ".glb";
+      const loadUrl = (url.startsWith("http://") || url.startsWith("https://"))
+        ? `/api/proxy-model?url=${encodeURIComponent(url)}`
+        : url;
+      const result = await SceneLoader.ImportMeshAsync("", "", loadUrl, this.editor.scene, undefined, extension);
+      
+      const rootNode = new TransformNode(obj.id, this.editor.scene);
+      rootNode.name = obj.name;
+      rootNode.position.set(obj.position[0], obj.position[1], obj.position[2]);
+      rootNode.rotation.set((obj.rotation[0] * Math.PI) / 180, (obj.rotation[1] * Math.PI) / 180, (obj.rotation[2] * Math.PI) / 180);
+      rootNode.scaling.set(obj.scale[0], obj.scale[1], obj.scale[2]);
+
+      // Compute bounding box of imported meshes and normalize to rootNode origin
+      let min = new Vector3(Number.MAX_VALUE, Number.MAX_VALUE, Number.MAX_VALUE);
+      let max = new Vector3(-Number.MAX_VALUE, -Number.MAX_VALUE, -Number.MAX_VALUE);
+      let hasBounds = false;
+
+      result.meshes.forEach((mesh) => {
+        mesh.isPickable = true;
+        if (mesh.getTotalVertices && mesh.getTotalVertices() > 0) {
+          mesh.computeWorldMatrix(true);
+          const boundingInfo = mesh.getBoundingInfo();
+          min = Vector3.Minimize(min, boundingInfo.boundingBox.minimumWorld);
+          max = Vector3.Maximize(max, boundingInfo.boundingBox.maximumWorld);
+          hasBounds = true;
+        }
+      });
+
+      if (hasBounds) {
+        const center = min.add(max).scale(0.5);
+        const bottomY = min.y;
+
+        result.meshes.forEach((mesh) => {
+          if (!mesh.parent) {
+            mesh.position.x -= center.x;
+            mesh.position.y -= bottomY;
+            mesh.position.z -= center.z;
+            mesh.setParent(rootNode);
+          }
+        });
+      } else {
+        result.meshes.forEach((mesh) => {
+          if (!mesh.parent) {
+            mesh.setParent(rootNode);
+          }
+        });
+      }
+
+      this.editor.nodesMap.set(obj.id, rootNode);
+      if (result.animationGroups.length > 0) {
+        this.editor.animationManager.registerAnimationGroups(obj.id, result.animationGroups);
+      }
+    } catch (err) {
+      console.warn("Failed to reconstruct model", obj.name, err);
+    }
+  }
+
 }
+
 

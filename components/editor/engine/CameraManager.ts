@@ -173,25 +173,35 @@ export class CameraManager {
     if (!this.defaultCamera) return;
 
     this.switchCamera("default_camera");
-    this.defaultCamera.mode = ArcRotateCamera.PERSPECTIVE_CAMERA;
 
-    switch (mode) {
-      case "perspective":
-        this.defaultCamera.alpha = Math.PI / 4;
-        this.defaultCamera.beta = Math.PI / 3;
-        break;
-      case "top":
-        this.defaultCamera.alpha = -Math.PI / 2;
-        this.defaultCamera.beta = 0.001; // Avoid exact zero singularity
-        break;
-      case "front":
-        this.defaultCamera.alpha = -Math.PI / 2;
-        this.defaultCamera.beta = Math.PI / 2;
-        break;
-      case "right":
-        this.defaultCamera.alpha = 0;
-        this.defaultCamera.beta = Math.PI / 2;
-        break;
+    if (mode === "perspective") {
+      this.defaultCamera.mode = ArcRotateCamera.PERSPECTIVE_CAMERA;
+      this.defaultCamera.alpha = Math.PI / 4;
+      this.defaultCamera.beta = Math.PI / 3;
+    } else {
+      // 2D Orthographic projection mode
+      this.defaultCamera.mode = ArcRotateCamera.ORTHOGRAPHIC_CAMERA;
+      const aspect = this.editor.engine.getAspectRatio(this.defaultCamera) || 1.6;
+      const zoomSize = 7;
+      this.defaultCamera.orthoLeft = -zoomSize * aspect;
+      this.defaultCamera.orthoRight = zoomSize * aspect;
+      this.defaultCamera.orthoTop = zoomSize;
+      this.defaultCamera.orthoBottom = -zoomSize;
+
+      switch (mode) {
+        case "top":
+          this.defaultCamera.alpha = -Math.PI / 2;
+          this.defaultCamera.beta = 0.001;
+          break;
+        case "front":
+          this.defaultCamera.alpha = -Math.PI / 2;
+          this.defaultCamera.beta = Math.PI / 2;
+          break;
+        case "right":
+          this.defaultCamera.alpha = 0;
+          this.defaultCamera.beta = Math.PI / 2;
+          break;
+      }
     }
   }
 }

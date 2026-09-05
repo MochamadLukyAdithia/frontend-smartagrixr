@@ -1,7 +1,7 @@
 "use client";
 
 import { useEditorStore } from "../store/useEditorStore";
-import { getEditorInstance } from "../engine/editorInstance";
+import { getEditorInstance, useEditorInstance } from "../engine/editorInstance";
 import { Play, Pause, Square, Plus, Trash2 } from "lucide-react";
 
 export function TimelinePanel() {
@@ -16,43 +16,49 @@ export function TimelinePanel() {
   } = useEditorStore();
   const { playing, speed, duration, time, clips, activeClip } = animationState;
 
-  const editor = getEditorInstance();
+  const editor = useEditorInstance();
 
   const handlePlayToggle = () => {
-    if (!editor) return;
+    const ed = getEditorInstance();
+    if (!ed) return;
     if (playing) {
-      editor.animationManager.pause();
+      ed.animationManager.pause();
     } else {
-      editor.animationManager.play();
+      ed.animationManager.play();
     }
   };
 
   const handleStop = () => {
-    if (editor) {
-      editor.animationManager.stop();
+    const ed = getEditorInstance();
+    if (ed) {
+      ed.animationManager.stop();
     }
   };
 
   const handleClipChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const clipName = e.target.value;
-    if (editor) {
-      editor.animationManager.selectClip(clipName);
+    const ed = getEditorInstance();
+    if (ed) {
+      ed.animationManager.selectClip(clipName);
     }
   };
 
   const handleSpeedChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const newSpeed = parseFloat(e.target.value);
-    if (editor) {
-      editor.animationManager.setSpeed(newSpeed);
+    const ed = getEditorInstance();
+    if (ed) {
+      ed.animationManager.setSpeed(newSpeed);
     }
   };
 
   const handleScrubChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const targetTime = parseFloat(e.target.value);
-    if (editor) {
-      editor.animationManager.scrubToTime(targetTime);
+    const ed = getEditorInstance();
+    if (ed) {
+      ed.animationManager.scrubToTime(targetTime);
     }
   };
+
 
   const formatTime = (t: number) => {
     const sec = Math.floor(t);

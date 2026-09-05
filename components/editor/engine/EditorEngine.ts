@@ -116,6 +116,8 @@ export class EditorEngine {
     this.lightingManager.createDefaultLights();
     // Setup default editor camera
     this.cameraManager.createDefaultCamera();
+    // Reconstruct all saved objects from the active scene
+    this.objectManager.loadActiveScene();
   }
 
   public dispose() {

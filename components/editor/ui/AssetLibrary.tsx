@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useEditorStore } from "../store/useEditorStore";
-import { getEditorInstance } from "../engine/editorInstance";
+import { getEditorInstance, useEditorInstance } from "../engine/editorInstance";
 import { Upload, Plus, Search, Loader2 } from "lucide-react";
 
 export function AssetLibrary() {
@@ -11,18 +11,19 @@ export function AssetLibrary() {
   const [isImporting, setIsImporting] = useState(false);
   const [importProgress, setImportProgress] = useState(0);
 
-  const editor = getEditorInstance();
+  const editor = useEditorInstance();
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
-    if (!files || files.length === 0 || !editor) return;
+    const ed = getEditorInstance();
+    if (!files || files.length === 0 || !ed) return;
 
     const file = files[0];
     setIsImporting(true);
     setImportProgress(0);
 
     try {
-      await editor.importManager.importFile(file, (progress) => {
+      await ed.importManager.importFile(file, (progress) => {
         setImportProgress(Math.round(progress * 100));
       });
     } catch (err) {
@@ -36,29 +37,31 @@ export function AssetLibrary() {
   };
 
   const spawnInstance = (assetId: string, name: string) => {
-    if (!editor) return;
+    const ed = getEditorInstance();
+    if (!ed) return;
     
     // Create new scene instance of the asset
     const id = "instance_" + Math.random().toString(36).substr(2, 9);
     
     // We duplicate the root mesh node of the asset
-    const rootNode = editor.nodesMap.get(assetId);
+    const rootNode = ed.nodesMap.get(assetId);
     if (!rootNode) return;
 
-    const duplicatedId = editor.objectManager.duplicateObject(assetId);
+    const duplicatedId = ed.objectManager.duplicateObject(assetId);
     if (duplicatedId) {
       // Offset slightly to prevent perfect overlapping
-      const node = editor.nodesMap.get(duplicatedId);
+      const node = ed.nodesMap.get(duplicatedId);
       if (node) {
         node.position.x += (Math.random() - 0.5) * 2;
         node.position.z += (Math.random() - 0.5) * 2;
-        editor.objectManager.updateObjectStateFromBabylon(duplicatedId);
+        ed.objectManager.updateObjectStateFromBabylon(duplicatedId);
         
         // Auto-select the newly spawned instance
-        editor.selectionManager.selectObject(duplicatedId);
+        ed.selectionManager.selectObject(duplicatedId);
       }
     }
   };
+
 
   const filteredAssets = assets.filter((asset) =>
     asset.name.toLowerCase().includes(searchQuery.toLowerCase())

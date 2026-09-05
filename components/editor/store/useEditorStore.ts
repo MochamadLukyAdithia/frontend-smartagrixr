@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { persist, createJSONStorage } from "zustand/middleware";
 
 export interface Behaviour {
   trigger: "click" | "hover" | "start" | "collision";
@@ -138,7 +139,7 @@ export interface EditorState {
   };
   
   // Active tool on left toolbar
-  activeLeftTab: "none" | "objects" | "agri" | "images" | "text" | "video" | "audio" | "environment";
+  activeLeftTab: "none" | "storage" | "text2model" | "objects" | "agri" | "images" | "text" | "video" | "audio" | "environment";
   
   // Actions
   setScenes: (scenes: SceneData[]) => void;
@@ -170,117 +171,132 @@ export interface EditorState {
   setAxisVisible: (visible: boolean) => void;
 }
 
-export const useEditorStore = create<EditorState>((set, get) => ({
-  scenes: [{ id: "scene_1", name: "Scene 1", objects: [] }],
-  activeSceneId: "scene_1",
-  activeCameraId: "default_camera",
-  isPreviewMode: false,
-  isARModalOpen: false,
-  activeInfoDialog: null,
-  selectedIds: [],
-  assets: [],
-  gizmoMode: "translate",
-  gizmoSpace: "world",
-  snapping: {
-    translateEnabled: false,
-    translateValue: 0.25,
-    rotateEnabled: false,
-    rotateValue: 15,
-    scaleEnabled: false,
-    scaleValue: 0.1,
-  },
-  gridSettings: {
-    visible: true,
-    size: 20,
-    spacing: 1,
-  },
-  axisVisible: true,
-  activeLeftTab: "none",
-  environment: {
-    preset: "studio",
-    bgColor: "#e8e8e8",
-    intensity: 1.0,
-    hdrUrl: null,
-    gridVisible: true,
-  },
-  animationState: {
-    playing: false,
-    speed: 1.0,
-    duration: 0,
-    time: 0,
-    clips: [],
-    activeClip: null,
-    loop: true,
-  },
-
-  setScenes: (scenes) => set({ scenes }),
-  setActiveSceneId: (id) => set({ activeSceneId: id, selectedIds: [] }),
-  addScene: (name) => set((state) => {
-    const id = "scene_" + Math.random().toString(36).substring(2, 9);
-    return {
-      scenes: [...state.scenes, { id, name, objects: [] }],
-      activeSceneId: id,
+export const useEditorStore = create<EditorState>()(
+  persist(
+    (set, get) => ({
+      scenes: [{ id: "scene_1", name: "Scene 1", objects: [] }],
+      activeSceneId: "scene_1",
+      activeCameraId: "default_camera",
+      isPreviewMode: false,
+      isARModalOpen: false,
+      activeInfoDialog: null,
       selectedIds: [],
-    };
-  }),
-  renameScene: (id, name) => set((state) => ({
-    scenes: state.scenes.map((s) => (s.id === id ? { ...s, name } : s)),
-  })),
-  deleteScene: (id) => set((state) => {
-    if (state.scenes.length <= 1) return {}; // Keep at least one scene
-    const newScenes = state.scenes.filter((s) => s.id !== id);
-    return {
-      scenes: newScenes,
-      activeSceneId: newScenes[0].id,
-      selectedIds: [],
-    };
-  }),
+      assets: [],
+      gizmoMode: "translate",
+      gizmoSpace: "world",
+      snapping: {
+        translateEnabled: false,
+        translateValue: 0.25,
+        rotateEnabled: false,
+        rotateValue: 15,
+        scaleEnabled: false,
+        scaleValue: 0.1,
+      },
+      gridSettings: {
+        visible: true,
+        size: 20,
+        spacing: 1,
+      },
+      axisVisible: true,
+      activeLeftTab: "none",
+      environment: {
+        preset: "studio",
+        bgColor: "#e8e8e8",
+        intensity: 1.0,
+        hdrUrl: null,
+        gridVisible: true,
+      },
+      animationState: {
+        playing: false,
+        speed: 1.0,
+        duration: 0,
+        time: 0,
+        clips: [],
+        activeClip: null,
+        loop: true,
+      },
 
-  setIsPreviewMode: (enabled) => set({ isPreviewMode: enabled, selectedIds: [] }),
-  setIsARModalOpen: (open) => set({ isARModalOpen: open }),
-  setActiveInfoDialog: (dialog) => set({ activeInfoDialog: dialog }),
-  setActiveLeftTab: (tab) => set((state) => ({ activeLeftTab: state.activeLeftTab === tab ? "none" : tab })),
+      setScenes: (scenes) => set({ scenes }),
+      setActiveSceneId: (id) => set({ activeSceneId: id, selectedIds: [] }),
+      addScene: (name) => set((state) => {
+        const id = "scene_" + Math.random().toString(36).substring(2, 9);
+        return {
+          scenes: [...state.scenes, { id, name, objects: [] }],
+          activeSceneId: id,
+          selectedIds: [],
+        };
+      }),
+      renameScene: (id, name) => set((state) => ({
+        scenes: state.scenes.map((s) => (s.id === id ? { ...s, name } : s)),
+      })),
+      deleteScene: (id) => set((state) => {
+        if (state.scenes.length <= 1) return {}; // Keep at least one scene
+        const newScenes = state.scenes.filter((s) => s.id !== id);
+        return {
+          scenes: newScenes,
+          activeSceneId: newScenes[0].id,
+          selectedIds: [],
+        };
+      }),
 
-  getObjects: () => {
-    const active = get().scenes.find((s) => s.id === get().activeSceneId);
-    return active ? active.objects : [];
-  },
+      setIsPreviewMode: (enabled) => set({ isPreviewMode: enabled, selectedIds: [] }),
+      setIsARModalOpen: (open) => set({ isARModalOpen: open }),
+      setActiveInfoDialog: (dialog) => set({ activeInfoDialog: dialog }),
+      setActiveLeftTab: (tab) => set((state) => ({ activeLeftTab: state.activeLeftTab === tab ? "none" : tab })),
 
-  addObject: (obj) => set((state) => ({
-    scenes: state.scenes.map((s) =>
-      s.id === state.activeSceneId ? { ...s, objects: [...s.objects, obj] } : s
-    ),
-  })),
+      getObjects: () => {
+        const active = get().scenes.find((s) => s.id === get().activeSceneId);
+        return active ? active.objects : [];
+      },
 
-  updateObject: (id, partial) => set((state) => ({
-    scenes: state.scenes.map((s) =>
-      s.id === state.activeSceneId
-        ? {
-            ...s,
-            objects: s.objects.map((o) => (o.id === id ? { ...o, ...partial } : o)),
-          }
-        : s
-    ),
-  })),
+      addObject: (obj) => set((state) => ({
+        scenes: state.scenes.map((s) =>
+          s.id === state.activeSceneId ? { ...s, objects: [...s.objects, obj] } : s
+        ),
+      })),
 
-  removeObject: (id) => set((state) => ({
-    scenes: state.scenes.map((s) =>
-      s.id === state.activeSceneId
-        ? { ...s, objects: s.objects.filter((o) => o.id !== id) }
-        : s
-    ),
-    selectedIds: state.selectedIds.filter((selId) => selId !== id),
-  })),
+      updateObject: (id, partial) => set((state) => ({
+        scenes: state.scenes.map((s) =>
+          s.id === state.activeSceneId
+            ? {
+                ...s,
+                objects: s.objects.map((o) => (o.id === id ? { ...o, ...partial } : o)),
+              }
+            : s
+        ),
+      })),
 
-  setSelectedIds: (ids) => set({ selectedIds: ids }),
-  addAsset: (asset) => set((state) => ({ assets: [...state.assets, asset] })),
-  setGizmoMode: (mode) => set({ gizmoMode: mode }),
-  setGizmoSpace: (space) => set({ gizmoSpace: space }),
-  setSnapping: (partial) => set((state) => ({ snapping: { ...state.snapping, ...partial } })),
-  setGridSettings: (partial) => set((state) => ({ gridSettings: { ...state.gridSettings, ...partial } })),
-  setAnimationState: (partial) => set((state) => ({ animationState: { ...state.animationState, ...partial } })),
-  setActiveCameraId: (id) => set({ activeCameraId: id }),
-  setEnvironment: (partial) => set((state) => ({ environment: { ...state.environment, ...partial } })),
-  setAxisVisible: (visible) => set({ axisVisible: visible }),
-}));
+      removeObject: (id) => set((state) => ({
+        scenes: state.scenes.map((s) =>
+          s.id === state.activeSceneId
+            ? { ...s, objects: s.objects.filter((o) => o.id !== id) }
+            : s
+        ),
+        selectedIds: state.selectedIds.filter((selId) => selId !== id),
+      })),
+
+      setSelectedIds: (ids) => set({ selectedIds: ids }),
+      addAsset: (asset) => set((state) => ({ assets: [...state.assets, asset] })),
+      setGizmoMode: (mode) => set({ gizmoMode: mode }),
+      setGizmoSpace: (space) => set({ gizmoSpace: space }),
+      setSnapping: (partial) => set((state) => ({ snapping: { ...state.snapping, ...partial } })),
+      setGridSettings: (partial) => set((state) => ({ gridSettings: { ...state.gridSettings, ...partial } })),
+      setAnimationState: (partial) => set((state) => ({ animationState: { ...state.animationState, ...partial } })),
+      setActiveCameraId: (id) => set({ activeCameraId: id }),
+      setEnvironment: (partial) => set((state) => ({ environment: { ...state.environment, ...partial } })),
+      setAxisVisible: (visible) => set({ axisVisible: visible }),
+    }),
+    {
+      name: "smartagrixr-editor-storage",
+      storage: createJSONStorage(() => localStorage),
+      partialize: (state) => ({
+        scenes: state.scenes,
+        activeSceneId: state.activeSceneId,
+        environment: state.environment,
+        gridSettings: state.gridSettings,
+        assets: state.assets,
+      }),
+    }
+  )
+);
 export type { SceneObject as EditorSceneObject };
