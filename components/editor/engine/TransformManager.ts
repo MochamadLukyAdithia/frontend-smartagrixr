@@ -170,8 +170,8 @@ export class TransformManager {
       const node = this.editor.nodesMap.get(ids[0]);
       if (node && node instanceof AbstractMesh) {
         this.gizmoManager.attachToMesh(node);
-      } else if (node && "position" in node) {
-        this.gizmoManager.attachToNode(node);
+      } else if (node && (node instanceof TransformNode || "position" in node)) {
+        this.gizmoManager.attachToNode(node as any);
       }
     } else {
       // Multi-selection: create temporary group node at selection center
@@ -183,7 +183,8 @@ export class TransformManager {
       ids.forEach((id) => {
         const node = this.editor.nodesMap.get(id);
         if (node) {
-          sumPos.addInPlace(node.absolutePosition || node.position || Vector3.Zero());
+          const nodePos = (node as any).absolutePosition || (node as any).position || Vector3.Zero();
+          sumPos.addInPlace(nodePos);
           count++;
         }
       });
@@ -196,9 +197,9 @@ export class TransformManager {
       // Parent selected meshes to the temp group, keeping world transforms
       ids.forEach((id) => {
         const node = this.editor.nodesMap.get(id);
-        if (node) {
-          this.originalParents.set(id, node.parent);
-          node.setParent(this.tempGroup);
+        if (node && "setParent" in node) {
+          this.originalParents.set(id, (node as any).parent);
+          (node as any).setParent(this.tempGroup);
         }
       });
 
@@ -217,9 +218,9 @@ export class TransformManager {
       // Revert children back to their original parents
       this.currentAttachedIds.forEach((id) => {
         const node = this.editor.nodesMap.get(id);
-        if (node) {
+        if (node && "setParent" in node) {
           const originalParent = this.originalParents.get(id) || null;
-          node.setParent(originalParent);
+          (node as any).setParent(originalParent);
         }
       });
 
@@ -230,33 +231,43 @@ export class TransformManager {
   }
 
   private applyCurrentTransformsToStore() {
-    // If multi-select, we must update all children's properties
+    // If multi-select or single, update transformed object properties in store
     this.currentAttachedIds.forEach((id) => {
       const node = this.editor.nodesMap.get(id);
       if (!node) return;
 
-      const pos = node.position;
-      const rot = node.rotationQuaternion 
-        ? node.rotationQuaternion.toEulerAngles() 
-        : node.rotation;
-      const scl = node.scaling;
+      const pos = (node as any).position;
+      const rotQuat = (node as any).rotationQuaternion;
+      const rotEuler = (node as any).rotation;
+
+      let rotX = 0;
+      let rotY = 0;
+      let rotZ = 0;
+
+      if (rotQuat) {
+        const euler = rotQuat.toEulerAngles();
+        rotX = Number(((euler.x * 180) / Math.PI).toFixed(2));
+        rotY = Number(((euler.y * 180) / Math.PI).toFixed(2));
+        rotZ = Number(((euler.z * 180) / Math.PI).toFixed(2));
+      } else if (rotEuler && typeof rotEuler.x === "number") {
+        rotX = Number(((rotEuler.x * 180) / Math.PI).toFixed(2));
+        rotY = Number(((rotEuler.y * 180) / Math.PI).toFixed(2));
+        rotZ = Number(((rotEuler.z * 180) / Math.PI).toFixed(2));
+      }
+
+      const posX = pos && typeof pos.x === "number" ? Number(pos.x.toFixed(3)) : 0;
+      const posY = pos && typeof pos.y === "number" ? Number(pos.y.toFixed(3)) : 0;
+      const posZ = pos && typeof pos.z === "number" ? Number(pos.z.toFixed(3)) : 0;
+
+      const scl = (node as any).scaling;
+      const sclX = scl && typeof scl.x === "number" ? Number(scl.x.toFixed(3)) : 1;
+      const sclY = scl && typeof scl.y === "number" ? Number(scl.y.toFixed(3)) : 1;
+      const sclZ = scl && typeof scl.z === "number" ? Number(scl.z.toFixed(3)) : 1;
 
       useEditorStore.getState().updateObject(id, {
-        position: [
-          Number(pos.x.toFixed(3)),
-          Number(pos.y.toFixed(3)),
-          Number(pos.z.toFixed(3))
-        ],
-        rotation: [
-          Number(((rot.x * 180) / Math.PI).toFixed(2)),
-          Number(((rot.y * 180) / Math.PI).toFixed(2)),
-          Number(((rot.z * 180) / Math.PI).toFixed(2))
-        ],
-        scale: [
-          Number(scl.x.toFixed(3)),
-          Number(scl.y.toFixed(3)),
-          Number(scl.z.toFixed(3))
-        ]
+        position: [posX, posY, posZ],
+        rotation: [rotX, rotY, rotZ],
+        scale: [sclX, sclY, sclZ]
       });
     });
   }

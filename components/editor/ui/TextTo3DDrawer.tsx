@@ -258,25 +258,25 @@ export function TextTo3DDrawer() {
 
 
   return (
-    <div className="w-88 bg-[#141416] border-r border-[#242427] flex flex-col h-full text-zinc-300 select-none z-10">
+    <div className="w-88 bg-[#161619] border-r border-[#27272a] flex flex-col h-full text-zinc-300 select-none z-10 font-sans shadow-2xl">
       {/* Header */}
-      <div className="h-12 border-b border-[#242427] px-3.5 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <div className="w-6 h-6 rounded bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
-            <Wand2 className="w-3.5 h-3.5" />
+      <div className="p-3.5 border-b border-[#27272a] flex items-center justify-between bg-[#131316]">
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 shadow-sm">
+            <Wand2 className="w-4 h-4" />
           </div>
           <div>
-            <div className="text-xs font-semibold text-zinc-100 flex items-center gap-1.5">
+            <div className="text-xs font-bold text-zinc-100 flex items-center gap-1.5">
               <span>Text to 3D AI</span>
-              <span className="text-[9px] bg-emerald-950/60 text-emerald-400 font-medium px-1.5 py-0.2 rounded border border-emerald-500/30">
-                Otomatis
+              <span className="text-[9px] bg-emerald-500/20 text-emerald-300 font-bold px-2 py-0.5 rounded-full border border-emerald-500/40">
+                AI Generator
               </span>
             </div>
           </div>
         </div>
         <button
           onClick={() => setActiveLeftTab("none")}
-          className="p-1 hover:bg-zinc-800 rounded text-zinc-500 hover:text-zinc-200 transition-colors"
+          className="bouncy-hover p-1.5 hover:bg-zinc-800 rounded-xl text-zinc-400 hover:text-zinc-100 transition-colors"
           title="Tutup Panel"
         >
           <X className="w-4 h-4" />
@@ -284,12 +284,12 @@ export function TextTo3DDrawer() {
       </div>
 
       {/* Mode Sub-tabs */}
-      <div className="flex border-b border-[#242427] px-3 pt-2 gap-1 bg-[#121214]">
+      <div className="flex border-b border-[#27272a] px-3.5 pt-2 gap-1.5 bg-[#131316]">
         <button
           onClick={() => setActiveTab("generate")}
-          className={`flex-1 pb-2 text-xs font-medium border-b-2 transition-colors cursor-pointer ${
+          className={`bouncy-hover flex-1 pb-2.5 text-xs font-bold border-b-2 transition-all cursor-pointer ${
             activeTab === "generate"
-              ? "border-emerald-500 text-emerald-400 font-semibold"
+              ? "border-emerald-500 text-emerald-400"
               : "border-transparent text-zinc-400 hover:text-zinc-200"
           }`}
         >
@@ -297,9 +297,9 @@ export function TextTo3DDrawer() {
         </button>
         <button
           onClick={() => setActiveTab("history")}
-          className={`flex-1 pb-2 text-xs font-medium border-b-2 transition-colors cursor-pointer ${
+          className={`bouncy-hover flex-1 pb-2.5 text-xs font-bold border-b-2 transition-all cursor-pointer ${
             activeTab === "history"
-              ? "border-emerald-500 text-emerald-400 font-semibold"
+              ? "border-emerald-500 text-emerald-400"
               : "border-transparent text-zinc-400 hover:text-zinc-200"
           }`}
         >
@@ -313,8 +313,8 @@ export function TextTo3DDrawer() {
           <form onSubmit={handleGenerate} className="space-y-3.5">
             {/* Error banner */}
             {errorMessage && (
-              <div className="p-2.5 rounded-lg bg-red-950/40 border border-red-800/60 text-red-300 text-xs flex items-start gap-2">
-                <AlertCircle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
+              <div className="p-3 rounded-xl bg-rose-950/40 border border-rose-800/60 text-rose-300 text-xs flex items-start gap-2">
+                <AlertCircle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
                 <span className="font-medium">{errorMessage}</span>
               </div>
             )}
@@ -322,10 +322,10 @@ export function TextTo3DDrawer() {
             {/* Prompt Input */}
             <div>
               <div className="flex items-center justify-between mb-1.5">
-                <label className="text-xs font-medium text-zinc-200">
-                  Deskripsi Objek 3D <span className="text-emerald-400">*</span>
+                <label className="text-xs font-bold text-zinc-200">
+                  Deskripsi Objek 3D <span className="text-purple-400">*</span>
                 </label>
-                <span className="text-[10px] text-zinc-500">{prompt.length}/1024</span>
+                <span className="text-[10px] text-zinc-500 font-mono">{prompt.length}/1024</span>
               </div>
               <textarea
                 value={prompt}
@@ -333,13 +333,13 @@ export function TextTo3DDrawer() {
                 maxLength={1024}
                 rows={3}
                 placeholder="Contoh: Rumah kaca pintar modern dengan panel surya, dinding kaca, dan kipas angin otomatis..."
-                className="w-full bg-[#1c1c1f] border border-[#2b2b30] focus:border-emerald-500/80 rounded-lg p-2.5 text-xs text-zinc-100 placeholder:text-zinc-600 focus:outline-none transition-colors resize-none"
+                className="w-full bg-[#1e1e23] border border-zinc-700/80 focus:border-purple-500 rounded-xl p-3 text-xs text-zinc-100 placeholder:text-zinc-500 focus:outline-none transition-colors resize-none font-medium"
               />
             </div>
 
             {/* Quick Presets for Smart Agri */}
             <div>
-              <div className="text-[11px] font-medium text-zinc-400 mb-1.5 flex items-center justify-between">
+              <div className="text-[11px] font-bold text-zinc-400 mb-1.5 flex items-center justify-between">
                 <span>Contoh Cepat Pertanian:</span>
               </div>
               <div className="grid grid-cols-2 gap-1.5">
@@ -348,72 +348,72 @@ export function TextTo3DDrawer() {
                     key={idx}
                     type="button"
                     onClick={() => setPrompt(item.prompt)}
-                    className="text-[11px] bg-[#1a1a1d] hover:bg-emerald-950/30 hover:border-emerald-500/40 text-zinc-300 hover:text-emerald-300 border border-[#27272b] p-1.5 rounded text-left transition-colors truncate"
+                    className="bouncy-hover text-[11px] bg-[#1e1e23] hover:bg-emerald-950/30 hover:border-emerald-500/50 text-zinc-300 hover:text-emerald-300 border border-zinc-800 p-2 rounded-xl text-left transition-colors truncate font-medium"
                     title={item.prompt}
                   >
-                    + {item.label}
+                    {item.label}
                   </button>
                 ))}
               </div>
             </div>
 
-            {/* Quality & Speed Mode (Replacing technical P1/P2) */}
+            {/* Quality & Speed Mode */}
             <div>
-              <label className="text-xs font-medium text-zinc-200 block mb-1.5">
+              <label className="text-xs font-bold text-zinc-200 block mb-1.5">
                 Mode Pembuatan
               </label>
               <div className="grid grid-cols-2 gap-2">
                 <button
                   type="button"
                   onClick={() => setQualityMode("fast")}
-                  className={`p-2.5 rounded-lg border text-left transition-colors cursor-pointer ${
+                  className={`bouncy-hover p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
                     qualityMode === "fast"
-                      ? "bg-emerald-950/25 border-emerald-500/60 text-emerald-300"
-                      : "bg-[#1a1a1d] border-[#27272b] text-zinc-400 hover:text-zinc-200"
+                      ? "bg-emerald-950/30 border-emerald-500 text-emerald-300 shadow-sm"
+                      : "bg-[#1e1e23] border-zinc-800 text-zinc-400 hover:text-zinc-200"
                   }`}
                 >
-                  <div className="flex items-center gap-1.5 text-xs font-semibold">
+                  <div className="flex items-center gap-1.5 text-xs font-bold">
                     <Zap className="w-3.5 h-3.5 text-amber-400" />
                     <span>Cepat & Ringan</span>
                   </div>
                   <div className="text-[10px] text-zinc-400 mt-1 leading-tight">
-                    Cocok untuk WebGL & HP (Rekomendasi)
+                    Cocok untuk WebGL & HP
                   </div>
                 </button>
 
                 <button
                   type="button"
                   onClick={() => setQualityMode("hd")}
-                  className={`p-2.5 rounded-lg border text-left transition-colors cursor-pointer ${
+                  className={`bouncy-hover p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
                     qualityMode === "hd"
-                      ? "bg-emerald-950/25 border-emerald-500/60 text-emerald-300"
-                      : "bg-[#1a1a1d] border-[#27272b] text-zinc-400 hover:text-zinc-200"
+                      ? "bg-emerald-950/30 border-emerald-500 text-emerald-300 shadow-sm"
+                      : "bg-[#1e1e23] border-zinc-800 text-zinc-400 hover:text-zinc-200"
                   }`}
                 >
-                  <div className="flex items-center gap-1.5 text-xs font-semibold">
+                  <div className="flex items-center gap-1.5 text-xs font-bold">
                     <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
                     <span>Detail Tinggi</span>
                   </div>
                   <div className="text-[10px] text-zinc-400 mt-1 leading-tight">
-                    Format Quad Mesh lebih halus
+                    Format Quad Mesh halus
                   </div>
                 </button>
               </div>
             </div>
 
-            {/* Model Complexity / Polygon Density (Replacing Face Limit slider) */}
+            {/* Model Complexity */}
             <div>
-              <label className="text-xs font-medium text-zinc-200 block mb-1.5">
+              <label className="text-xs font-bold text-zinc-200 block mb-1.5">
                 Tingkat Kepadatan Detail
               </label>
               <div className="grid grid-cols-3 gap-1.5">
                 <button
                   type="button"
                   onClick={() => setDetailLevel("low")}
-                  className={`py-1.5 px-2 rounded-md border text-center text-xs transition-colors cursor-pointer ${
+                  className={`bouncy-hover py-2 px-2 rounded-xl border text-center text-xs font-bold transition-all cursor-pointer ${
                     detailLevel === "low"
-                      ? "bg-emerald-600 text-white font-semibold border-emerald-500"
-                      : "bg-[#1a1a1d] border-[#27272b] text-zinc-400 hover:text-zinc-200"
+                      ? "bg-emerald-500 text-zinc-950 border-emerald-400 shadow-sm"
+                      : "bg-[#1e1e23] border-zinc-800 text-zinc-400 hover:text-zinc-200"
                   }`}
                 >
                   Ringan
@@ -421,10 +421,10 @@ export function TextTo3DDrawer() {
                 <button
                   type="button"
                   onClick={() => setDetailLevel("medium")}
-                  className={`py-1.5 px-2 rounded-md border text-center text-xs transition-colors cursor-pointer ${
+                  className={`bouncy-hover py-2 px-2 rounded-xl border text-center text-xs font-bold transition-all cursor-pointer ${
                     detailLevel === "medium"
-                      ? "bg-emerald-600 text-white font-semibold border-emerald-500"
-                      : "bg-[#1a1a1d] border-[#27272b] text-zinc-400 hover:text-zinc-200"
+                      ? "bg-emerald-500 text-zinc-950 border-emerald-400 shadow-sm"
+                      : "bg-[#1e1e23] border-zinc-800 text-zinc-400 hover:text-zinc-200"
                   }`}
                 >
                   Standar
@@ -432,10 +432,10 @@ export function TextTo3DDrawer() {
                 <button
                   type="button"
                   onClick={() => setDetailLevel("high")}
-                  className={`py-1.5 px-2 rounded-md border text-center text-xs transition-colors cursor-pointer ${
+                  className={`bouncy-hover py-2 px-2 rounded-xl border text-center text-xs font-bold transition-all cursor-pointer ${
                     detailLevel === "high"
-                      ? "bg-emerald-600 text-white font-semibold border-emerald-500"
-                      : "bg-[#1a1a1d] border-[#27272b] text-zinc-400 hover:text-zinc-200"
+                      ? "bg-emerald-500 text-zinc-950 border-emerald-400 shadow-sm"
+                      : "bg-[#1e1e23] border-zinc-800 text-zinc-400 hover:text-zinc-200"
                   }`}
                 >
                   Detail Tinggi
@@ -448,7 +448,7 @@ export function TextTo3DDrawer() {
               <button
                 type="button"
                 onClick={() => setShowAdvanced(!showAdvanced)}
-                className="flex items-center justify-between w-full text-xs font-medium text-zinc-400 hover:text-zinc-200 transition-colors py-1"
+                className="flex items-center justify-between w-full text-xs font-bold text-zinc-400 hover:text-zinc-200 transition-colors py-1"
               >
                 <div className="flex items-center gap-1.5">
                   <Sliders className="w-3.5 h-3.5 text-zinc-500" />
@@ -458,10 +458,10 @@ export function TextTo3DDrawer() {
               </button>
 
               {showAdvanced && (
-                <div className="mt-2.5 p-2.5 rounded-lg bg-[#18181c] border border-[#27272c] space-y-3">
+                <div className="mt-2.5 p-3 rounded-xl bg-[#1e1e23] border border-zinc-800 space-y-3">
                   {/* Negative Prompt */}
                   <div>
-                    <label className="text-[11px] font-medium text-zinc-300 block mb-1">
+                    <label className="text-[11px] font-semibold text-zinc-300 block mb-1">
                       Hindari Bentuk Berikut (Negative Prompt)
                     </label>
                     <input
@@ -469,13 +469,13 @@ export function TextTo3DDrawer() {
                       value={negativePrompt}
                       onChange={(e) => setNegativePrompt(e.target.value)}
                       placeholder="Contoh: buram, rusak, jaring terdistorsi..."
-                      className="w-full bg-[#121214] border border-[#2b2b30] rounded p-1.5 text-xs text-zinc-200 focus:outline-none focus:border-emerald-500"
+                      className="w-full bg-[#161619] border border-zinc-700 rounded-lg p-2 text-xs text-zinc-200 focus:outline-none focus:border-emerald-500"
                     />
                   </div>
 
                   {/* Texture & PBR Toggles */}
                   <div className="grid grid-cols-2 gap-2 text-xs">
-                    <label className="flex items-center gap-2 text-zinc-300 cursor-pointer">
+                    <label className="flex items-center gap-2 text-zinc-300 cursor-pointer font-medium">
                       <input
                         type="checkbox"
                         checked={texture}
@@ -484,44 +484,31 @@ export function TextTo3DDrawer() {
                       />
                       <span>Beri Warna Tekstur</span>
                     </label>
-                    <label className="flex items-center gap-2 text-zinc-300 cursor-pointer">
+                    <label className="flex items-center gap-2 text-zinc-300 cursor-pointer font-medium">
                       <input
                         type="checkbox"
                         checked={pbr}
                         onChange={(e) => setPbr(e.target.checked)}
                         className="accent-emerald-500"
                       />
-                      <span>Efek Kilau PBR Realistis</span>
+                      <span>Kilau PBR Realistis</span>
                     </label>
                   </div>
 
                   {/* Texture Quality */}
                   <div>
-                    <label className="text-[11px] font-medium text-zinc-300 block mb-1">
+                    <label className="text-[11px] font-semibold text-zinc-300 block mb-1">
                       Ketajaman Tekstur
                     </label>
                     <select
                       value={textureQuality}
                       onChange={(e) => setTextureQuality(e.target.value as any)}
-                      className="w-full bg-[#121214] border border-[#2b2b30] rounded p-1.5 text-xs text-zinc-200 focus:outline-none focus:border-emerald-500"
+                      className="w-full bg-[#161619] border border-zinc-700 rounded-lg p-2 text-xs text-zinc-200 focus:outline-none focus:border-emerald-500 font-medium"
                     >
-                      <option value="standard">Standar (Cepat & Hemat Kuota)</option>
+                      <option value="standard">Standar (Cepat & Ringan)</option>
                       <option value="detailed">HD Lebih Tajam</option>
                       <option value="extreme">Ultra HD 8K</option>
                     </select>
-                  </div>
-
-                  {/* Auto size toggle */}
-                  <div className="text-xs">
-                    <label className="flex items-center gap-2 text-zinc-300 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={autoSize}
-                        onChange={(e) => setAutoSize(e.target.checked)}
-                        className="accent-emerald-500"
-                      />
-                      <span>Skala Otomatis ke Ukuran Nyata (Meter)</span>
-                    </label>
                   </div>
                 </div>
               )}
@@ -529,16 +516,16 @@ export function TextTo3DDrawer() {
 
             {/* Generation Progress Card */}
             {isGenerating && (
-              <div className="p-3 rounded-lg bg-[#18181c] border border-emerald-500/30 space-y-2">
+              <div className="p-3.5 rounded-xl bg-[#1e1e23] border border-emerald-500/40 space-y-2.5">
                 <div className="flex items-center justify-between text-xs">
-                  <div className="flex items-center gap-2 text-emerald-400 font-medium">
-                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  <div className="flex items-center gap-2 text-emerald-400 font-bold">
+                    <Loader2 className="w-4 h-4 animate-spin" />
                     <span>{statusMessage || "Sedang memproses..."}</span>
                   </div>
-                  <span className="font-mono text-zinc-400">{progressPct}%</span>
+                  <span className="font-mono text-zinc-300 font-bold">{progressPct}%</span>
                 </div>
                 {/* Progress bar */}
-                <div className="w-full bg-zinc-800 rounded-full h-1.5 overflow-hidden">
+                <div className="w-full bg-zinc-800 rounded-full h-2 overflow-hidden">
                   <div
                     className="bg-emerald-500 h-full transition-all duration-300 ease-out"
                     style={{ width: `${progressPct}%` }}
@@ -549,15 +536,15 @@ export function TextTo3DDrawer() {
 
             {/* Generation Success Card & Insert Button */}
             {generatedModelUrl && !isGenerating && (
-              <div className="p-3 rounded-lg bg-emerald-950/20 border border-emerald-500/40 space-y-2.5">
+              <div className="p-3.5 rounded-xl bg-emerald-950/25 border border-emerald-500/40 space-y-3">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold text-emerald-400 flex items-center gap-1.5">
-                    <Check className="w-3.5 h-3.5" /> Model 3D Berhasil Dibuat!
+                  <span className="text-xs font-bold text-emerald-400 flex items-center gap-1.5">
+                    <Check className="w-4 h-4" /> Model 3D Berhasil Dibuat!
                   </span>
                 </div>
 
                 {previewImageUrl && (
-                  <div className="w-full h-32 rounded bg-black/40 border border-zinc-800 overflow-hidden flex items-center justify-center">
+                  <div className="w-full h-32 rounded-xl bg-black/40 border border-zinc-800 overflow-hidden flex items-center justify-center">
                     <img
                       src={previewImageUrl}
                       alt="Rendered Preview"
@@ -571,15 +558,15 @@ export function TextTo3DDrawer() {
                     type="button"
                     onClick={() => handleInsertIntoScene(generatedModelUrl, prompt.slice(0, 24) || "Model 3D AI")}
                     disabled={isInserting}
-                    className="flex-1 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-md text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow-sm"
+                    className="bouncy-hover flex-1 py-2 bg-emerald-500 hover:bg-emerald-400 text-zinc-950 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-sm"
                   >
                     {isInserting ? (
                       <>
-                        <Loader2 className="w-3.5 h-3.5 animate-spin" /> Memasukkan ke Canvas...
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" /> Memasukkan...
                       </>
                     ) : (
                       <>
-                        <Plus className="w-3.5 h-3.5" /> Masukkan ke Canvas 3D
+                        <Plus className="w-3.5 h-3.5 stroke-[3]" /> Masukkan ke Canvas 3D
                       </>
                     )}
                   </button>
@@ -588,7 +575,7 @@ export function TextTo3DDrawer() {
                     download="model_3d.glb"
                     target="_blank"
                     rel="noreferrer"
-                    className="p-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-md border border-zinc-700 flex items-center justify-center"
+                    className="bouncy-hover p-2 bg-[#1e1e23] hover:bg-[#25252b] text-zinc-300 rounded-xl border border-zinc-700 flex items-center justify-center"
                     title="Unduh file .GLB"
                   >
                     <Download className="w-4 h-4" />
@@ -601,7 +588,7 @@ export function TextTo3DDrawer() {
             <button
               type="submit"
               disabled={isGenerating || !prompt.trim()}
-              className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-500 disabled:bg-zinc-800 disabled:text-zinc-600 text-white rounded-lg text-xs font-semibold flex items-center justify-center gap-2 transition-colors cursor-pointer shadow"
+              className="bouncy-hover w-full py-2.5 bg-emerald-500 hover:bg-emerald-400 disabled:bg-zinc-800 disabled:text-zinc-600 text-zinc-950 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer shadow-sm"
             >
               {isGenerating ? (
                 <>
@@ -609,7 +596,7 @@ export function TextTo3DDrawer() {
                 </>
               ) : (
                 <>
-                  <Wand2 className="w-4 h-4" /> Buat Model 3D
+                  <Wand2 className="w-4 h-4 stroke-[2.5]" /> Buat Model 3D
                 </>
               )}
             </button>
@@ -619,21 +606,21 @@ export function TextTo3DDrawer() {
           <div className="space-y-2.5">
             {history.length === 0 ? (
               <div className="text-center py-8 text-zinc-500 text-xs">
-                Belum ada riwayat model 3D. Buat model 3D pertama Anda di tab sebelah!
+                Belum ada riwayat model 3D.
               </div>
             ) : (
               history.map((item) => (
                 <div
                   key={item.id}
-                  className="p-2.5 rounded-lg bg-[#1a1a1d] border border-[#27272a] space-y-2 hover:border-zinc-700 transition-colors"
+                  className="p-3 rounded-xl bg-[#1e1e23] border border-zinc-800 space-y-2.5 hover:border-emerald-500/50 transition-colors"
                 >
                   <div className="flex items-start justify-between gap-2">
-                    <div className="font-medium text-xs text-zinc-200 line-clamp-2">
+                    <div className="font-bold text-xs text-zinc-200 line-clamp-2">
                       {item.prompt}
                     </div>
                     <button
                       onClick={() => deleteFromHistory(item.id)}
-                      className="text-zinc-600 hover:text-red-400 p-1 cursor-pointer"
+                      className="text-zinc-500 hover:text-rose-400 p-1 cursor-pointer transition-colors"
                       title="Hapus dari riwayat"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
@@ -641,7 +628,7 @@ export function TextTo3DDrawer() {
                   </div>
 
                   {item.previewUrl && (
-                    <div className="w-full h-24 rounded bg-black/30 overflow-hidden flex items-center justify-center border border-zinc-800">
+                    <div className="w-full h-24 rounded-xl bg-black/30 overflow-hidden flex items-center justify-center border border-zinc-800">
                       <img
                         src={item.previewUrl}
                         alt={item.prompt}
@@ -651,13 +638,13 @@ export function TextTo3DDrawer() {
                   )}
 
                   <div className="flex items-center justify-between pt-1">
-                    <span className="text-[10px] text-zinc-500">
+                    <span className="text-[10px] text-zinc-500 font-medium">
                       {item.model}
                     </span>
                     <div className="flex gap-1.5">
                       <button
                         onClick={() => handleInsertIntoScene(item.modelUrl, item.prompt.slice(0, 20))}
-                        className="px-2.5 py-1 bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-400 border border-emerald-500/40 rounded text-[11px] font-medium transition-colors cursor-pointer"
+                        className="bouncy-hover px-3 py-1 bg-emerald-500 hover:bg-emerald-400 text-zinc-950 rounded-lg text-xs font-bold transition-colors cursor-pointer"
                       >
                         Masukkan
                       </button>
@@ -666,7 +653,7 @@ export function TextTo3DDrawer() {
                         download="model.glb"
                         target="_blank"
                         rel="noreferrer"
-                        className="p-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-white rounded border border-zinc-700"
+                        className="bouncy-hover p-1.5 bg-[#161619] hover:bg-zinc-800 text-zinc-400 hover:text-white rounded-lg border border-zinc-700"
                         title="Unduh GLB"
                       >
                         <Download className="w-3.5 h-3.5" />

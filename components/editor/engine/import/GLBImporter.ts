@@ -99,9 +99,21 @@ export class GLBImporter {
         parentId: null,
         visible: true,
         locked: false,
-        position: [rootNode.position.x, rootNode.position.y, rootNode.position.z],
-        rotation: [rootNode.rotation.x, rootNode.rotation.y, rootNode.rotation.z],
-        scale: [rootNode.scaling.x, rootNode.scaling.y, rootNode.scaling.z],
+        position: [
+          rootNode.position ? rootNode.position.x : 0,
+          rootNode.position ? rootNode.position.y : 0,
+          rootNode.position ? rootNode.position.z : 0
+        ],
+        rotation: [
+          rootNode.rotation ? (rootNode.rotation.x * 180) / Math.PI : 0,
+          rootNode.rotation ? (rootNode.rotation.y * 180) / Math.PI : 0,
+          rootNode.rotation ? (rootNode.rotation.z * 180) / Math.PI : 0
+        ],
+        scale: [
+          rootNode.scaling ? rootNode.scaling.x : 1,
+          rootNode.scaling ? rootNode.scaling.y : 1,
+          rootNode.scaling ? rootNode.scaling.z : 1
+        ],
         assetId: assetId,
         mediaUrl: typeof source === "string" ? source : undefined,
         metadata: {

@@ -26,14 +26,12 @@ export class ObjectManager {
     this.editor.selectionManager.clearSelection();
     
     for (const [id, node] of this.editor.nodesMap.entries()) {
-      if (id !== "main_directional_light" && id !== "default_camera") {
+      if (id !== "ambient_hemi_light" && id !== "scene_sun_light" && id !== "default_camera") {
         node.dispose();
       }
     }
     this.editor.nodesMap.clear();
 
-    const light = this.editor.scene.getLightById("main_directional_light");
-    if (light) this.editor.nodesMap.set("main_directional_light", light);
     const camera = this.editor.scene.getCameraById("default_camera");
     if (camera) this.editor.nodesMap.set("default_camera", camera);
   }
@@ -859,20 +857,38 @@ export class ObjectManager {
     const node = this.editor.nodesMap.get(id);
     if (!node) return;
 
-    const pos = node.position;
-    const rot = node.rotationQuaternion 
-      ? node.rotationQuaternion.toEulerAngles() 
-      : node.rotation;
-    const scl = node.scaling;
+    const pos = (node as any).position;
+    const rotQuat = (node as any).rotationQuaternion;
+    const rotEuler = (node as any).rotation;
+
+    let rotX = 0;
+    let rotY = 0;
+    let rotZ = 0;
+
+    if (rotQuat) {
+      const euler = rotQuat.toEulerAngles();
+      rotX = (euler.x * 180) / Math.PI;
+      rotY = (euler.y * 180) / Math.PI;
+      rotZ = (euler.z * 180) / Math.PI;
+    } else if (rotEuler && typeof rotEuler.x === "number") {
+      rotX = (rotEuler.x * 180) / Math.PI;
+      rotY = (rotEuler.y * 180) / Math.PI;
+      rotZ = (rotEuler.z * 180) / Math.PI;
+    }
+
+    const posX = pos && typeof pos.x === "number" ? pos.x : 0;
+    const posY = pos && typeof pos.y === "number" ? pos.y : 0;
+    const posZ = pos && typeof pos.z === "number" ? pos.z : 0;
+
+    const scl = (node as any).scaling;
+    const sclX = scl && typeof scl.x === "number" ? scl.x : 1;
+    const sclY = scl && typeof scl.y === "number" ? scl.y : 1;
+    const sclZ = scl && typeof scl.z === "number" ? scl.z : 1;
 
     useEditorStore.getState().updateObject(id, {
-      position: [pos.x, pos.y, pos.z],
-      rotation: [
-        rot.x * (180 / Math.PI),
-        rot.y * (180 / Math.PI),
-        rot.z * (180 / Math.PI)
-      ],
-      scale: [scl.x, scl.y, scl.z],
+      position: [posX, posY, posZ],
+      rotation: [rotX, rotY, rotZ],
+      scale: [sclX, sclY, sclZ],
     });
   }
 
@@ -921,10 +937,18 @@ export class ObjectManager {
     }
 
     clonedNode.name = obj.name + " (Copy)";
-    clonedNode.position.copyFrom(originalNode.position);
-    if (originalNode.rotation) clonedNode.rotation.copyFrom(originalNode.rotation);
-    if (originalNode.rotationQuaternion) clonedNode.rotationQuaternion = originalNode.rotationQuaternion.clone();
-    clonedNode.scaling.copyFrom(originalNode.scaling);
+    if (originalNode.position && clonedNode.position) {
+      clonedNode.position.copyFrom(originalNode.position);
+    }
+    if (originalNode.rotation && clonedNode.rotation) {
+      clonedNode.rotation.copyFrom(originalNode.rotation);
+    }
+    if (originalNode.rotationQuaternion && clonedNode.rotationQuaternion) {
+      clonedNode.rotationQuaternion = originalNode.rotationQuaternion.clone();
+    }
+    if (originalNode.scaling && clonedNode.scaling) {
+      clonedNode.scaling.copyFrom(originalNode.scaling);
+    }
 
     this.editor.nodesMap.set(newId, clonedNode);
 

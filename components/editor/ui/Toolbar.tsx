@@ -6,28 +6,25 @@ import { getEditorInstance, useEditorInstance } from "../engine/editorInstance";
 import { 
   Undo, 
   Redo, 
-  Download, 
   Eye, 
   EyeOff, 
   QrCode, 
-  Smartphone, 
-  Compass, 
   Grid, 
-  Magnet,
-  Camera
+  Sparkles,
+  Move,
+  RotateCw,
+  Maximize2,
+  Sprout
 } from "lucide-react";
 
 export function Toolbar() {
   const { 
     gizmoMode, 
-    snapping, 
     gridSettings, 
     axisVisible,
     isPreviewMode,
-    isARModalOpen,
     setIsARModalOpen,
     setGizmoMode, 
-    setSnapping, 
     setGridSettings, 
     setAxisVisible,
     setIsPreviewMode
@@ -71,7 +68,6 @@ export function Toolbar() {
     if (ed) ed.historyManager.redo();
   };
 
-
   const [activeAngle, setActiveAngle] = useState<"perspective" | "top" | "front" | "right">("perspective");
 
   const handleSetViewportAngle = (mode: "perspective" | "top" | "front" | "right") => {
@@ -82,139 +78,132 @@ export function Toolbar() {
   };
 
   return (
-    <div className="h-12 bg-[#121214] border-b border-[#242427] px-4 flex items-center justify-between text-white select-none z-20">
-      {/* Left: Clean Logo and Project Name */}
+    <div className="h-14 bg-[#161619] border-b border-[#27272a] px-4 flex items-center justify-between text-white select-none z-20 shadow-sm font-sans">
+      {/* Left: Brand / Studio Badge */}
       <div className="flex items-center gap-2.5">
-        <div className="w-2.5 h-2.5 rounded-sm bg-emerald-500" />
-        <span className="font-semibold text-sm tracking-tight text-zinc-100">
-          SmartAgriXR
-        </span>
-        <span className="text-[10px] text-zinc-500 font-mono">
-          Editor
-        </span>
+        <div className="w-8 h-8 rounded-xl bg-emerald-500 flex items-center justify-center text-zinc-950 font-black text-sm shadow-sm">
+          <Sprout className="w-5 h-5 text-zinc-950 stroke-[2.5]" />
+        </div>
+        <div className="flex flex-col">
+          <span className="font-bold text-sm tracking-tight text-emerald-400">
+            SmartAgri Studio
+          </span>
+          <span className="text-[10px] text-zinc-400 font-medium">
+            3D & XR Workspace
+          </span>
+        </div>
       </div>
 
       {/* Middle: Transform and Snapping Settings (Only if not in Preview Mode) */}
       {!isPreviewMode && (
-        <div className="flex items-center gap-2 bg-[#1a1a1d] px-2 py-1 rounded-lg border border-zinc-800">
-          <div className="flex items-center gap-0.5 text-xs text-zinc-400 font-medium">
-            <button
-              onClick={() => handleGizmoModeChange("translate")}
-              className={`px-2.5 py-1 rounded-md transition-colors cursor-pointer ${gizmoMode === "translate" ? "bg-zinc-700 text-white" : "hover:text-zinc-200"}`}
-            >
-              Move
-            </button>
-            <button
-              onClick={() => handleGizmoModeChange("rotate")}
-              className={`px-2.5 py-1 rounded-md transition-colors cursor-pointer ${gizmoMode === "rotate" ? "bg-zinc-700 text-white" : "hover:text-zinc-200"}`}
-            >
-              Rotate
-            </button>
-            <button
-              onClick={() => handleGizmoModeChange("scale")}
-              className={`px-2.5 py-1 rounded-md transition-colors cursor-pointer ${gizmoMode === "scale" ? "bg-zinc-700 text-white" : "hover:text-zinc-200"}`}
-            >
-              Scale
-            </button>
+        <div className="flex items-center gap-2 bg-[#1f1f24] px-2.5 py-1.5 rounded-xl border border-zinc-700/60 shadow-inner">
+          {/* Gizmo transform modes */}
+          <div className="flex items-center gap-1 text-xs font-semibold">
+            {[
+              { id: "translate", label: "Move", icon: Move },
+              { id: "rotate", label: "Rotate", icon: RotateCw },
+              { id: "scale", label: "Scale", icon: Maximize2 },
+            ].map((m) => {
+              const Icon = m.icon;
+              const isSelected = gizmoMode === m.id;
+              return (
+                <button
+                  key={m.id}
+                  onClick={() => handleGizmoModeChange(m.id as any)}
+                  className={`flex items-center gap-1.5 px-3 py-1 rounded-lg transition-all cursor-pointer ${
+                    isSelected 
+                      ? "bg-emerald-500 text-zinc-950 font-bold shadow-md scale-100" 
+                      : "text-zinc-300 hover:bg-zinc-800 hover:text-white"
+                  }`}
+                >
+                  <Icon className="w-3.5 h-3.5" />
+                  <span>{m.label}</span>
+                </button>
+              );
+            })}
           </div>
 
-          <div className="h-4 w-[1px] bg-white/10" />
+          <div className="h-4 w-[1px] bg-zinc-700" />
 
           {/* Camera View Angle Selector */}
-          <div className="flex items-center gap-0.5 text-[10.5px] font-medium text-zinc-400">
-            <button
-              onClick={() => handleSetViewportAngle("perspective")}
-              className={`px-2 py-0.5 rounded transition-colors cursor-pointer ${
-                activeAngle === "perspective" ? "bg-zinc-700 text-white font-semibold" : "hover:text-zinc-200"
-              }`}
-              title="3D Free Orbit Perspective View"
-            >
-              3D
-            </button>
-            <button
-              onClick={() => handleSetViewportAngle("top")}
-              className={`px-2 py-0.5 rounded transition-colors cursor-pointer ${
-                activeAngle === "top" ? "bg-zinc-700 text-white font-semibold" : "hover:text-zinc-200"
-              }`}
-              title="2D Top Orthographic View"
-            >
-              Top
-            </button>
-            <button
-              onClick={() => handleSetViewportAngle("front")}
-              className={`px-2 py-0.5 rounded transition-colors cursor-pointer ${
-                activeAngle === "front" ? "bg-zinc-700 text-white font-semibold" : "hover:text-zinc-200"
-              }`}
-              title="2D Front Orthographic View"
-            >
-              Front
-            </button>
-            <button
-              onClick={() => handleSetViewportAngle("right")}
-              className={`px-2 py-0.5 rounded transition-colors cursor-pointer ${
-                activeAngle === "right" ? "bg-zinc-700 text-white font-semibold" : "hover:text-zinc-200"
-              }`}
-              title="2D Right Orthographic View"
-            >
-              Right
-            </button>
+          <div className="flex items-center gap-1 text-xs font-medium text-zinc-400">
+            {(["perspective", "top", "front", "right"] as const).map((angle) => (
+              <button
+                key={angle}
+                onClick={() => handleSetViewportAngle(angle)}
+                className={`px-2.5 py-1 rounded-lg capitalize transition-all cursor-pointer ${
+                  activeAngle === angle 
+                    ? "bg-zinc-700 text-emerald-300 font-bold border border-emerald-500/40" 
+                    : "hover:bg-zinc-800 hover:text-zinc-200"
+                }`}
+                title={`${angle} View`}
+              >
+                {angle === "perspective" ? "3D" : angle}
+              </button>
+            ))}
           </div>
         </div>
       )}
 
-      {/* Right: Actions, AR Barcode, Preview & Publish */}
-      <div className="flex items-center gap-2.5">
+      {/* Right: Actions, Launch AR, Preview Mode */}
+      <div className="flex items-center gap-2">
         {!isPreviewMode && (
-          <>
+          <div className="flex items-center gap-1 bg-[#1f1f24] p-1 rounded-xl border border-zinc-800">
             <button
               onClick={handleUndo}
-              className="p-2 hover:bg-[#252528] rounded-full text-gray-400 hover:text-white transition-colors"
+              className="p-1.5 hover:bg-zinc-800 rounded-lg text-zinc-400 hover:text-emerald-400 transition-colors"
               title="Undo (Ctrl+Z)"
             >
               <Undo className="w-4 h-4" />
             </button>
             <button
               onClick={handleRedo}
-              className="p-2 hover:bg-[#252528] rounded-full text-gray-400 hover:text-white transition-colors"
+              className="p-1.5 hover:bg-zinc-800 rounded-lg text-zinc-400 hover:text-emerald-400 transition-colors"
               title="Redo (Ctrl+Y)"
             >
               <Redo className="w-4 h-4" />
             </button>
             <button
               onClick={toggleGrid}
-              className={`p-2 rounded-full transition-colors ${gridSettings.visible ? "text-[#22a447] bg-[#22a447]/10" : "text-gray-400 hover:text-white"}`}
+              className={`p-1.5 rounded-lg transition-colors ${
+                gridSettings.visible 
+                  ? "text-emerald-400 bg-emerald-500/10" 
+                  : "text-zinc-400 hover:text-white"
+              }`}
               title="Toggle Grid"
             >
               <Grid className="w-4 h-4" />
             </button>
-          </>
+          </div>
         )}
 
-        {/* Convert to AR Modal Button */}
+        {/* Launch AR Modal Button */}
         <button
           onClick={() => setIsARModalOpen(true)}
-          className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-md text-xs font-medium transition-colors cursor-pointer"
+          className="bouncy-hover flex items-center gap-1.5 px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-bold rounded-xl text-xs transition-all shadow-sm cursor-pointer"
         >
-          <QrCode className="w-3.5 h-3.5" />
+          <QrCode className="w-4 h-4 text-zinc-950" />
           <span>Launch AR</span>
         </button>
 
-        {/* Preview toggle */}
+        {/* Preview mode toggle */}
         <button
           onClick={() => setIsPreviewMode(!isPreviewMode)}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors cursor-pointer border ${
+          className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer border ${
             isPreviewMode 
-              ? "bg-amber-600/20 border-amber-500/50 text-amber-300" 
-              : "bg-zinc-800 border-zinc-700/60 hover:bg-zinc-700 text-zinc-300"
+              ? "bg-amber-500 text-zinc-950 font-bold border-amber-400 shadow-sm" 
+              : "bg-[#1f1f24] border-zinc-700/80 hover:bg-zinc-800 text-zinc-200"
           }`}
         >
           {isPreviewMode ? (
             <>
-              <EyeOff className="w-3.5 h-3.5" /> Exit Preview
+              <EyeOff className="w-4 h-4 text-zinc-950" />
+              <span>Exit Preview</span>
             </>
           ) : (
             <>
-              <Eye className="w-3.5 h-3.5" /> Preview
+              <Eye className="w-4 h-4 text-emerald-400" />
+              <span>Preview</span>
             </>
           )}
         </button>
@@ -222,4 +211,6 @@ export function Toolbar() {
     </div>
   );
 }
+
+
 

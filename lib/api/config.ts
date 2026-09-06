@@ -9,11 +9,7 @@ export function getApiUrl(path: string): string {
   return `${API_BASE_URL.replace(/\/$/, "")}${cleanPath}`;
 }
 
-export function getAuthHeaders(): HeadersInit {
-  const headers: HeadersInit = {
-    "Accept": "application/json",
-  };
-
+export function getAuthToken(): string | null {
   if (typeof window !== "undefined") {
     const token =
       localStorage.getItem("auth_token") ||
@@ -22,9 +18,19 @@ export function getAuthHeaders(): HeadersInit {
       localStorage.getItem("jwt") ||
       sessionStorage.getItem("auth_token") ||
       sessionStorage.getItem("token");
-    if (token) {
-      headers["Authorization"] = `Bearer ${token}`;
-    }
+    if (token) return token;
+  }
+  return process.env.NEXT_PUBLIC_AUTH_TOKEN || null;
+}
+
+export function getAuthHeaders(): HeadersInit {
+  const headers: HeadersInit = {
+    "Accept": "application/json",
+  };
+
+  const token = getAuthToken();
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
   }
 
   return headers;

@@ -1,4 +1,4 @@
-import { getApiUrl, getAuthHeaders } from "./config";
+import { getApiUrl, getAuthHeaders, getAuthToken } from "./config";
 
 export interface AssetCategory {
   id: string | number;
@@ -24,6 +24,7 @@ export interface CloudAsset {
 
 export interface FetchAssetsParams {
   category_id?: string | number;
+  category?: string;
   search?: string;
   type?: string;
   page?: number;
@@ -31,29 +32,40 @@ export interface FetchAssetsParams {
 }
 
 /**
- * 1. Fetch real list of asset categories: GET /api/asset-categories
+ * 1. Fetch real list of asset categories: GET /api/asset-categories or /api/categories
  */
 export async function fetchAssetCategories(): Promise<AssetCategory[]> {
-  try {
-    const url = getApiUrl("/api/asset-categories");
-    const response = await fetch(url, {
-      method: "GET",
-      headers: getAuthHeaders(),
-    });
+  const possibleEndpoints = [
+    "/api/asset-categories",
+    "/api/categories",
+    "/api/assets/categories",
+  ];
 
-    if (!response.ok) {
-      return [];
+  for (const ep of possibleEndpoints) {
+    try {
+      const url = getApiUrl(ep);
+      const response = await fetch(url, {
+        method: "GET",
+        headers: getAuthHeaders(),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        let list: AssetCategory[] = [];
+        if (Array.isArray(data)) list = data;
+        else if (Array.isArray(data.data)) list = data.data;
+        else if (Array.isArray(data.categories)) list = data.categories;
+
+        if (list.length > 0) {
+          return list;
+        }
+      }
+    } catch (error) {
+      console.warn(`Could not reach ${ep}:`, error);
     }
-
-    const data = await response.json();
-    if (Array.isArray(data)) return data;
-    if (Array.isArray(data.data)) return data.data;
-    if (Array.isArray(data.categories)) return data.categories;
-    return [];
-  } catch (error) {
-    console.warn("Could not reach /api/asset-categories:", error);
-    return [];
   }
+
+  return [];
 }
 
 /**
@@ -85,6 +97,9 @@ export async function createAssetCategory(payload: { name: string; description?:
 export async function fetchAssets(params?: FetchAssetsParams): Promise<CloudAsset[]> {
   try {
     const query = new URLSearchParams();
+    if (params?.category && params.category !== "all") {
+      query.append("category", String(params.category));
+    }
     if (params?.category_id && params.category_id !== "all") {
       query.append("category_id", String(params.category_id));
     }
@@ -122,23 +137,21 @@ export async function fetchAssets(params?: FetchAssetsParams): Promise<CloudAsse
 }
 
 /**
- * 4. Upload asset to cloud storage: POST /api/assets
+ * 4. Upload asset to cloud storage: POST /api/assets/upload
  */
 export async function uploadAsset(
   formData: FormData,
   onProgress?: (percent: number) => void
 ): Promise<CloudAsset> {
-  const url = getApiUrl("/api/assets");
+  const url = getApiUrl("/api/assets/upload");
 
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
     xhr.open("POST", url);
 
-    if (typeof window !== "undefined") {
-      const token = localStorage.getItem("auth_token") || sessionStorage.getItem("auth_token");
-      if (token) {
-        xhr.setRequestHeader("Authorization", `Bearer ${token}`);
-      }
+    const token = getAuthToken();
+    if (token) {
+      xhr.setRequestHeader("Authorization", `Bearer ${token}`);
     }
     xhr.setRequestHeader("Accept", "application/json");
 
@@ -176,7 +189,30 @@ export async function uploadAsset(
 }
 
 /**
- * 5. Get asset details / URL: GET /api/assets/{id}
+ * 5. Fetch direct / stream URL for asset: GET /api/assets/{id}/url
+ */
+export async function fetchAssetUrl(id: string | number): Promise<string> {
+  try {
+    const url = getApiUrl(`/api/assets/${id}/url`);
+    const response = await fetch(url, {
+      method: "GET",
+      headers: getAuthHeaders(),
+    });
+
+    if (!response.ok) {
+      return "";
+    }
+
+    const data = await response.json();
+    return data.url || data.file_url || data.data?.url || data.data?.file_url || "";
+  } catch (error) {
+    console.warn(`Could not reach /api/assets/${id}/url:`, error);
+    return "";
+  }
+}
+
+/**
+ * 6. Get asset details: GET /api/assets/{id}
  */
 export async function getAssetDetails(id: string | number): Promise<CloudAsset> {
   const url = getApiUrl(`/api/assets/${id}`);
@@ -194,7 +230,7 @@ export async function getAssetDetails(id: string | number): Promise<CloudAsset> 
 }
 
 /**
- * 6. Delete asset from cloud storage: DELETE /api/assets/{id}
+ * 7. Delete asset from cloud storage: DELETE /api/assets/{id}
  */
 export async function deleteAsset(id: string | number): Promise<boolean> {
   const url = getApiUrl(`/api/assets/${id}`);

@@ -15,43 +15,15 @@ export class LightingManager {
     const hemiLight = new HemisphericLight("ambient_hemi_light", new Vector3(0, 1, 0), this.editor.scene);
     hemiLight.intensity = 1.0;
     hemiLight.diffuse = new Color3(1, 1, 1);
-    hemiLight.groundColor = new Color3(0.35, 0.35, 0.38);
+    hemiLight.groundColor = new Color3(0.4, 0.4, 0.45);
     this.lights.set("ambient_hemi_light", hemiLight);
 
-    // 2. Directional Sun Light (for directional cast shadows and depth)
-    const mainLightId = "main_directional_light";
-    const dir = new Vector3(-1, -2, -1);
-    const light = new DirectionalLight(mainLightId, dir, this.editor.scene);
-    light.intensity = 1.2;
-    light.diffuse = new Color3(1, 1, 1);
-    light.specular = new Color3(0.3, 0.3, 0.3);
-
-    this.lights.set(mainLightId, light);
-    this.editor.nodesMap.set(mainLightId, light);
-
-    const stateObj: SceneObject = {
-      id: mainLightId,
-      name: "Main Directional Light",
-      type: "light",
-      parentId: null,
-      visible: true,
-      locked: false,
-      position: [0, 10, 0],
-      rotation: [-45, -45, 0],
-      scale: [1, 1, 1],
-      lightSettings: {
-        type: "directional",
-        color: "#ffffff",
-        intensity: 1.2,
-        shadows: false,
-      },
-    };
-
-    // Register in Zustand if it doesn't already exist
-    const exists = useEditorStore.getState().getObjects().some((o) => o.id === mainLightId);
-    if (!exists) {
-      useEditorStore.getState().addObject(stateObj);
-    }
+    // 2. Scene Sunlight for directional cast shadows and depth (direct scene light, not a user object)
+    const sunLight = new DirectionalLight("scene_sun_light", new Vector3(-1, -2, -1), this.editor.scene);
+    sunLight.intensity = 1.0;
+    sunLight.diffuse = new Color3(1, 1, 1);
+    sunLight.specular = new Color3(0.2, 0.2, 0.2);
+    this.lights.set("scene_sun_light", sunLight);
   }
 
   public addLight(type: "directional" | "point" | "spot") {
