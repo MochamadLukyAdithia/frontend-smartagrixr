@@ -1,16 +1,37 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { login } from "@/lib/api";
+import { useAuthStore } from "@/stores/useAuthStore";
 
 export default function Masuk() {
+  const router = useRouter();
+  const setAuth = useAuthStore((s) => s.setAuth);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
+    try {
+      const { token, user } = await login({ email, password });
+      setAuth(token, user);
+      router.push("/dashboard/beranda");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Gagal masuk. Coba lagi.");
+    } finally {
+      setLoading(false);
+    }
+  };
   return (
-    // Wrapper utama menggunakan flexbox untuk split-screen
     <div className="flex min-h-screen bg-[url('/bg-login.svg')] bg-cover bg-center bg-no-repeat text-[#171717]">
-      {/* --- BAGIAN KIRI: Ilustrasi & Teks (Disembunyikan di Mobile) --- */}
       <div className="relative hidden flex-1 flex-col items-center justify-center p-12 lg:flex">
-        {/* Teks Sambutan */}
         <div className="z-10 mb-8 text-center">
           <h1 className="font-serif text-[32px] leading-snug text-black xl:text-[40px]">
             <span className="uppercase tracking-wide">SELAMAT DATANG DI</span>
@@ -19,11 +40,7 @@ export default function Masuk() {
           </h1>
         </div>
 
-        {/* --- CLUSTER ILUSTRASI --- */}
-        {/* Container dengan ukuran fix agar susunan gambar selalu proporsional dan tidak lari-lari */}
         <div className="relative h-[450px] w-[500px]">
-          {/* 1. Ilustrasi Gandum (Atas Tengah) */}
-          {/* Pastikan nama file dan foldernya sudah sesuai dengan project Anda */}
           <div className="absolute left-[50%] top-0 z-10 -translate-x-1/2">
             <Image
               src="/images/landing/wheat.png"
@@ -35,10 +52,9 @@ export default function Masuk() {
             />
           </div>
 
-          {/* 2. Ilustrasi Drone & Smart Farm (Kiri Bawah) */}
           <div className="absolute left-[5%] top-[40%] z-20">
             <Image
-              src="/images/landing/drone.svg" // Ganti .png jika file aslinya png
+              src="/images/landing/drone.svg"
               alt="Ilustrasi Drone"
               width={240}
               height={240}
@@ -47,7 +63,6 @@ export default function Masuk() {
             />
           </div>
 
-          {/* 3. Ilustrasi Petani (Kanan Bawah) */}
           <div className="absolute right-[15%] top-[55%] z-20">
             <Image
               src="/images/landing/farmer.png"
@@ -61,9 +76,7 @@ export default function Masuk() {
         </div>
       </div>
 
-      {/* --- BAGIAN KANAN: Form Login Panel --- */}
       <div className="flex w-full flex-col justify-center bg-white px-8 py-12 shadow-2xl sm:px-16 lg:w-[500px] lg:rounded-l-[40px] xl:w-[600px] xl:px-24">
-        {/* Tab Navigasi (Masuk / Daftar) */}
         <div className="mb-12 flex justify-center gap-10">
           <Link
             href="/masuk"
@@ -79,9 +92,7 @@ export default function Masuk() {
           </Link>
         </div>
 
-        {/* Form Inputs */}
-        <form className="flex flex-col gap-6">
-          {/* Input Email/Username */}
+        <form className="flex flex-col gap-6" onSubmit={handleSubmit}>
           <div className="flex flex-col gap-2">
             <label className="font-serif text-[15px] text-black">
               E-mail atau username
@@ -89,11 +100,13 @@ export default function Masuk() {
             <input
               type="text"
               placeholder="Masukkan e-mail atau username"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
               className="w-full rounded-xl border border-gray-300 px-4 py-3.5 font-serif text-[15px] outline-none transition-all focus:border-[#21a447] focus:ring-1 focus:ring-[#21a447]"
             />
           </div>
 
-          {/* Input Kata Sandi */}
           <div className="flex flex-col gap-2">
             <div className="flex items-center justify-between">
               <label className="font-serif text-[15px] text-black">
@@ -109,33 +122,42 @@ export default function Masuk() {
             <input
               type="password"
               placeholder="Masukkan kata sandi"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
               className="w-full rounded-xl border border-gray-300 px-4 py-3.5 font-serif text-[15px] outline-none transition-all focus:border-[#21a447] focus:ring-1 focus:ring-[#21a447]"
             />
           </div>
 
-          {/* Tombol Submit Masuk */}
           <button
-            onClick={() => {
-              window.location.href = "/dashboard/beranda";
-            }}
-            type="button"
-            className="mt-2 w-full rounded-full border border-gray-300 py-3.5 font-serif text-[16px] font-bold text-black transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#21a447] focus:ring-offset-2"
+            type="submit"
+            disabled={loading}
+            className="mt-2 w-full rounded-full border border-gray-300 py-3.5 font-serif text-[16px] font-bold text-black transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#21a447] focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            Masuk
+            {loading ? "Memproses..." : "Masuk"}
           </button>
+
+          {error && (
+            <p className="rounded-lg bg-red-50 px-4 py-2 text-center font-serif text-[13px] text-red-600">
+              {error}
+            </p>
+          )}
         </form>
 
-        {/* Divider / Pemisah */}
         <div className="my-8 flex items-center justify-center">
           <span className="font-serif text-[14px] text-black">
             Atau, masuk dengan :
           </span>
         </div>
 
-        {/* Social Login Buttons */}
         <div className="flex flex-col gap-4">
-          {/* Tombol Google */}
-          <button className="flex w-full items-center justify-center gap-3 rounded-full border border-gray-300 py-3.5 transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#21a447] focus:ring-offset-1">
+          <button
+            type="button"
+            onClick={() => {
+              window.location.href = `${process.env.NEXT_PUBLIC_API_URL}auth/google/redirect`;
+            }}
+            className="flex w-full items-center justify-center gap-3 rounded-full border border-gray-300 py-3.5 transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#21a447] focus:ring-offset-1 cursor-pointer"
+          >
             <svg
               width="20"
               height="20"
@@ -165,7 +187,6 @@ export default function Masuk() {
             </span>
           </button>
 
-          {/* Tombol Email Lanjutan */}
           <button className="flex w-full items-center justify-center gap-3 rounded-full border border-gray-300 py-3.5 transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#21a447] focus:ring-offset-1">
             <svg
               width="20"
@@ -187,7 +208,6 @@ export default function Masuk() {
           </button>
         </div>
 
-        {/* Teks Bawah */}
         <div className="mt-8 text-center">
           <Link
             href="/daftar"

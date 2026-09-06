@@ -1,12 +1,17 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Navbar } from "@/components/layout/navbar";
 import Footer from "@/components/layout/footer";
+import { useAuthStore } from "@/stores/useAuthStore";
+import { fetchAssets, deleteAsset } from "@/lib/api";
+import type { ApiAsset } from "@/lib/api";
+import { AssetThumbnail } from "@/components/dashboard/asset-thumbnail";
+import { AssetDetailModal } from "@/components/dashboard/asset-detail-modal";
+import { UploadAssetModal } from "@/components/dashboard/upload-asset-modal";
 
-// --- DATA MODUL PEMBELAJARAN ---
 const LEARNING_MODULES = [
   {
     id: 1,
@@ -35,112 +40,136 @@ const LEARNING_MODULES = [
   },
 ];
 
-// --- DATA ASSET 3D & KATEGORI FILTER ---
-const ASSET_CATEGORIES = [
-  {
-    id: "Semua",
-    icon: (
-      <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
-        <path d="M3 3h8v8H3zm10 0h8v8h-8zM3 13h8v8H3zm10 0h8v8h-8z" />
-      </svg>
-    ),
-  },
-  { id: "Tanaman Budidaya", icon: "🌱" },
-  { id: "Rumah Kaca", icon: "🏠" },
-  { id: "Sistem Irigasi Cerdas", icon: "💧" },
-  { id: "Drone Pertanian", icon: "🚁" },
-  { id: "Mesin dan Alat Pertanian", icon: "🚜" },
-  { id: "Sistem Pascapanen", icon: "📦" },
-  { id: "Sensor IoT", icon: "📡" },
-];
+const CATEGORY_ICONS: Record<string, string> = {
+  Semua: "🗂️",
+  Bunga: "🌸",
+  tanaman: "🌱",
+  panah: "🎯",
+  greenhouse: "🏠",
+  irigasi: "💧",
+  drone: "🚁",
+  mesin: "🚜",
+  pascapanen: "📦",
+  sensor: "📡",
+};
 
-// Simulasi 9 item agar penuh seperti di gambar referensi
-const ASSETS_3D = [
-  {
-    id: 1,
-    title: "Tanaman Budidaya",
-    category: "Tanaman Budidaya",
-    image: "/images/dashboard/beranda/asset-1.png",
-  },
-  {
-    id: 2,
-    title: "Tanaman Budidaya",
-    category: "Tanaman Budidaya",
-    image: "/images/dashboard/beranda/asset-2.png",
-  },
-  {
-    id: 3,
-    title: "Rumah Kaca",
-    category: "Rumah Kaca",
-    image: "/images/dashboard/beranda/asset-3.png",
-  },
-  {
-    id: 4,
-    title: "Tanaman Budidaya",
-    category: "Tanaman Budidaya",
-    image: "/images/dashboard/beranda/asset-1.png",
-  },
-  {
-    id: 5,
-    title: "Tanaman Budidaya",
-    category: "Tanaman Budidaya",
-    image: "/images/dashboard/beranda/asset-2.png",
-  },
-  {
-    id: 6,
-    title: "Tanaman Budidaya",
-    category: "Tanaman Budidaya",
-    image: "/images/dashboard/beranda/asset-1.png",
-  },
-  {
-    id: 7,
-    title: "Rumah Kaca",
-    category: "Rumah Kaca",
-    image: "/images/dashboard/beranda/asset-3.png",
-  },
-  {
-    id: 8,
-    title: "Tanaman Budidaya",
-    category: "Tanaman Budidaya",
-    image: "/images/dashboard/beranda/asset-2.png",
-  },
-  {
-    id: 9,
-    title: "Tanaman Budidaya",
-    category: "Tanaman Budidaya",
-    image: "/images/dashboard/beranda/asset-1.png",
-  },
-];
+function categoryIcon(category: string | null): string {
+  if (!category) return "🌱";
+  const key = Object.keys(CATEGORY_ICONS).find(
+    (k) => k.toLowerCase() === category.toLowerCase()
+  );
+  return (key && CATEGORY_ICONS[key]) || "🌱";
+}
 
 export default function DashboardBeranda() {
+  const token = useAuthStore((s) => s.token);
+  const user = useAuthStore((s) => s.user);
   const [activeCategory, setActiveCategory] = useState("Semua");
   const [searchQuery, setSearchQuery] = useState("");
+  const [assets, setAssets] = useState<ApiAsset[]>([]);
+  const [loadingAssets, setLoadingAssets] = useState(true);
+  const [assetsError, setAssetsError] = useState<string | null>(null);
+  const [selectedAsset, setSelectedAsset] = useState<ApiAsset | null>(null);
+  const [showUploadModal, setShowUploadModal] = useState(false);
 
-  const filteredAssets = ASSETS_3D.filter((asset) => {
-    if (activeCategory === "Semua") return true;
-    return asset.category === activeCategory;
+  useEffect(() => {
+    if (!token) return;
+
+    let cancelled = false;
+    fetchAssets(token)
+      .then(({ my_assets, public_assets }) => {
+        if (cancelled) return;
+        setAssets([...my_assets, ...public_assets]);
+      })
+      .catch((err) => {
+        if (!cancelled)
+          setAssetsError(
+            err instanceof Error ? err.message : "Gagal memuat aset.",
+          );
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingAssets(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [token]);
+
+  // Cek apakah role user adalah Dosen/Guru (sesuaikan string role backend Anda, misal "dosen" atau "Guru")
+  const isDosen =
+    user?.unej_role?.toLowerCase() === "dosen" ||
+    user?.unej_role?.toLowerCase() === "guru";
+
+  const categories = [
+    "Semua",
+    ...Array.from(
+      new Set(
+        assets
+          .map((asset) => asset.category)
+          .filter((c): c is string => c !== null)
+      ),
+    ),
+  ];
+
+  const filteredAssets = assets.filter((asset) => {
+    if (activeCategory !== "Semua" && asset.category !== activeCategory)
+      return false;
+    if (
+      searchQuery &&
+      !asset.name.toLowerCase().includes(searchQuery.toLowerCase())
+    )
+      return false;
+    return true;
   });
+
+  const refreshAssets = () => {
+    if (!token) return;
+    setLoadingAssets(true);
+    fetchAssets(token)
+      .then(({ my_assets, public_assets }) => {
+        setAssets([...my_assets, ...public_assets]);
+      })
+      .catch((err) => {
+        setAssetsError(
+          err instanceof Error ? err.message : "Gagal memuat aset."
+        );
+      })
+      .finally(() => setLoadingAssets(false));
+  };
+
+  const handleDeleteAsset = async (e: React.MouseEvent, assetId: number) => {
+    e.stopPropagation();
+    if (!token) return;
+    if (!confirm("Yakin ingin menghapus aset ini?")) return;
+
+    try {
+      await deleteAsset(token, assetId);
+      refreshAssets();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Gagal menghapus aset.");
+    }
+  };
 
   return (
     <div className="min-h-screen pb-[100px] bg-[url('/bg.svg')] bg-[center_100px] bg-no-repeat bg-[length:100%_auto] text-[#171717]">
       <Navbar />
 
-      <main className="container mt-28  px-5 sm:px-8">
-        {/* --- 1. SAPAAN PENGGUNA --- */}
-        <div className="mb-6">
-          <h1 className="font-serif text-[24px] font-bold text-[#171717] sm:text-[28px]">
-            Selamat Datang, Andini!
-          </h1>
-        </div>
+      <main className="container mt-28 px-5 sm:px-8">
+        <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between rounded-2xl border border-gray-200 bg-white p-6 sm:p-8 shadow-sm">
+          <div>
+            <h1 className="font-serif text-[24px] font-bold text-[#171717] sm:text-[28px]">
+              Selamat datang, {user?.name}!
+            </h1>
+            {isDosen && (
+              <p className="font-serif text-[14px] text-gray-500 mt-1">
+                Apa yang akan kamu buat hari ini?
+              </p>
+            )}
+          </div>
 
-        {/* --- 2. MODUL PEMBELAJARAN --- */}
-        <section className="rounded-2xl border border-gray-200 bg-white p-6 sm:p-8 shadow-sm">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between mb-8">
-            <h2 className="font-serif text-[20px] font-bold text-black sm:text-[22px]">
-              Modul Pembelajaran Pertanian Imersif
-            </h2>
-
-            <div className="relative w-full lg:w-[380px]">
+          {isDosen && (
+            <div className="relative w-full sm:w-[350px]">
               <span className="absolute inset-y-0 left-4 flex items-center pointer-events-none text-gray-400">
                 <svg
                   width="18"
@@ -158,16 +187,106 @@ export default function DashboardBeranda() {
               </span>
               <input
                 type="text"
-                placeholder="Cari modul pembelajaran yang ingin dipelajari..."
+                placeholder="Apa yang ingin kamu cari?"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full rounded-full border border-gray-300 bg-white py-2.5 pl-11 pr-4 font-serif text-[14px] outline-none transition-all focus:border-[#21a447] focus:ring-1 focus:ring-[#21a447]"
               />
             </div>
+          )}
+        </div>
+
+        {isDosen && (
+          <div className="mb-12 grid grid-cols-1 gap-6 sm:grid-cols-3">
+            <div className="group flex items-center gap-4 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm transition-all hover:shadow-md cursor-pointer">
+              <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-[#21a447] text-white">
+                <span className="text-2xl font-bold">+</span>
+              </div>
+              <div>
+                <h3 className="font-serif text-[16px] font-bold text-black">
+                  Buat Project AR
+                </h3>
+                <p className="font-serif text-[12px] text-gray-500">
+                  Buat konten Augmented Reality interaktif
+                </p>
+              </div>
+            </div>
+
+            <div className="group flex items-center gap-4 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm transition-all hover:shadow-md cursor-pointer">
+              <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-[#21a447] text-white">
+                <span className="text-xl">✨</span>
+              </div>
+              <div>
+                <h3 className="font-serif text-[16px] font-bold text-black">
+                  Generator Objek AI
+                </h3>
+                <p className="font-serif text-[12px] text-gray-500">
+                  Ubah prompt atau gambar jadi objek 3D keren
+                </p>
+              </div>
+            </div>
+
+            <div className="group flex items-center gap-4 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm transition-all hover:shadow-md cursor-pointer">
+              <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-[#21a447] text-white">
+                <span className="text-xl">📚</span>
+              </div>
+              <div>
+                <h3 className="font-serif text-[16px] font-bold text-black">
+                  Coba LessonCraft
+                </h3>
+                <p className="font-serif text-[12px] text-gray-500">
+                  Buat RPP, lembar kerja, flashcard, dan lainnya
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        <section className="rounded-2xl border border-gray-200 bg-white p-6 sm:p-8 shadow-sm">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between mb-8">
+            <h2 className="font-serif text-[20px] font-bold text-black sm:text-[22px]">
+              {isDosen
+                ? "Materi Pembelajaran"
+                : "Modul Pembelajaran Pertanian Imersif"}
+            </h2>
+
+            {isDosen ? (
+              <Link
+                href="#"
+                className="font-serif text-[14px] font-medium text-[#21a447] hover:underline"
+              >
+                Lihat Semua Materi
+              </Link>
+            ) : (
+              <div className="relative w-full lg:w-[380px]">
+                <span className="absolute inset-y-0 left-4 flex items-center pointer-events-none text-gray-400">
+                  <svg
+                    width="18"
+                    height="18"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <circle cx="11" cy="11" r="8" />
+                    <path d="M21 21l-4.3-4.3" />
+                  </svg>
+                </span>
+                <input
+                  type="text"
+                  placeholder="Cari modul pembelajaran yang ingin dipelajari..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full rounded-full border border-gray-300 bg-white py-2.5 pl-11 pr-4 font-serif text-[14px] outline-none transition-all focus:border-[#21a447] focus:ring-1 focus:ring-[#21a447]"
+                />
+              </div>
+            )}
           </div>
 
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-5">
-            {LEARNING_MODULES.map((modul) => (
+            {LEARNING_MODULES.slice(0, isDosen ? 4 : 5).map((modul) => (
               <Link
                 key={modul.id}
                 href={`/dashboard/bahan-ajar/topics-library/${modul.id}`}
@@ -210,11 +329,20 @@ export default function DashboardBeranda() {
                 </div>
               </Link>
             ))}
+
+            {isDosen && (
+              <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-gray-300 bg-gray-50/50 p-6 text-center cursor-pointer hover:bg-gray-100 transition-colors min-h-[260px]">
+                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#21a447] text-white shadow-md mb-3">
+                  <span className="text-2xl leading-none">+</span>
+                </div>
+                <span className="font-serif text-[14px] font-bold text-gray-700">
+                  Buat Materi Baru
+                </span>
+              </div>
+            )}
           </div>
         </section>
-
-        {/* --- 3. KELAS ANDA --- */}
-        <section className="mt-12">
+        <section className="mb-12 mt-10">
           <div className="mb-6 flex items-center justify-between">
             <h2 className="font-serif text-[22px] font-bold text-black">
               Kelas Anda
@@ -241,6 +369,7 @@ export default function DashboardBeranda() {
                 </h3>
               </div>
             </div>
+
             <div className="flex h-[180px] w-full cursor-pointer items-center justify-center rounded-2xl border-2 border-dashed border-gray-300 bg-gray-50/50 transition-colors hover:bg-gray-100 hover:border-gray-400">
               <div className="flex flex-col items-center justify-center rounded-xl bg-[#21a447] px-6 py-4 text-white shadow-sm transition-transform hover:scale-105">
                 <span className="text-2xl leading-none">+</span>
@@ -251,8 +380,6 @@ export default function DashboardBeranda() {
             </div>
           </div>
         </section>
-
-        {/* --- 4. ASSET 3D (DESAIN REVISI SESUAI GAMBAR) --- */}
         <section className="mt-12">
           <div className="mb-4">
             <h2 className="font-serif text-[22px] font-bold text-black">
@@ -260,14 +387,13 @@ export default function DashboardBeranda() {
             </h2>
           </div>
 
-          {/* Filter Chips (Bentuk Kapsul / Pill) */}
           <div className="flex gap-2.5 overflow-x-auto pb-4 [&::-webkit-scrollbar]:hidden">
-            {ASSET_CATEGORIES.map((category) => {
-              const isActive = activeCategory === category.id;
+            {categories.map((category) => {
+              const isActive = activeCategory === category;
               return (
                 <button
-                  key={category.id}
-                  onClick={() => setActiveCategory(category.id)}
+                  key={category}
+                  onClick={() => setActiveCategory(category)}
                   className={`flex items-center gap-2 whitespace-nowrap rounded-full px-4 py-1.5 font-serif text-[13px] font-medium transition-all border ${
                     isActive
                       ? "border-[#21a447] bg-[#21a447] text-white"
@@ -277,47 +403,142 @@ export default function DashboardBeranda() {
                   <span
                     className={`flex items-center justify-center ${isActive ? "text-white" : "text-[#21a447]"}`}
                   >
-                    {category.icon}
+                    {categoryIcon(category)}
                   </span>
-                  {category.id}
+                  {category}
                 </button>
               );
             })}
           </div>
 
-          {/* Grid Aset 3D (Rapat, Portrait, Border Hijau Sekeliling Card) */}
-          <div className="mt-2 grid grid-cols-2 gap-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-7 xl:grid-cols-9">
-            {filteredAssets.map((asset, index) => (
-              <div
-                key={index}
-                className="group flex flex-col overflow-hidden rounded-md border border-[#21a447]/60 bg-white transition-all duration-300 hover:-translate-y-1 hover:shadow-md cursor-pointer"
-              >
-                {/* Kotak Gambar - Aspect Ratio Portrait (Lebih tinggi dari lebar), TANPA padding */}
-                <div className="relative aspect-[3/4] w-full bg-gray-100 overflow-hidden">
-                  <Image
-                    src={asset.image}
-                    alt={asset.title}
-                    fill
-                    className="object-cover"
-                  />
-                </div>
+          {!token && (
+            <p className="mt-4 rounded-lg bg-yellow-50 px-4 py-2 font-serif text-[13px] text-yellow-700">
+              Silakan masuk terlebih dahulu untuk melihat aset.
+            </p>
+          )}
 
-                {/* Label Kategori Bawah - Dipisah dengan border atas hijau */}
-                <div className="border-t border-[#21a447]/60 p-2 flex items-center justify-center gap-1.5 bg-white">
-                  <span className="text-[12px] text-[#21a447] flex items-center justify-center">
-                    {ASSET_CATEGORIES.find((c) => c.id === asset.category)
-                      ?.icon || "🌱"}
-                  </span>
-                  <span className="font-serif text-[10px] font-medium text-[#21a447] truncate">
-                    {asset.title}
-                  </span>
+          {loadingAssets && token && (
+            <div className="mt-2 grid grid-cols-2 gap-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-7 xl:grid-cols-9">
+              {Array.from({ length: 9 }).map((_, index) => (
+                <div
+                  key={index}
+                  className="animate-pulse flex flex-col overflow-hidden rounded-md border border-gray-200 bg-gray-100"
+                >
+                  <div className="aspect-[3/4] w-full bg-gray-200" />
+                  <div className="p-2">
+                    <div className="h-3 w-3/4 rounded bg-gray-200" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {assetsError && (
+            <p className="mt-4 rounded-lg bg-red-50 px-4 py-2 font-serif text-[13px] text-red-600">
+              {assetsError}
+            </p>
+          )}
+
+          {token && !loadingAssets && !assetsError && (
+            <div className="mt-2 grid grid-cols-2 gap-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-7 xl:grid-cols-9">
+              {filteredAssets.length === 0 && (
+                <p className="col-span-full py-8 text-center font-serif text-[14px] text-gray-500">
+                  Tidak ada aset yang cocok.
+                </p>
+              )}
+              {filteredAssets.map((asset) => (
+                <div
+                  key={asset.id}
+                  onClick={() => setSelectedAsset(asset)}
+                  className="group relative flex flex-col overflow-hidden rounded-md border border-[#21a447]/60 bg-white transition-all duration-300 hover:-translate-y-1 hover:shadow-md cursor-pointer"
+                >
+                  <button
+                    type="button"
+                    onClick={(e) => handleDeleteAsset(e, asset.id)}
+                    className="absolute right-2 top-2 z-10 flex h-7 w-7 items-center justify-center rounded-full bg-red-500 text-white opacity-0 shadow-md transition-all hover:bg-red-600 group-hover:opacity-100"
+                    title="Hapus aset"
+                  >
+                    <svg
+                      width="14"
+                      height="14"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        d="M3 6H21M8 6V4C8 3.44772 8.44772 3 9 3H15C15.5523 3 16 3.44772 16 4V6M19 6V20C19 21.1046 18.1046 22 17 22H7C5.89543 22 5 21.1046 5 20V6"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                  </button>
+
+                  <div className="relative aspect-[3/4] w-full bg-gray-100 overflow-hidden">
+                    <AssetThumbnail token={token!} asset={asset} />
+                  </div>
+
+                  <div className="border-t border-[#21a447]/60 p-2 flex items-center justify-center gap-1.5 bg-white">
+                    <span className="text-[12px] text-[#21a447] flex items-center justify-center">
+                      {categoryIcon(asset.category)}
+                    </span>
+                    <span className="font-serif text-[10px] font-medium text-[#21a447] truncate">
+                      {asset.name}
+                    </span>
+                  </div>
+                </div>
+              ))}
+
+              {/* Card kosong untuk tambah aset */}
+              <div
+                onClick={() => setShowUploadModal(true)}
+                className="flex cursor-pointer flex-col items-center justify-center overflow-hidden rounded-md border-2 border-dashed border-[#21a447]/60 bg-white transition-all duration-300 hover:-translate-y-1 hover:shadow-md hover:border-[#21a447]"
+              >
+                <div className="relative aspect-[3/4] w-full flex flex-col items-center justify-center bg-gray-50 p-4">
+                  <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-[#21a447]/10">
+                    <svg
+                      width="24"
+                      height="24"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        d="M12 5V19M5 12H19"
+                        stroke="#21a447"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                  </div>
+                  <p className="font-serif text-[13px] font-semibold text-[#21a447]">
+                    Tambah Aset
+                  </p>
                 </div>
               </div>
-            ))}
-          </div>
+            </div>
+          )}
         </section>
       </main>
       <Footer />
+
+      {selectedAsset && token && (
+        <AssetDetailModal
+          token={token}
+          asset={selectedAsset}
+          onClose={() => setSelectedAsset(null)}
+        />
+      )}
+
+      {showUploadModal && token && (
+        <UploadAssetModal
+          token={token}
+          onClose={() => setShowUploadModal(false)}
+          onSuccess={refreshAssets}
+        />
+      )}
     </div>
   );
 }
