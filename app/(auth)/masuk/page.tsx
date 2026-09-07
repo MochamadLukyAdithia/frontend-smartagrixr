@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { login } from "@/lib/api";
+import { getGoogleLoginUrl, login } from "@/lib/api";
 import { useAuthStore } from "@/stores/useAuthStore";
 
 export default function Masuk() {
@@ -154,7 +154,7 @@ export default function Masuk() {
           <button
             type="button"
             onClick={() => {
-              window.location.href = `${process.env.NEXT_PUBLIC_API_URL}auth/google/redirect`;
+              window.location.href = getGoogleLoginUrl();
             }}
             className="flex w-full items-center justify-center gap-3 rounded-full border border-gray-300 py-3.5 transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#21a447] focus:ring-offset-1 cursor-pointer"
           >

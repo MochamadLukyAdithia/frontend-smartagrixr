@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { getGoogleLoginUrl } from "@/lib/api";
 
 export default function Daftar() {
   const [step, setStep] = useState<number>(1);
@@ -240,7 +241,9 @@ export default function Daftar() {
                 </h3>
 
                 <button
-                  onClick={() => handleNext()}
+                  onClick={() => {
+                    window.location.href = getGoogleLoginUrl();
+                  }}
                   className="flex w-full items-center justify-center gap-3 rounded-full border border-gray-300 bg-white py-3.5 transition-all hover:bg-gray-50 shadow-sm"
                 >
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none">

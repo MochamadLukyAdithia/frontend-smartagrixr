@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Engine,
   Scene,
@@ -10,8 +10,9 @@ import {
   Color4,
 } from "@babylonjs/core";
 import "@babylonjs/loaders/glTF";
+import "@babylonjs/loaders/OBJ";
 import { SceneLoader } from "@babylonjs/core";
-import type { ApiAsset } from "@/lib/api";
+import { assetExtensionCandidates, type ApiAsset } from "@/lib/api";
 
 export function AssetThumbnail({
   token,
@@ -24,6 +25,24 @@ export function AssetThumbnail({
 }) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [failed, setFailed] = useState(false);
+
+  const extensions = useMemo(
+    () =>
+      assetExtensionCandidates(
+        asset.file_extension,
+        asset.extension,
+        asset.asset_type,
+        asset.name,
+        asset.thumbnail_url
+      ),
+    [
+      asset.file_extension,
+      asset.extension,
+      asset.asset_type,
+      asset.name,
+      asset.thumbnail_url,
+    ]
+  );
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -57,51 +76,61 @@ export function AssetThumbnail({
     let disposed = false;
 
     (async () => {
-      try {
-        const result = await SceneLoader.ImportMeshAsync(
-          "",
-          "",
-          url,
-          scene,
-          undefined,
-          ".glb"
-        );
+      let result: Awaited<
+        ReturnType<typeof SceneLoader.ImportMeshAsync>
+      > | null = null;
 
-        if (disposed) return;
-
-        const meshes = result.meshes.filter((m) => m.getTotalVertices() > 0);
-        if (!meshes.length) {
-          setFailed(true);
-          dispose();
-          return;
+      for (const ext of extensions) {
+        try {
+          result = await SceneLoader.ImportMeshAsync(
+            "",
+            "",
+            url,
+            scene,
+            undefined,
+            ext
+          );
+          break;
+        } catch {
+          continue;
         }
+      }
 
-        let min: Vector3 | null = null;
-        let max: Vector3 | null = null;
-        for (const mesh of meshes) {
-          const bounds = mesh.getHierarchyBoundingVectors(true);
-          min = min ? Vector3.Minimize(min, bounds.min) : bounds.min;
-          max = max ? Vector3.Maximize(max, bounds.max) : bounds.max;
-        }
-
-        const center = min!.add(max!).scale(0.5);
-        const size = Vector3.Distance(min!, max!);
-        camera.setTarget(center);
-        camera.radius = Math.max(size, 0.5) * 1.35;
-
-        if (autoRotate) {
-          scene.onBeforeRenderObservable.add(() => {
-            camera.alpha += 0.003;
-          });
-        }
-
-        engine.runRenderLoop(() => {
-          scene.render();
-        });
-      } catch {
+      if (!result || disposed) {
         if (!disposed) setFailed(true);
         dispose();
+        return;
       }
+
+        const meshes = result.meshes.filter((m) => m.getTotalVertices() > 0);
+      if (!meshes.length) {
+        setFailed(true);
+        dispose();
+        return;
+      }
+
+      let min: Vector3 | null = null;
+      let max: Vector3 | null = null;
+      for (const mesh of meshes) {
+        const bounds = mesh.getHierarchyBoundingVectors(true);
+        min = min ? Vector3.Minimize(min, bounds.min) : bounds.min;
+        max = max ? Vector3.Maximize(max, bounds.max) : bounds.max;
+      }
+
+      const center = min!.add(max!).scale(0.5);
+      const size = Vector3.Distance(min!, max!);
+      camera.setTarget(center);
+      camera.radius = Math.max(size, 0.5) * 1.35;
+
+      if (autoRotate) {
+        scene.onBeforeRenderObservable.add(() => {
+          camera.alpha += 0.003;
+        });
+      }
+
+      engine.runRenderLoop(() => {
+        scene.render();
+      });
     })();
 
     function dispose() {
@@ -114,7 +143,7 @@ export function AssetThumbnail({
     }
 
     return dispose;
-  }, [asset.id, autoRotate, token]);
+  }, [asset.id, autoRotate, token, extensions]);
 
   if (failed) {
     return (

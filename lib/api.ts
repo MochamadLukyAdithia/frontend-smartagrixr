@@ -25,6 +25,26 @@ export interface ApiAsset {
   is_public: boolean;
   file_size: number;
   thumbnail_url: string | null;
+  file_extension?: string | null;
+  extension?: string | null;
+  asset_type?: string | null;
+}
+
+export function assetExtensionCandidates(
+  fileExtension: string | null | undefined,
+  extension: string | null | undefined,
+  assetType: string | null | undefined,
+  name: string,
+  thumbnailUrl: string | null | undefined
+): string[] {
+  const samples = [fileExtension, extension, assetType, name, thumbnailUrl]
+    .filter((v): v is string => Boolean(v))
+    .join("|")
+    .toLowerCase();
+
+  if (/\bobj\b|\.obj|wavefront|model\/obj/.test(samples)) return [".obj"];
+  if (/\bglb\b|\.glb|gltf-binary|model\/gltf/.test(samples)) return [".glb"];
+  return [".glb", ".obj"];
 }
 
 export interface AssetsResponse {
@@ -35,6 +55,10 @@ export interface AssetsResponse {
 interface LoginCredentials {
   email: string;
   password: string;
+}
+
+export function getGoogleLoginUrl(): string {
+  return `${API_URL}/auth/google/redirect`;
 }
 
 export async function login(
@@ -140,6 +164,25 @@ export async function deleteAsset(token: string, id: number): Promise<void> {
         "Gagal menghapus aset."
     );
   }
+}
+
+export async function fetchMe(token: string): Promise<User> {
+  const res = await fetch(`${API_URL}/api/me`, {
+    headers: { Accept: "application/json", Authorization: `Bearer ${token}` },
+  });
+
+  const data = res.status !== 204 ? await res.json().catch(() => null) : null;
+
+  if (!res.ok) {
+    throw new Error(
+      (data as { message?: string } | null)?.message ||
+        "Gagal mengambil profil user."
+    );
+  }
+
+  const user = (data as { user?: User } | null)?.user;
+  if (!user) throw new Error("Response profil tidak valid.");
+  return user;
 }
 
 export interface UploadAssetParams {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import {
   Engine,
   Scene,
@@ -11,9 +11,10 @@ import {
   Color4,
 } from "@babylonjs/core";
 import "@babylonjs/loaders/glTF";
+import "@babylonjs/loaders/OBJ";
 import { SceneLoader } from "@babylonjs/core";
 import { X } from "lucide-react";
-import type { ApiAsset } from "@/lib/api";
+import { assetExtensionCandidates, type ApiAsset } from "@/lib/api";
 
 export function AssetDetailModal({
   token,
@@ -25,6 +26,24 @@ export function AssetDetailModal({
   onClose: () => void;
 }) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+
+  const extensions = useMemo(
+    () =>
+      assetExtensionCandidates(
+        asset.file_extension,
+        asset.extension,
+        asset.asset_type,
+        asset.name,
+        asset.thumbnail_url
+      ),
+    [
+      asset.file_extension,
+      asset.extension,
+      asset.asset_type,
+      asset.name,
+      asset.thumbnail_url,
+    ]
+  );
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -70,17 +89,27 @@ export function AssetDetailModal({
     let disposed = false;
 
     (async () => {
-      try {
-        const result = await SceneLoader.ImportMeshAsync(
-          "",
-          "",
-          url,
-          scene,
-          undefined,
-          ".glb"
-        );
-        if (disposed) return;
+      let result: Awaited<
+        ReturnType<typeof SceneLoader.ImportMeshAsync>
+      > | null = null;
 
+      for (const ext of extensions) {
+        try {
+          result = await SceneLoader.ImportMeshAsync(
+            "",
+            "",
+            url,
+            scene,
+            undefined,
+            ext
+          );
+          break;
+        } catch {
+          continue;
+        }
+      }
+
+      if (result && !disposed) {
         const meshes = result.meshes.filter((m) => m.getTotalVertices() > 0);
         if (meshes.length) {
           let min: Vector3 | null = null;
@@ -95,8 +124,6 @@ export function AssetDetailModal({
           camera.setTarget(center);
           camera.radius = Math.max(size, 0.5) * 1.6;
         }
-      } catch {
-        // abaikan, canvas kosong
       }
     })();
 
@@ -113,7 +140,7 @@ export function AssetDetailModal({
     }
 
     return dispose;
-  }, [asset.id, asset, token]);
+  }, [asset, token, extensions]);
 
   if (!asset) return null;
 

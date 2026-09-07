@@ -59,8 +59,9 @@ export function UploadAssetModal({
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selected = e.target.files?.[0];
     if (selected) {
-      if (!selected.name.endsWith(".glb")) {
-        setError("Hanya file GLB yang didukung.");
+      const ext = selected.name.split(".").pop()?.toLowerCase();
+      if (ext !== "glb" && ext !== "obj") {
+        setError("Hanya file GLB atau OBJ yang didukung.");
         return;
       }
       setFile(selected);
@@ -97,7 +98,7 @@ export function UploadAssetModal({
             <>
               <div className="mb-4">
                 <label className="mb-2 block font-serif text-[14px] font-semibold text-[#171717]">
-                  File GLB
+                  File 3D (GLB / OBJ)
                 </label>
                 <div
                   onClick={() => fileInputRef.current?.click()}
@@ -116,7 +117,7 @@ export function UploadAssetModal({
                     <>
                       <Upload className="h-8 w-8 text-gray-400 mb-2" />
                       <p className="font-serif text-[14px] text-gray-500">
-                        Klik untuk memilih file GLB
+                        Klik untuk memilih file GLB atau OBJ
                       </p>
                     </>
                   )}
@@ -124,7 +125,7 @@ export function UploadAssetModal({
                 <input
                   ref={fileInputRef}
                   type="file"
-                  accept=".glb"
+                  accept=".glb,.obj"
                   onChange={handleFileChange}
                   className="hidden"
                 />
