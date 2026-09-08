@@ -1,10 +1,13 @@
 "use client";
 
-import React, { useState } from "react";
-import Image from "next/image";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
+import { useParams } from "next/navigation";
 import { Navbar } from "@/components/layout/navbar";
 import Footer from "@/components/layout/footer";
+import { useAuthStore } from "@/stores/useAuthStore";
+import { fetchClassroom } from "@/lib/api";
+import type { ClassroomDetail, ClassroomStudent } from "@/lib/api";
 import {
   ArrowLeft,
   MoreHorizontal,
@@ -23,11 +26,41 @@ interface MateriItem {
 }
 
 export const DetailKelas = () => {
+  const { id } = useParams<{ id: string }>();
+  const token = useAuthStore((s) => s.token);
   const [activeTab, setActiveTab] = useState<"beranda" | "materi" | "anggota">(
     "beranda",
   );
   const [selectedMateri, setSelectedMateri] = useState<MateriItem | null>(null);
   const [commentText, setCommentText] = useState("");
+  const [classroom, setClassroom] = useState<ClassroomDetail | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!token || !id) return;
+
+    let cancelled = false;
+    fetchClassroom(token, id)
+      .then((detail) => {
+        if (cancelled) return;
+        setClassroom(detail);
+      })
+      .catch((err) => {
+        if (!cancelled)
+          setError(err instanceof Error ? err.message : "Gagal memuat kelas.");
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [token, id]);
+
+  const students: ClassroomStudent[] = classroom?.students ?? [];
+  const teacher = classroom?.teacher ?? null;
 
   const materiList: MateriItem[] = [
     {
@@ -56,39 +89,6 @@ export const DetailKelas = () => {
         "https://images.unsplash.com/photo-1530836369250-ef72a3f5cda8?q=80&w=800&auto=format&fit=crop",
       resume:
         "Materi ini mengajak mahasiswa mengenal konsep budidaya tanaman modern serta perbedaannya dengan metode budidaya konvensional. Mahasiswa akan mempelajari bagaimana teknologi, pengelolaan lingkungan, dan penggunaan sumber daya yang efisien dapat mendukung proses produksi tanaman. Melalui materi ini, mahasiswa diharapkan memahami dasar penerapan budidaya modern untuk meningkatkan produktivitas sekaligus mendukung pertanian berkelanjutan.",
-    },
-  ];
-
-  const students = [
-    {
-      id: "1",
-      name: "Ahmad Rafi",
-      avatar:
-        "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=150&auto=format&fit=crop",
-    },
-    {
-      id: "2",
-      name: "Andini Sayna",
-      avatar:
-        "https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=150&auto=format&fit=crop",
-    },
-    {
-      id: "3",
-      name: "Salma Hanin Adawiyah",
-      avatar:
-        "https://images.unsplash.com/photo-1580489944761-15a19d654956?q=80&w=150&auto=format&fit=crop",
-    },
-    {
-      id: "4",
-      name: "Muhammad Agus Salim",
-      avatar:
-        "https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?q=80&w=150&auto=format&fit=crop",
-    },
-    {
-      id: "5",
-      name: "Kevin Putra Wijaya",
-      avatar:
-        "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=150&auto=format&fit=crop",
     },
   ];
 
@@ -143,9 +143,33 @@ export const DetailKelas = () => {
           </button>
 
           <div className="absolute inset-0 flex items-center justify-center">
-            <h1 className="font-serif text-2xl sm:text-3xl font-bold text-white drop-shadow-md">
-              Pertanian Industrial
-            </h1>
+            {loading ? (
+              <p className="font-serif text-2xl sm:text-3xl font-bold text-white drop-shadow-md animate-pulse">
+                Memuat kelas...
+              </p>
+            ) : error ? (
+              <div className="text-center">
+                <h1 className="font-serif text-2xl sm:text-3xl font-bold text-white drop-shadow-md">
+                  Kelas Tidak Ditemukan
+                </h1>
+                {error && (
+                  <p className="mt-2 font-serif text-sm text-red-200">{error}</p>
+                )}
+              </div>
+            ) : (
+              <div className="text-center px-4">
+                <h1 className="font-serif text-2xl sm:text-3xl font-bold text-white drop-shadow-md">
+                  {classroom?.name}
+                </h1>
+                {(classroom?.subject || classroom?.description) && (
+                  <p className="mt-1 font-serif text-sm text-white/90 drop-shadow">
+                    {[classroom?.subject, classroom?.description]
+                      .filter(Boolean)
+                      .join(" · ")}
+                  </p>
+                )}
+              </div>
+            )}
           </div>
         </div>
 
@@ -286,22 +310,24 @@ export const DetailKelas = () => {
 
               <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
                 <h3 className="font-serif text-sm font-bold text-gray-900 mb-4">
-                  5 Siswa + 1 Guru
+                  {students.length} Siswa + 1 Guru
                 </h3>
                 <div className="flex -space-x-2 overflow-hidden mb-4">
-                  {students.map((st) => (
-                    <img
-                      key={st.id}
-                      src={st.avatar}
-                      alt={st.name}
-                      className="inline-block h-9 w-9 rounded-full ring-2 ring-white object-cover"
-                    />
+                  {students.slice(0, 4).map((st) => (
+                    <div
+                      key={String(st.id)}
+                      className="inline-flex h-9 w-9 items-center justify-center rounded-full ring-2 ring-white bg-[#21a447] text-white text-xs font-bold uppercase object-cover"
+                    >
+                      {typeof st.name === "string" && st.name
+                        ? st.name.charAt(0)
+                        : "?"}
+                    </div>
                   ))}
-                  <img
-                    src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=150&auto=format&fit=crop"
-                    alt="Guru"
-                    className="inline-block h-9 w-9 rounded-full ring-2 ring-white object-cover"
-                  />
+                  {teacher && (
+                    <div className="inline-flex h-9 w-9 items-center justify-center rounded-full ring-2 ring-white bg-[#145a2b] text-white text-xs font-bold uppercase object-cover">
+                      {teacher.name ? teacher.name.charAt(0) : "G"}
+                    </div>
+                  )}
                 </div>
                 <button
                   onClick={() => setActiveTab("anggota")}
@@ -355,15 +381,20 @@ export const DetailKelas = () => {
                 </span>
               </div>
               <div className="space-y-3">
+                {students.length === 0 && (
+                  <p className="font-serif text-xs text-gray-400">
+                    Belum ada mahasiswa di kelas ini.
+                  </p>
+                )}
                 {students.map((st) => (
-                  <div key={st.id} className="flex items-center gap-3">
-                    <img
-                      src={st.avatar}
-                      alt={st.name}
-                      className="h-8 w-8 rounded-full object-cover"
-                    />
+                  <div key={String(st.id)} className="flex items-center gap-3">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#21a447] text-white text-xs font-bold uppercase object-cover">
+                      {typeof st.name === "string" && st.name
+                        ? st.name.charAt(0)
+                        : "?"}
+                    </div>
                     <span className="font-serif text-xs font-medium text-gray-800">
-                      {st.name}
+                      {String(st.name ?? "")}
                     </span>
                   </div>
                 ))}
@@ -376,18 +407,23 @@ export const DetailKelas = () => {
                   Guru
                 </h3>
                 <span className="font-serif text-xs font-semibold text-gray-500">
-                  Total : 1
+                  Total : {teacher ? 1 : 0}
                 </span>
               </div>
               <div className="flex items-center gap-4">
-                <img
-                  src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=150&auto=format&fit=crop"
-                  alt="Lilik Indahtatik"
-                  className="h-12 w-12 rounded-full object-cover"
-                />
-                <span className="font-serif text-base font-bold text-gray-900">
-                  Lilik Indahtatik
-                </span>
+                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#145a2b] text-white text-base font-bold uppercase object-cover">
+                  {teacher?.name ? teacher.name.charAt(0) : "G"}
+                </div>
+                <div>
+                  <span className="font-serif text-base font-bold text-gray-900">
+                    {teacher?.name ?? "-"}
+                  </span>
+                  {teacher?.email && (
+                    <p className="font-serif text-xs text-gray-500">
+                      {teacher.email}
+                    </p>
+                  )}
+                </div>
               </div>
             </div>
           </div>

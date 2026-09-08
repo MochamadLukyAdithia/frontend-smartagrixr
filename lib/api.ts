@@ -192,6 +192,173 @@ export interface UploadAssetParams {
   is_public: boolean;
 }
 
+export interface Classroom {
+  id: number;
+  teacher_id: number;
+  name: string;
+  description: string | null;
+  subject: string | null;
+  invite_code: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+  deleted_at: string | null;
+  students_count: number;
+}
+
+export interface ClassroomsResponse {
+  as_teacher: Classroom[];
+  as_student: Classroom[];
+}
+
+export interface CreateClassroomParams {
+  name: string;
+  description: string;
+  subject: string;
+}
+
+export async function fetchClassrooms(
+  token: string
+): Promise<ClassroomsResponse> {
+  const res = await fetch(`${API_URL}/api/classrooms`, {
+    headers: { Accept: "application/json", Authorization: `Bearer ${token}` },
+  });
+
+  const data = res.status !== 204 ? await res.json().catch(() => null) : null;
+
+  if (!res.ok) {
+    throw new Error(
+      (data as { message?: string } | null)?.message ||
+        "Gagal mengambil daftar kelas."
+    );
+  }
+
+  return (data as { data?: ClassroomsResponse } | null)?.data ?? {
+    as_teacher: [],
+    as_student: [],
+  };
+}
+export async function createClassroom(
+  token: string,
+  params: CreateClassroomParams
+): Promise<Classroom> {
+  const res = await fetch(`${API_URL}/api/classrooms`, {
+    method: "POST",
+    headers: {
+      Accept: "application/json",
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(params),
+  });
+
+  const data = res.status !== 204 ? await res.json().catch(() => null) : null;
+
+  if (!res.ok) {
+    throw new Error(
+      (data as { message?: string } | null)?.message ||
+        "Gagal membuat kelas baru."
+    );
+  }
+
+  const created = (data as { data?: Classroom } | null)?.data;
+  if (!created) throw new Error("Response pembuatan kelas tidak valid.");
+  return created;
+}
+
+function classroomErrorMessage(
+  status: number,
+  message: string | null | undefined,
+  fallback: string
+): string {
+  if (
+    status === 404 ||
+    (message && message.includes("No query results for model"))
+  ) {
+    return "Kode kelas tidak ditemukan. Periksa kembali kode undangan Anda.";
+  }
+  return message || fallback;
+}
+
+export async function joinClassroom(
+  token: string,
+  code: string
+): Promise<Classroom> {
+  const res = await fetch(
+    `${API_URL}/api/classrooms/join/${encodeURIComponent(code)}`,
+    {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  );
+
+  const data = res.status !== 204 ? await res.json().catch(() => null) : null;
+
+  if (!res.ok) {
+    throw new Error(
+      classroomErrorMessage(
+        res.status,
+        (data as { message?: string } | null)?.message,
+        "Gagal bergabung ke kelas."
+      )
+    );
+  }
+
+  const joined = (data as { data?: Classroom } | null)?.data;
+  if (!joined) throw new Error("Response join kelas tidak valid.");
+  return joined;
+}
+
+export interface ClassroomTeacher {
+  id: number;
+  name: string;
+  username: string | null;
+  email: string;
+  phone: string | null;
+  status: string;
+  unej_role: string;
+  avatar: string | null;
+}
+
+export interface ClassroomStudent {
+  id: number;
+  name: string;
+  [key: string]: unknown;
+}
+
+export interface ClassroomDetail extends Classroom {
+  teacher: ClassroomTeacher;
+  students: ClassroomStudent[];
+}
+
+export async function fetchClassroom(
+  token: string,
+  id: number | string
+): Promise<ClassroomDetail> {
+  const res = await fetch(`${API_URL}/api/classrooms/${id}`, {
+    headers: { Accept: "application/json", Authorization: `Bearer ${token}` },
+  });
+
+  const data = res.status !== 204 ? await res.json().catch(() => null) : null;
+
+  if (!res.ok) {
+    const message = (data as { message?: string } | null)?.message;
+    throw new Error(
+      res.status === 404 ||
+        (message && message.includes("No query results for model"))
+        ? "Kelas tidak ditemukan atau sudah dihapus."
+        : message || "Gagal mengambil detail kelas."
+    );
+  }
+
+  const detail = (data as { data?: ClassroomDetail } | null)?.data;
+  if (!detail) throw new Error("Response detail kelas tidak valid.");
+  return detail;
+}
+
 export async function uploadAsset(
   token: string,
   params: UploadAssetParams

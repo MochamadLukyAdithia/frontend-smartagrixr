@@ -6,11 +6,19 @@ import Link from "next/link";
 import { Navbar } from "@/components/layout/navbar";
 import Footer from "@/components/layout/footer";
 import { useAuthStore } from "@/stores/useAuthStore";
-import { fetchAssets, deleteAsset } from "@/lib/api";
-import type { ApiAsset } from "@/lib/api";
+import {
+  fetchAssets,
+  deleteAsset,
+  fetchClassrooms,
+  createClassroom,
+  joinClassroom,
+} from "@/lib/api";
+import type { ApiAsset, Classroom } from "@/lib/api";
 import { AssetThumbnail } from "@/components/dashboard/asset-thumbnail";
 import { AssetDetailModal } from "@/components/dashboard/asset-detail-modal";
 import { UploadAssetModal } from "@/components/dashboard/upload-asset-modal";
+import { CreateClassModal } from "@/components/dashboard/create-class-modal";
+import { JoinClassModal } from "@/components/dashboard/join-class-modal";
 
 const LEARNING_MODULES = [
   {
@@ -56,7 +64,7 @@ const CATEGORY_ICONS: Record<string, string> = {
 function categoryIcon(category: string | null): string {
   if (!category) return "🌱";
   const key = Object.keys(CATEGORY_ICONS).find(
-    (k) => k.toLowerCase() === category.toLowerCase()
+    (k) => k.toLowerCase() === category.toLowerCase(),
   );
   return (key && CATEGORY_ICONS[key]) || "🌱";
 }
@@ -71,6 +79,58 @@ export default function DashboardBeranda() {
   const [assetsError, setAssetsError] = useState<string | null>(null);
   const [selectedAsset, setSelectedAsset] = useState<ApiAsset | null>(null);
   const [showUploadModal, setShowUploadModal] = useState(false);
+  const [classrooms, setClassrooms] = useState<Classroom[]>([]);
+  const [loadingClasses, setLoadingClasses] = useState(true);
+  const [showCreateClassModal, setShowCreateClassModal] = useState(false);
+  const [showJoinClassModal, setShowJoinClassModal] = useState(false);
+
+  useEffect(() => {
+    if (!token) return;
+
+    let cancelled = false;
+    fetchClassrooms(token)
+      .then(({ as_teacher, as_student }) => {
+        if (cancelled) return;
+        setClassrooms([...as_teacher, ...as_student]);
+      })
+      .catch(() => {
+        if (!cancelled) setClassrooms([]);
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingClasses(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [token]);
+
+  const refreshClassrooms = () => {
+    if (!token) return;
+    setLoadingClasses(true);
+    fetchClassrooms(token)
+      .then(({ as_teacher, as_student }) => {
+        setClassrooms([...as_teacher, ...as_student]);
+      })
+      .catch(() => setClassrooms([]))
+      .finally(() => setLoadingClasses(false));
+  };
+
+  const handleCreateClass = async (values: {
+    name: string;
+    description: string;
+    subject: string;
+  }) => {
+    if (!token) return;
+    await createClassroom(token, values);
+    refreshClassrooms();
+  };
+
+  const handleJoinClass = async (code: string) => {
+    if (!token) return;
+    await joinClassroom(token, code);
+    refreshClassrooms();
+  };
 
   useEffect(() => {
     if (!token) return;
@@ -101,13 +161,18 @@ export default function DashboardBeranda() {
     user?.unej_role?.toLowerCase() === "dosen" ||
     user?.unej_role?.toLowerCase() === "guru";
 
+  // Role mahasiswa hanya bisa join kelas, tidak bisa membuat kelas
+  const isStudent =
+    user?.unej_role?.toLowerCase() === "mahasiswa" ||
+    user?.unej_role?.toLowerCase() === "student";
+
   const categories = [
     "Semua",
     ...Array.from(
       new Set(
         assets
           .map((asset) => asset.category)
-          .filter((c): c is string => c !== null)
+          .filter((c): c is string => c !== null),
       ),
     ),
   ];
@@ -132,7 +197,7 @@ export default function DashboardBeranda() {
       })
       .catch((err) => {
         setAssetsError(
-          err instanceof Error ? err.message : "Gagal memuat aset."
+          err instanceof Error ? err.message : "Gagal memuat aset.",
         );
       })
       .finally(() => setLoadingAssets(false));
@@ -356,28 +421,68 @@ export default function DashboardBeranda() {
           </div>
 
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5">
-            <div className="group relative h-[180px] w-full cursor-pointer overflow-hidden rounded-2xl bg-gray-200 shadow-sm transition-all hover:shadow-md">
-              <Image
-                src="/images/dashboard/beranda/1.png"
-                alt="Pertanian Industrial"
-                fill
-                className="object-cover transition-transform duration-500 group-hover:scale-105"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent flex items-end p-5">
-                <h3 className="font-serif text-[16px] font-bold text-white">
-                  Pertanian Industrial
-                </h3>
-              </div>
-            </div>
+            {loadingClasses &&
+              Array.from({ length: 2 }).map((_, index) => (
+                <div
+                  key={`skeleton-${index}`}
+                  className="h-[180px] w-full animate-pulse rounded-2xl bg-gray-200"
+                />
+              ))}
 
-            <div className="flex h-[180px] w-full cursor-pointer items-center justify-center rounded-2xl border-2 border-dashed border-gray-300 bg-gray-50/50 transition-colors hover:bg-gray-100 hover:border-gray-400">
-              <div className="flex flex-col items-center justify-center rounded-xl bg-[#21a447] px-6 py-4 text-white shadow-sm transition-transform hover:scale-105">
-                <span className="text-2xl leading-none">+</span>
-                <span className="mt-2 font-serif text-[12px] font-medium tracking-wide">
-                  Buat Kelas Baru
+            {!loadingClasses &&
+              classrooms.map((cls) => (
+                <Link
+                  key={cls.id}
+                  href={`/dashboard/kelas/${cls.id}`}
+                  className="group relative h-[180px] w-full cursor-pointer overflow-hidden rounded-2xl bg-gray-200 shadow-sm transition-all hover:shadow-md"
+                >
+                  <Image
+                    src="/images/dashboard/beranda/1.png"
+                    alt={cls.name}
+                    fill
+                    className="object-cover transition-transform duration-500 group-hover:scale-105"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-transparent flex items-end p-5">
+                    <div className="w-full">
+                      <h3 className="font-serif text-[16px] font-bold text-white leading-snug">
+                        {cls.name}
+                      </h3>
+                      {cls.subject && (
+                        <p className="mt-1 truncate font-serif text-[12px] text-white/80">
+                          {cls.subject}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </Link>
+              ))}
+
+            {!loadingClasses && classrooms.length === 0 && (
+              <div className="h-[180px] w-full rounded-2xl border-2 border-dashed border-gray-300 bg-gray-50/50 flex items-center justify-center">
+                <span className="font-serif text-[14px] text-gray-500">
+                  Belum ada kelas
                 </span>
               </div>
-            </div>
+            )}
+
+            <button
+              type="button"
+              onClick={() =>
+                isStudent
+                  ? setShowJoinClassModal(true)
+                  : setShowCreateClassModal(true)
+              }
+              className="flex h-[180px] w-full cursor-pointer items-center justify-center rounded-2xl border-2 border-dashed border-gray-300 bg-gray-50/50 transition-colors hover:bg-gray-100 hover:border-gray-400"
+            >
+              <div className="flex flex-col items-center justify-center rounded-xl bg-[#21a447] px-6 py-4 text-white shadow-sm transition-transform hover:scale-105">
+                <span className="text-2xl leading-none">
+                  {isStudent ? "🔑" : "+"}
+                </span>
+                <span className="mt-2 font-serif text-[12px] font-medium tracking-wide">
+                  {isStudent ? "Gabung ke Kelas" : "Buat Kelas Baru"}
+                </span>
+              </div>
+            </button>
           </div>
         </section>
         <section className="mt-12">
@@ -537,6 +642,22 @@ export default function DashboardBeranda() {
           token={token}
           onClose={() => setShowUploadModal(false)}
           onSuccess={refreshAssets}
+        />
+      )}
+
+      {showCreateClassModal && token && !isStudent && (
+        <CreateClassModal
+          open={showCreateClassModal}
+          onClose={() => setShowCreateClassModal(false)}
+          onSubmit={handleCreateClass}
+        />
+      )}
+
+      {showJoinClassModal && token && isStudent && (
+        <JoinClassModal
+          open={showJoinClassModal}
+          onClose={() => setShowJoinClassModal(false)}
+          onSubmit={handleJoinClass}
         />
       )}
     </div>
