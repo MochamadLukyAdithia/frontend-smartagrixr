@@ -1,51 +1,116 @@
 "use client";
 
-import { useState } from "react";
-import Image from "next/image";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Navbar } from "@/components/layout/navbar";
-import { GRADES, TAB_CONTENT, TAB_ORDER, type LibraryTab } from "./data";
+import { TAB_CONTENT, TAB_ORDER, type LibraryTab } from "./data";
 import { TopicsLibraryHero } from "./components/topics-library-hero";
 import { SubjectPill } from "./components/subject-pill";
 import { GradeChip } from "./components/grade-chip";
 import { RecommendationCard } from "./components/recommendation-card";
 import { HorizontalScroller } from "./components/horizontal-scroller";
+import { ContentDetailModal } from "./components/content-detail-modal";
 import Footer from "@/components/layout/footer";
 
-// --- DATA DUMMY SESUAI GAMBAR ---
-const LEARNING_MODULES = [
-  {
-    id: 1,
-    title: "Budidaya Tanaman Modern",
-    image: "/images/dashboard/beranda/1.png",
-  },
-  {
-    id: 2,
-    title: "Smart Farming (IoT)",
-    image: "/images/dashboard/beranda/2.png",
-  },
-  {
-    id: 3,
-    title: "Rantai Pasok Agroindustri",
-    image: "/images/dashboard/beranda/3.png",
-  },
-  {
-    id: 4,
-    title: "Perencanaan dan Pengelolaan",
-    image: "/images/dashboard/beranda/4.png",
-  },
-  // Item ke-5 untuk mensimulasikan card turun ke baris bawah seperti di gambar
-  {
-    id: 5,
-    title: "Budidaya Tanaman Modern",
-    image: "/images/dashboard/beranda/1.png",
-  },
-];
+const API_URL = (process.env.NEXT_PUBLIC_API_URL ?? "").replace(/\/$/, "");
+
+// --- TYPES SESUAI RESPONSE /api/learn ---
+type ApiSubject = {
+  id: number;
+  name: string;
+  slug: string;
+  is_active: boolean;
+  sort_order: number;
+  contents_count: number;
+};
+
+type ApiGradeLevel = {
+  id: number;
+  name: string;
+  slug: string;
+  level_type: string;
+};
+
+type ApiLatestContent = {
+  id: number;
+  title: string;
+  content_type: string;
+  subject: { id: number; name: string; slug: string };
+  grade_level: { id: number; name: string; slug: string };
+  thumbnail_url: string | null;
+  created_at: string;
+};
+
+type LearnData = {
+  subjects: ApiSubject[];
+  grade_levels: ApiGradeLevel[];
+  latest: ApiLatestContent[];
+};
+
+// Mapping icon per slug subject — backend belum menyediakan field icon,
+// jadi dipetakan di sisi frontend. Tambahkan entri baru di sini kalau
+// backend menambah subject baru, dan fallback "📘" dipakai untuk yang belum dipetakan.
+const SUBJECT_ICON_MAP: Record<string, string> = {
+  literasi: "📖",
+  sains: "🧬",
+  matematika: "√",
+  "pendidikan-pancasila": "🦅",
+  umum: "⊞",
+  agroteknologi: "🌾",
+  biologi: "🧫",
+};
+
+function getSubjectIcon(slug: string): string {
+  return SUBJECT_ICON_MAP[slug] ?? "📘";
+}
 
 export default function TopicsLibrary() {
-  // "slide" jadi default, sama seperti tampilan awal sebelumnya
   const [activeTab, setActiveTab] = useState<LibraryTab>("slide");
-  const content = TAB_CONTENT[activeTab];
+
+  const [learnData, setLearnData] = useState<LearnData | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Id konten yang lagi dibuka di modal. null = modal tertutup.
+  const [selectedContentId, setSelectedContentId] = useState<number | null>(null);
+
+  useEffect(() => {
+    const controller = new AbortController();
+
+    async function fetchLearnData() {
+      try {
+        setIsLoading(true);
+        setError(null);
+
+        const res = await fetch(`${API_URL}/api/learn`, {
+          signal: controller.signal,
+          headers: { Accept: "application/json" },
+        });
+
+        if (!res.ok) {
+          throw new Error(`Gagal memuat data (status ${res.status})`);
+        }
+
+        const json = await res.json();
+
+        if (!json.success) {
+          throw new Error(json.message ?? "Gagal memuat data modul");
+        }
+
+        setLearnData(json.data as LearnData);
+      } catch (err) {
+        if ((err as Error).name !== "AbortError") {
+          setError((err as Error).message || "Terjadi kesalahan saat memuat data");
+        }
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    fetchLearnData();
+
+    return () => controller.abort();
+  }, []);
 
   return (
     <div className="min-h-screen  bg-[url('/bg.svg')] bg-[center_100px] bg-no-repeat bg-[length:100%_auto] text-[#171717]">
@@ -61,63 +126,127 @@ export default function TopicsLibrary() {
       </div>
 
       <main className="container px-5 sm:px-8 pt-14 pb-20">
-        <section>
+        {!isLoading && error && (
+          <div className="mb-10 rounded-xl border border-red-200 bg-red-50 p-6 text-center">
+            <p className="font-serif text-[14px] text-red-600">{error}</p>
+          </div>
+        )}
+
+        {/* ── Jelajahi berdasarkan Mata Pelajaran ── */}
+        <section className="mb-12">
           <h2 className="mb-6 font-serif text-[20px] font-bold text-[#21a447] sm:text-[22px]">
-            Jelajahi Berdasarkan Modul Pembelajaran
+            Jelajahi Berdasarkan Mata Pelajaran
           </h2>
 
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-            {LEARNING_MODULES.map((modul) => (
-              <Link
-                key={modul.id}
-                href={`/bahan-ajar/topics-library/${modul.id}`} // Sesuaikan tujuan link Anda
-                className="group flex flex-col overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md hover:border-[#21a447]/50"
-              >
-                <div className="relative h-[160px] w-full overflow-hidden bg-gray-100">
-                  <Image
-                    src={modul.image}
-                    alt={modul.title}
-                    fill
-                    className="object-cover"
-                  />
-                </div>
+          {isLoading && (
+            <div className="flex gap-4 overflow-x-hidden">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <div
+                  key={i}
+                  className="h-[72px] w-[200px] flex-shrink-0 animate-pulse rounded-2xl bg-gray-100"
+                />
+              ))}
+            </div>
+          )}
 
-                <div className="border-b border-gray-100 p-4 pb-5">
-                  <h3 className="font-serif text-[16px] font-bold text-[#171717]">
-                    {modul.title}
-                  </h3>
-                </div>
+          {!isLoading && !error && learnData && (
+            <HorizontalScroller>
+              {learnData.subjects.map((subject) => (
+                <SubjectPill
+                  key={subject.id}
+                  name={subject.name}
+                  icon={getSubjectIcon(subject.slug)}
+                />
+              ))}
+            </HorizontalScroller>
+          )}
+        </section>
 
-                <div className="flex items-center justify-between p-4">
-                  <span className="font-serif text-[13px] font-medium text-[#21a447]">
-                    Jelajahi Materi
-                  </span>
+        {/* ── Atau berdasarkan Kelas ── */}
+        <section className="mb-12">
+          <h2 className="mb-6 font-serif text-[20px] font-bold text-[#21a447] sm:text-[22px]">
+            Atau Berdasarkan Kelas
+          </h2>
 
-                  <div className="flex h-6 w-6 items-center justify-center rounded-full bg-[#21a447] transition-transform group-hover:translate-x-1">
-                    <svg
-                      width="12"
-                      height="12"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      xmlns="http://www.w3.org/2000/svg"
-                    >
-                      <path
-                        d="M5 12H19M19 12L12 5M19 12L12 19"
-                        stroke="white"
-                        strokeWidth="3"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                    </svg>
-                  </div>
-                </div>
-              </Link>
-            ))}
+          {isLoading && (
+            <div className="flex gap-3 overflow-x-hidden">
+              {Array.from({ length: 8 }).map((_, i) => (
+                <div
+                  key={i}
+                  className="h-[44px] w-[110px] flex-shrink-0 animate-pulse rounded-full bg-gray-100"
+                />
+              ))}
+            </div>
+          )}
+
+          {!isLoading && !error && learnData && (
+            <HorizontalScroller>
+              {learnData.grade_levels.map((grade) => (
+                <GradeChip key={grade.id} grade={grade.name} />
+              ))}
+            </HorizontalScroller>
+          )}
+        </section>
+
+        {/* ── Rekomendasi untuk Anda ── */}
+        <section>
+          <div className="mb-6 flex items-center justify-between">
+            <h2 className="font-serif text-[20px] font-bold text-[#21a447] sm:text-[22px]">
+              Rekomendasi untuk Anda
+            </h2>
+
+            <Link
+              href="/bahan-ajar/topics-library/1"
+              className="font-serif text-[14px] font-semibold text-[#21a447] hover:underline"
+            >
+              Lihat Semua →
+            </Link>
           </div>
+
+          {isLoading && (
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div
+                  key={i}
+                  className="aspect-[4/3] animate-pulse rounded-2xl bg-gray-100"
+                />
+              ))}
+            </div>
+          )}
+
+          {!isLoading && !error && learnData && learnData.latest.length === 0 && (
+            <div className="rounded-xl border border-gray-200 bg-white p-6 text-center">
+              <p className="font-serif text-[14px] text-gray-500">
+                Belum ada materi yang tersedia.
+              </p>
+            </div>
+          )}
+
+          {!isLoading && !error && learnData && learnData.latest.length > 0 && (
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
+              {learnData.latest.map((content) => (
+                <RecommendationCard
+                  key={content.id}
+                  item={{
+                    id: content.id,
+                    title: content.title,
+                    image: content.thumbnail_url ?? "",
+                    grade: content.grade_level.name,
+                  }}
+                  onClick={(item) => setSelectedContentId(item.id)}
+                />
+              ))}
+            </div>
+          )}
         </section>
       </main>
 
       <Footer />
+
+      <ContentDetailModal
+        contentId={selectedContentId}
+        onClose={() => setSelectedContentId(null)}
+      />
     </div>
   );
 }
