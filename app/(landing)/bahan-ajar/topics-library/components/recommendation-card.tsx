@@ -44,11 +44,11 @@ export function RecommendationCard({ item, onClick }: Props) {
           {item.title}
         </h3>
 
-        <div className="mt-4 flex justify-end">
-          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#1da1f2]/10 text-[13px] font-bold text-[#1da1f2]">
-            {item.grade}
-          </div>
+      <div className="mt-4 flex justify-end">
+        <div className="flex items-center justify-center whitespace-nowrap rounded-full bg-[#1da1f2]/10 px-3 py-1 text-[13px] font-bold text-[#1da1f2]">
+          {item.grade}
         </div>
+      </div>
       </div>
     </div>
   );
