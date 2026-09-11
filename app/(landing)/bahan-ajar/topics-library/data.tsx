@@ -59,7 +59,8 @@ export const TAB_CONTENT: Record<LibraryTab, TabContent> = {
       highlight: "Aset Belajar 3D",
       suffix: " dan Augmented Reality",
     },
-    heroIllustration: "/images/topics/hero-alat-peraga.png",
+    // TODO: ganti dengan gambar asli di /public/images/topics/hero-alat-peraga.png
+    heroIllustration: "https://picsum.photos/seed/alat-peraga/960/600",
     subjects: [
       { name: "Literasi", icon: "📖" },
       { name: "Sains", icon: "🧬" },
@@ -79,7 +80,8 @@ export const TAB_CONTENT: Record<LibraryTab, TabContent> = {
       highlight: "Slide Learning",
       suffix: " Interaktif siap pakai",
     },
-    heroIllustration: "/images/topics/hero-slide.png",
+    // TODO: ganti dengan gambar asli di /public/images/topics/hero-slide.png
+    heroIllustration: "https://picsum.photos/seed/slide-learning/960/600",
     subjects: [
       { name: "Literasi", icon: "📖" },
       { name: "Sains", icon: "🧬" },
