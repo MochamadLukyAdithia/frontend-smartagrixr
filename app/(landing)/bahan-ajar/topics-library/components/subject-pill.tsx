@@ -1,14 +1,25 @@
 import type { Subject } from "../data";
 
-export function SubjectPill({ name, icon }: Subject) {
+type Props = {
+  name: string;
+  icon: string;
+  isActive?: boolean;
+  onClick?: () => void;
+};
+
+export function SubjectPill({ name, icon, isActive, onClick }: Props) {
   return (
-    <button className="flex min-w-[200px] flex-shrink-0 items-center gap-4 rounded-2xl border border-gray-100 bg-white px-6 py-4 shadow-[0_5px_15px_rgba(0,0,0,0.04)] transition-transform hover:-translate-y-1 hover:border-[#21a447]/30 hover:shadow-[0_10px_20px_rgba(33,164,71,0.1)] focus:outline-none">
-      <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[#f0f9f2] text-[24px] font-bold text-[#21a447]">
-        {icon}
-      </div>
-      <span className="font-serif text-[16px] font-semibold text-[#171717]">
-        {name}
-      </span>
+    <button
+      type="button"
+      onClick={onClick}
+      className={`flex items-center gap-2 rounded-2xl border px-4 py-3 transition-colors ${
+        isActive
+          ? "border-[#21a447] bg-[#21a447]/10 text-[#21a447]"
+          : "border-gray-100 bg-white text-[#171717] hover:border-gray-200"
+      }`}
+    >
+      <span>{icon}</span>
+      <span className="font-serif text-[14px] font-medium">{name}</span>
     </button>
   );
 }

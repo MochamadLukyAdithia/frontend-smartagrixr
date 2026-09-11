@@ -32,8 +32,7 @@ export function TopicsLibraryHero({
                 Interaktif siap pakai
               </h1>
               <p className="mt-4 font-serif text-[15px] sm:text-[16px] text-[#171717]/80">
-                {content.description ||
-                  "Jelajahi berbagai materi pembelajaran interaktif untuk mendalami teknologi pertanian cerdas secara praktis."}
+                Jelajahi berbagai materi pembelajaran interaktif untuk mendalami teknologi pertanian cerdas secara praktis.
               </p>
             </div>
 

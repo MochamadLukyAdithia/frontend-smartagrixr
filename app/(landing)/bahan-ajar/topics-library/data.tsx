@@ -9,6 +9,7 @@ export type Recommendation = {
   id: number;
   title: string;
   image: string;
+  embedUrl: string | null;
   grade: string;
 };
 
@@ -24,7 +25,6 @@ export type TabContent = {
   };
   heroIllustration: string;
   subjects: Subject[];
-  recommendations: Recommendation[];
 };
 
 // Grade/kelas sama untuk kedua tab, jadi tidak perlu diduplikasi
@@ -70,56 +70,6 @@ export const TAB_CONTENT: Record<LibraryTab, TabContent> = {
       { name: "Kejuruan", icon: "🛠️" },
       { name: "Umum", icon: "⊞" },
     ],
-    recommendations: [
-      {
-        id: 101,
-        title: "Rumah Adat Nusantara",
-        image: "/images/topics/ap-1.jpg",
-        grade: "SD",
-      },
-      {
-        id: 102,
-        title: "Ngarai Sianok",
-        image: "/images/topics/ap-2.jpg",
-        grade: "SMP",
-      },
-      {
-        id: 103,
-        title: "Robot Sains Sederhana",
-        image: "/images/topics/ap-3.jpg",
-        grade: "6",
-      },
-      {
-        id: 104,
-        title: "Candi Prambanan",
-        image: "/images/topics/ap-4.jpg",
-        grade: "5",
-      },
-      {
-        id: 105,
-        title: "Monumen Nasional",
-        image: "/images/topics/ap-5.jpg",
-        grade: "4",
-      },
-      {
-        id: 106,
-        title: "Kisah Perang Badar",
-        image: "/images/topics/ap-6.jpg",
-        grade: "SMP",
-      },
-      {
-        id: 107,
-        title: "Kemudi & Sistem Kendaraan",
-        image: "/images/topics/ap-7.jpg",
-        grade: "7",
-      },
-      {
-        id: 108,
-        title: "Ekosistem Gurun",
-        image: "/images/topics/ap-8.jpg",
-        grade: "6",
-      },
-    ],
   },
   slide: {
     tagLabel: "Slide Interaktif",
@@ -136,68 +86,6 @@ export const TAB_CONTENT: Record<LibraryTab, TabContent> = {
       { name: "Matematika", icon: "√" },
       { name: "Pendidikan Pancasila", icon: "🦅" },
       { name: "Umum", icon: "⊞" },
-    ],
-    recommendations: [
-      {
-        id: 1,
-        title: "Dampak Pembakaran pada Hidrokarbon",
-        image: "/images/topics/topic-1.jpg",
-        grade: "11",
-      },
-      {
-        id: 2,
-        title: "Isomer pada Hidrokarbon",
-        image: "/images/topics/topic-2.jpg",
-        grade: "11",
-      },
-      {
-        id: 3,
-        title: "Alkena dan Alkuna",
-        image: "/images/topics/topic-3.jpg",
-        grade: "11",
-      },
-      {
-        id: 4,
-        title: "Sifat Fisis dan Kimia Hidrokarbon",
-        image: "/images/topics/topic-4.jpg",
-        grade: "11",
-      },
-      {
-        id: 5,
-        title: "Alkana",
-        image: "/images/topics/topic-5.jpg",
-        grade: "11",
-      },
-      {
-        id: 6,
-        title: "Kekhasan Atom Karbon",
-        image: "/images/topics/topic-6.jpg",
-        grade: "11",
-      },
-      {
-        id: 7,
-        title: "Persen Hasil dan Kemurnian",
-        image: "/images/topics/topic-7.jpg",
-        grade: "11",
-      },
-      {
-        id: 8,
-        title: "Pereaksi Pembatas",
-        image: "/images/topics/topic-8.jpg",
-        grade: "11",
-      },
-      {
-        id: 9,
-        title: "3.4 Iritabilitas pada Tumbuhan",
-        image: "/images/topics/topic-9.jpg",
-        grade: "11",
-      },
-      {
-        id: 10,
-        title: "3.3 Reproduksi pada Tumbuhan",
-        image: "/images/topics/topic-10.jpg",
-        grade: "11",
-      },
     ],
   },
 };

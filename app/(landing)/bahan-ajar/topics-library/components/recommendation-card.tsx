@@ -1,31 +1,45 @@
+import Image from "next/image";
 import Link from "next/link";
 import type { Recommendation } from "../data";
 
 type Props = {
   item: Recommendation;
-  /**
-   * Kalau diisi, card akan memicu fungsi ini saat diklik (dipakai untuk
-   * membuka modal detail di halaman yang sama) alih-alih navigasi lewat Link.
-   */
   onClick?: (item: Recommendation) => void;
 };
 
+export function extractCanvaEmbedSrc(embedHtml: string): string | null {
+  const match = embedHtml.match(/src="([^"]+)"/);
+  return match ? match[1] : null;
+}
+
 export function RecommendationCard({ item, onClick }: Props) {
+  const embedSrc = item.embedUrl ? extractCanvaEmbedSrc(item.embedUrl) : null;
+
   const cardContent = (
     <div className="group flex h-full cursor-pointer flex-col overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-[0_5px_15px_rgba(0,0,0,0.05)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_15px_35px_rgba(0,0,0,0.08)]">
-      {/* Thumbnail */}
+      {/* Thumbnail / Preview */}
       <div className="relative aspect-[4/3] w-full overflow-hidden bg-gray-50">
-        <div className="absolute inset-0 flex items-center justify-center bg-gray-200 text-sm font-serif text-gray-400">
-          Thumbnail Materi
-        </div>
-        {/* Ganti placeholder di atas dengan gambar asli:
-        <Image
-          src={item.image}
-          alt={item.title}
-          fill
-          className="object-cover transition-transform duration-500 group-hover:scale-105"
-        />
-        */}
+        {embedSrc ? (
+          // Preview embed Canva — non-interaktif, cuma buat pratinjau visual
+          <iframe
+            src={embedSrc}
+            title={item.title}
+            loading="lazy"
+            tabIndex={-1}
+            className="pointer-events-none absolute inset-0 h-full w-full border-0"
+          />
+        ) : item.image ? (
+          <Image
+            src={item.image}
+            alt={item.title}
+            fill
+            className="object-cover transition-transform duration-500 group-hover:scale-105"
+          />
+        ) : (
+          <div className="absolute inset-0 flex items-center justify-center bg-gray-200 text-sm font-serif text-gray-400">
+            Thumbnail Materi
+          </div>
+        )}
       </div>
 
       {/* Konten teks bawah */}
@@ -43,8 +57,6 @@ export function RecommendationCard({ item, onClick }: Props) {
     </div>
   );
 
-  // Kalau onClick disediakan, render sebagai button (buka modal),
-  // bukan Link (navigasi ke halaman lain).
   if (onClick) {
     return (
       <button

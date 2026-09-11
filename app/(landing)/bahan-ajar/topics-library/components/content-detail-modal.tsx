@@ -67,17 +67,12 @@ type Props = {
 const RELATED_PER_PAGE = 4;
 
 export function ContentDetailModal({ contentId, onClose }: Props) {
-  // Id konten yang SEDANG ditampilkan di dalam modal — terpisah dari
-  // `contentId` (prop awal), supaya klik "Materi Terkait" bisa berpindah
-  // konten tanpa perlu mengubah state di parent / menutup modal.
   const [activeId, setActiveId] = useState<number | null>(contentId);
   const [detail, setDetail] = useState<ContentDetail | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [relatedPage, setRelatedPage] = useState(1);
 
-  // Setiap kali modal dibuka dengan contentId baru dari parent,
-  // reset activeId & relatedPage mengikuti konten awal itu.
   useEffect(() => {
     setActiveId(contentId);
     setRelatedPage(1);
@@ -197,10 +192,6 @@ export function ContentDetailModal({ contentId, onClose }: Props) {
               {/* Embed Canva / video */}
               <div className="mx-auto w-full max-w-[700px]">
                 {detail.content_type === "canva" && detail.embed_url ? (
-                  // embed_url dari Canva berisi HTML EMBED CODE LENGKAP
-                  // (<div><iframe>...</iframe></div>), BUKAN url murni —
-                  // jadi harus di-render sebagai HTML, tidak bisa dipasang
-                  // langsung ke <iframe src={...}>.
                   <div
                     className="canva-embed-wrapper overflow-hidden rounded-2xl shadow-inner"
                     dangerouslySetInnerHTML={{ __html: detail.embed_url }}
@@ -242,57 +233,6 @@ export function ContentDetailModal({ contentId, onClose }: Props) {
                   {detail.description}
                 </p>
               </div>
-
-              {/* Materi terkait */}
-              {detail.related.data.length > 0 && (
-                <div className="mx-auto mt-10 w-full max-w-[700px]">
-                  <h4 className="mb-4 font-serif text-[16px] font-bold text-[#171717]">
-                    Materi Terkait
-                  </h4>
-
-                  <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-                    {detail.related.data.map((related) => (
-                      <RecommendationCard
-                        key={related.id}
-                        item={{
-                          id: related.id,
-                          title: related.title,
-                          image: related.thumbnail_url ?? "",
-                          grade: related.grade_level.name,
-                        }}
-                        onClick={(item) => {
-                          // Ganti konten aktif TANPA menutup modal
-                          setRelatedPage(1);
-                          setActiveId(item.id);
-                        }}
-                      />
-                    ))}
-                  </div>
-
-                  {/* Pagination related content */}
-                  {detail.related.last_page > 1 && (
-                    <div className="mt-4 flex items-center justify-center gap-4">
-                      <button
-                        disabled={relatedPage <= 1}
-                        onClick={() => setRelatedPage((p) => Math.max(1, p - 1))}
-                        className="rounded-full border border-gray-200 px-4 py-1.5 font-serif text-[13px] text-gray-600 hover:enabled:bg-gray-50 disabled:opacity-30"
-                      >
-                        ← Sebelumnya
-                      </button>
-                      <span className="font-serif text-[13px] text-gray-400">
-                        Halaman {detail.related.current_page} / {detail.related.last_page}
-                      </span>
-                      <button
-                        disabled={relatedPage >= detail.related.last_page}
-                        onClick={() => setRelatedPage((p) => p + 1)}
-                        className="rounded-full border border-gray-200 px-4 py-1.5 font-serif text-[13px] text-gray-600 hover:enabled:bg-gray-50 disabled:opacity-30"
-                      >
-                        Selanjutnya →
-                      </button>
-                    </div>
-                  )}
-                </div>
-              )}
             </>
           )}
         </div>

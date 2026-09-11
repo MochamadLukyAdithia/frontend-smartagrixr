@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { Navbar } from "@/components/layout/navbar";
 import { TAB_CONTENT, TAB_ORDER, type LibraryTab } from "./data";
@@ -38,6 +38,7 @@ type ApiLatestContent = {
   subject: { id: number; name: string; slug: string };
   grade_level: { id: number; name: string; slug: string };
   thumbnail_url: string | null;
+  embed_url: string | null;
   created_at: string;
 };
 
@@ -47,9 +48,6 @@ type LearnData = {
   latest: ApiLatestContent[];
 };
 
-// Mapping icon per slug subject — backend belum menyediakan field icon,
-// jadi dipetakan di sisi frontend. Tambahkan entri baru di sini kalau
-// backend menambah subject baru, dan fallback "📘" dipakai untuk yang belum dipetakan.
 const SUBJECT_ICON_MAP: Record<string, string> = {
   literasi: "📖",
   sains: "🧬",
@@ -71,8 +69,13 @@ export default function TopicsLibrary() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Id konten yang lagi dibuka di modal. null = modal tertutup.
   const [selectedContentId, setSelectedContentId] = useState<number | null>(null);
+
+  // ── State filter: subject & grade yang lagi dipilih ──
+  // null = tidak ada filter aktif untuk kategori itu (tampilkan semua).
+  // Klik pill/chip yang sama lagi = toggle off (unselect).
+  const [selectedSubjectSlug, setSelectedSubjectSlug] = useState<string | null>(null);
+  const [selectedGradeSlug, setSelectedGradeSlug] = useState<string | null>(null);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -111,6 +114,27 @@ export default function TopicsLibrary() {
 
     return () => controller.abort();
   }, []);
+
+  // ── Filtered list: hasil filter subject + grade terhadap learnData.latest ──
+  const filteredLatest = useMemo(() => {
+    if (!learnData) return [];
+
+    return learnData.latest.filter((content) => {
+      const matchSubject =
+        !selectedSubjectSlug || content.subject.slug === selectedSubjectSlug;
+      const matchGrade =
+        !selectedGradeSlug || content.grade_level.slug === selectedGradeSlug;
+      return matchSubject && matchGrade;
+    });
+  }, [learnData, selectedSubjectSlug, selectedGradeSlug]);
+
+  function handleSubjectClick(slug: string) {
+    setSelectedSubjectSlug((prev) => (prev === slug ? null : slug));
+  }
+
+  function handleGradeClick(slug: string) {
+    setSelectedGradeSlug((prev) => (prev === slug ? null : slug));
+  }
 
   return (
     <div className="min-h-screen  bg-[url('/bg.svg')] bg-[center_100px] bg-no-repeat bg-[length:100%_auto] text-[#171717]">
@@ -156,6 +180,8 @@ export default function TopicsLibrary() {
                   key={subject.id}
                   name={subject.name}
                   icon={getSubjectIcon(subject.slug)}
+                  isActive={selectedSubjectSlug === subject.slug}
+                  onClick={() => handleSubjectClick(subject.slug)}
                 />
               ))}
             </HorizontalScroller>
@@ -182,7 +208,12 @@ export default function TopicsLibrary() {
           {!isLoading && !error && learnData && (
             <HorizontalScroller>
               {learnData.grade_levels.map((grade) => (
-                <GradeChip key={grade.id} grade={grade.name} />
+                <GradeChip
+                  key={grade.id}
+                  grade={grade.name}
+                  isActive={selectedGradeSlug === grade.slug}
+                  onClick={() => handleGradeClick(grade.slug)}
+                />
               ))}
             </HorizontalScroller>
           )}
@@ -203,6 +234,35 @@ export default function TopicsLibrary() {
             </Link>
           </div>
 
+          {/* Info filter aktif + tombol reset */}
+          {!isLoading && !error && (selectedSubjectSlug || selectedGradeSlug) && (
+            <div className="mb-4 flex flex-wrap items-center gap-2">
+              <span className="font-serif text-[13px] text-gray-500">
+                Filter aktif:
+              </span>
+              {selectedSubjectSlug && (
+                <span className="rounded-full bg-[#21a447]/10 px-3 py-1 font-serif text-[12px] font-semibold text-[#21a447]">
+                  {learnData?.subjects.find((s) => s.slug === selectedSubjectSlug)?.name}
+                </span>
+              )}
+              {selectedGradeSlug && (
+                <span className="rounded-full bg-[#1da1f2]/10 px-3 py-1 font-serif text-[12px] font-semibold text-[#1da1f2]">
+                  {learnData?.grade_levels.find((g) => g.slug === selectedGradeSlug)?.name}
+                </span>
+              )}
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedSubjectSlug(null);
+                  setSelectedGradeSlug(null);
+                }}
+                className="font-serif text-[12px] text-gray-400 underline hover:text-gray-600"
+              >
+                Reset filter
+              </button>
+            </div>
+          )}
+
           {isLoading && (
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
               {Array.from({ length: 6 }).map((_, i) => (
@@ -214,23 +274,26 @@ export default function TopicsLibrary() {
             </div>
           )}
 
-          {!isLoading && !error && learnData && learnData.latest.length === 0 && (
+          {!isLoading && !error && learnData && filteredLatest.length === 0 && (
             <div className="rounded-xl border border-gray-200 bg-white p-6 text-center">
               <p className="font-serif text-[14px] text-gray-500">
-                Belum ada materi yang tersedia.
+                {selectedSubjectSlug || selectedGradeSlug
+                  ? "Tidak ada materi yang cocok dengan filter ini."
+                  : "Belum ada materi yang tersedia."}
               </p>
             </div>
           )}
 
-          {!isLoading && !error && learnData && learnData.latest.length > 0 && (
+          {!isLoading && !error && learnData && filteredLatest.length > 0 && (
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
-              {learnData.latest.map((content) => (
+              {filteredLatest.map((content) => (
                 <RecommendationCard
                   key={content.id}
                   item={{
                     id: content.id,
                     title: content.title,
                     image: content.thumbnail_url ?? "",
+                    embedUrl: content.embed_url,
                     grade: content.grade_level.name,
                   }}
                   onClick={(item) => setSelectedContentId(item.id)}
