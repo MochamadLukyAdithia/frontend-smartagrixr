@@ -1,5 +1,5 @@
 export const API_URL = (
-  process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
+  process.env.NEXT_PUBLIC_API_URL || "https://backend-smartagrixr-production.up.railway.app"
 ).replace(/\/+$/, "");
 
 export interface User {
