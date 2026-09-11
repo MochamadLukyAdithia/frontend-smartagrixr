@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { RecommendationCard } from "./recommendation-card";
+import { normalizeEmbedHtml } from "@/lib/canva";
 
 const API_URL = (process.env.NEXT_PUBLIC_API_URL ?? "").replace(/\/$/, "");
 
@@ -194,7 +194,7 @@ export function ContentDetailModal({ contentId, onClose }: Props) {
                 {detail.content_type === "canva" && detail.embed_url ? (
                   <div
                     className="canva-embed-wrapper overflow-hidden rounded-2xl shadow-inner"
-                    dangerouslySetInnerHTML={{ __html: detail.embed_url }}
+                    dangerouslySetInnerHTML={{ __html: normalizeEmbedHtml(detail.embed_url) }}
                   />
                 ) : detail.content_type === "youtube" && detail.embed_url ? (
                   <div className="relative aspect-[16/9] w-full overflow-hidden rounded-2xl bg-black shadow-inner">

@@ -1,16 +1,12 @@
 import Image from "next/image";
 import Link from "next/link";
 import type { Recommendation } from "../data";
+import { extractCanvaEmbedSrc } from "@/lib/canva";
 
 type Props = {
   item: Recommendation;
   onClick?: (item: Recommendation) => void;
 };
-
-export function extractCanvaEmbedSrc(embedHtml: string): string | null {
-  const match = embedHtml.match(/src="([^"]+)"/);
-  return match ? match[1] : null;
-}
 
 export function RecommendationCard({ item, onClick }: Props) {
   const embedSrc = item.embedUrl ? extractCanvaEmbedSrc(item.embedUrl) : null;
