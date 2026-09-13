@@ -31,11 +31,11 @@ export function LeftToolbar() {
   ] as const;
 
   return (
-    <div className="w-16 bg-[#161619] border-r border-[#27272a] flex flex-col items-center py-3 justify-between select-none z-20 shadow-xl font-sans">
+    <div className="w-16 bg-white border-r border-slate-200 flex flex-col items-center py-3 justify-between select-none z-20 shadow-sm font-sans">
       {/* Top logo/home button */}
       <Link
         href="/"
-        className="w-10 h-10 rounded-xl bg-emerald-500 hover:bg-emerald-400 flex items-center justify-center text-zinc-950 shadow-sm hover:scale-105 active:scale-95 transition-all font-bold"
+        className="w-10 h-10 rounded-xl bg-emerald-600 hover:bg-emerald-500 flex items-center justify-center text-white shadow-sm hover:scale-105 active:scale-95 transition-all font-bold"
         title="Kembali ke Beranda"
       >
         <Home className="w-5 h-5 stroke-[2.5]" />
@@ -52,8 +52,8 @@ export function LeftToolbar() {
               onClick={() => setActiveLeftTab(item.id)}
               className={`group w-full h-11 rounded-xl flex flex-col items-center justify-center gap-0.5 transition-all cursor-pointer border ${
                 isActive 
-                  ? "bg-emerald-500 border-emerald-400 text-zinc-950 font-bold shadow-sm"
-                  : "border-transparent text-zinc-400 hover:bg-[#202024] hover:text-emerald-400 hover:scale-105 active:scale-95"
+                  ? "bg-emerald-600 border-emerald-600 text-white font-bold shadow-xs"
+                  : "border-transparent text-slate-500 hover:bg-slate-100 hover:text-emerald-700 hover:scale-105 active:scale-95"
               }`}
               title={item.label}
             >
@@ -68,7 +68,7 @@ export function LeftToolbar() {
 
       {/* Bottom live engine indicator */}
       <div className="flex flex-col items-center gap-1" title="SmartAgri Engine Active">
-        <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 ring-4 ring-emerald-500/20 animate-pulse" />
+        <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 ring-4 ring-emerald-500/20 animate-pulse" />
       </div>
     </div>
   );

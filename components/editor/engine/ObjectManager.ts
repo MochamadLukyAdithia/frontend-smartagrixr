@@ -8,7 +8,9 @@ import {
   Texture, 
   DynamicTexture, 
   StandardMaterial,
-  SceneLoader
+  SceneLoader,
+  VideoTexture,
+  Sound
 } from "@babylonjs/core";
 import "@babylonjs/loaders/glTF";
 import { EditorEngine } from "./EditorEngine";
@@ -986,12 +988,29 @@ export class ObjectManager {
     
     const plane = MeshBuilder.CreatePlane(id, { size: 2, sideOrientation: Mesh.DOUBLESIDE }, this.editor.scene);
     plane.name = name;
+    plane.position.set(0, 1, 0);
     
-    const mat = new PBRMaterial(id + "_material", this.editor.scene);
-    mat.albedoTexture = new Texture(url, this.editor.scene);
-    mat.roughness = 0.8;
-    mat.metallic = 0.1;
+    const mat = new StandardMaterial(id + "_material", this.editor.scene);
+    const tex = new Texture(url, this.editor.scene, false, false, Texture.BILINEAR_SAMPLINGMODE, () => {
+      const size = tex.getSize();
+      if (size.width && size.height) {
+        const aspect = size.width / size.height;
+        if (aspect >= 1) {
+          plane.scaling.x = aspect;
+          plane.scaling.y = 1;
+        } else {
+          plane.scaling.x = 1;
+          plane.scaling.y = 1 / aspect;
+        }
+      }
+    });
+    tex.hasAlpha = true;
+    mat.diffuseTexture = tex;
+    mat.emissiveColor = new Color3(1, 1, 1);
+    mat.specularColor = new Color3(0.1, 0.1, 0.1);
+    mat.backFaceCulling = false;
     plane.material = mat;
+    plane.isPickable = true;
 
     this.editor.nodesMap.set(id, plane);
 
@@ -1009,6 +1028,8 @@ export class ObjectManager {
     };
 
     useEditorStore.getState().addObject(stateObj);
+    this.editor.selectionManager.selectObject(id);
+    this.editor.cameraManager.focusOnNode(plane);
     return id;
   }
 
@@ -1018,14 +1039,47 @@ export class ObjectManager {
     const url = source instanceof File ? URL.createObjectURL(source) : source;
     const name = customName || (source instanceof File ? source.name : "Video " + id.slice(-4));
     
-    const { VideoTexture } = require("@babylonjs/core");
-    
-    const plane = MeshBuilder.CreatePlane(id, { size: 3 }, this.editor.scene);
+    const plane = MeshBuilder.CreatePlane(id, { size: 2.5, sideOrientation: Mesh.DOUBLESIDE }, this.editor.scene);
     plane.name = name;
+    plane.position.set(0, 1.25, 0);
     
     const mat = new StandardMaterial(id + "_material", this.editor.scene);
-    mat.diffuseTexture = new VideoTexture(id + "_texture", url, this.editor.scene, true, false);
+    const videoTexture = new VideoTexture(
+      id + "_texture", 
+      url, 
+      this.editor.scene, 
+      true, 
+      false, 
+      Texture.BILINEAR_SAMPLINGMODE, 
+      { autoPlay: true, autoUpdateTexture: true, loop: true, muted: true }
+    );
+    
+    // Auto adjust aspect ratio when video metadata is ready
+    if (videoTexture.video) {
+      videoTexture.video.playsInline = true;
+      videoTexture.video.addEventListener("loadedmetadata", () => {
+        const vw = videoTexture.video.videoWidth;
+        const vh = videoTexture.video.videoHeight;
+        if (vw && vh) {
+          const aspect = vw / vh;
+          if (aspect >= 1) {
+            plane.scaling.x = aspect;
+            plane.scaling.y = 1;
+          } else {
+            plane.scaling.x = 1;
+            plane.scaling.y = 1 / aspect;
+          }
+        }
+      });
+      videoTexture.video.play().catch(() => {});
+    }
+
+    mat.diffuseTexture = videoTexture;
+    mat.emissiveColor = new Color3(1, 1, 1);
+    mat.specularColor = new Color3(0.1, 0.1, 0.1);
+    mat.backFaceCulling = false;
     plane.material = mat;
+    plane.isPickable = true;
 
     this.editor.nodesMap.set(id, plane);
 
@@ -1036,13 +1090,15 @@ export class ObjectManager {
       parentId: null,
       visible: true,
       locked: false,
-      position: [0, 1.5, 0],
+      position: [0, 1.25, 0],
       rotation: [0, 0, 0],
       scale: [1, 1, 1],
       mediaUrl: url,
     };
 
     useEditorStore.getState().addObject(stateObj);
+    this.editor.selectionManager.selectObject(id);
+    this.editor.cameraManager.focusOnNode(plane);
     return id;
   }
 
@@ -1052,10 +1108,9 @@ export class ObjectManager {
     const url = source instanceof File ? URL.createObjectURL(source) : source;
     const name = customName || (source instanceof File ? source.name : "Audio " + id.slice(-4));
     
-    const { Sound } = require("@babylonjs/core");
-    
     const node = new TransformNode(id, this.editor.scene);
     node.name = name;
+    node.position.set(0, 1, 0);
     
     const sound = new Sound(id + "_sound", url, this.editor.scene, () => {
       sound.play();
@@ -1078,6 +1133,7 @@ export class ObjectManager {
     };
 
     useEditorStore.getState().addObject(stateObj);
+    this.editor.selectionManager.selectObject(id);
     return id;
   }
 
@@ -1089,10 +1145,12 @@ export class ObjectManager {
     plane.rotation.set((obj.rotation[0] * Math.PI) / 180, (obj.rotation[1] * Math.PI) / 180, (obj.rotation[2] * Math.PI) / 180);
     plane.scaling.set(obj.scale[0], obj.scale[1], obj.scale[2]);
 
-    const mat = new PBRMaterial(obj.id + "_material", this.editor.scene);
-    mat.albedoTexture = new Texture(obj.mediaUrl, this.editor.scene);
-    mat.roughness = 0.8;
-    mat.metallic = 0.1;
+    const mat = new StandardMaterial(obj.id + "_material", this.editor.scene);
+    const tex = new Texture(obj.mediaUrl, this.editor.scene);
+    tex.hasAlpha = true;
+    mat.diffuseTexture = tex;
+    mat.emissiveColor = new Color3(1, 1, 1);
+    mat.backFaceCulling = false;
     plane.material = mat;
     plane.isPickable = true;
 
@@ -1101,25 +1159,36 @@ export class ObjectManager {
 
   private reconstructVideo(obj: SceneObject) {
     if (!obj.mediaUrl) return;
-    const { VideoTexture } = require("@babylonjs/core");
-    const plane = MeshBuilder.CreatePlane(obj.id, { size: 3 }, this.editor.scene);
+    const plane = MeshBuilder.CreatePlane(obj.id, { size: 2.5, sideOrientation: Mesh.DOUBLESIDE }, this.editor.scene);
     plane.name = obj.name;
     plane.position.set(obj.position[0], obj.position[1], obj.position[2]);
     plane.rotation.set((obj.rotation[0] * Math.PI) / 180, (obj.rotation[1] * Math.PI) / 180, (obj.rotation[2] * Math.PI) / 180);
     plane.scaling.set(obj.scale[0], obj.scale[1], obj.scale[2]);
 
     const mat = new StandardMaterial(obj.id + "_material", this.editor.scene);
-    mat.diffuseTexture = new VideoTexture(obj.id + "_texture", obj.mediaUrl, this.editor.scene, true, false);
+    const videoTexture = new VideoTexture(
+      obj.id + "_texture", 
+      obj.mediaUrl, 
+      this.editor.scene, 
+      true, 
+      false, 
+      Texture.BILINEAR_SAMPLINGMODE, 
+      { autoPlay: true, autoUpdateTexture: true, loop: true, muted: true }
+    );
+    if (videoTexture.video) {
+      videoTexture.video.playsInline = true;
+    }
+    mat.diffuseTexture = videoTexture;
+    mat.emissiveColor = new Color3(1, 1, 1);
+    mat.backFaceCulling = false;
     plane.material = mat;
     plane.isPickable = true;
 
     this.editor.nodesMap.set(obj.id, plane);
   }
 
-
   private reconstructAudio(obj: SceneObject) {
     if (!obj.mediaUrl) return;
-    const { Sound } = require("@babylonjs/core");
     const node = new TransformNode(obj.id, this.editor.scene);
     node.name = obj.name;
     node.position.set(obj.position[0], obj.position[1], obj.position[2]);

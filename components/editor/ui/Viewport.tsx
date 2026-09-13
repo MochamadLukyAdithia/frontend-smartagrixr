@@ -11,8 +11,43 @@ export function Viewport() {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const isPreviewMode = useEditorStore((state) => state.isPreviewMode);
   const selectedIds = useEditorStore((state) => state.selectedIds);
+  const addAsset = useEditorStore((state) => state.addAsset);
   const [menuPos, setMenuPos] = useState<{ x: number; y: number } | null>(null);
   const [showMore, setShowMore] = useState(false);
+  const [isDragOver, setIsDragOver] = useState(false);
+
+  const handleCanvasDrop = async (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(false);
+
+    const files = e.dataTransfer.files;
+    const editor = getEditorInstance();
+    if (!files || files.length === 0 || !editor) return;
+
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      const ext = file.name.split(".").pop()?.toLowerCase() || "";
+      const objectUrl = URL.createObjectURL(file);
+
+      try {
+        if (ext === "glb" || ext === "gltf") {
+          await editor.importManager.importFile(file);
+        } else if (["png", "jpg", "jpeg", "webp", "gif", "svg"].includes(ext)) {
+          editor.objectManager.createImage(file);
+          addAsset({ id: "img_" + Math.random().toString(36).substring(2, 9), name: file.name, url: objectUrl, type: "image" });
+        } else if (["mp4", "webm", "ogv", "mov"].includes(ext)) {
+          editor.objectManager.createVideo(file);
+          addAsset({ id: "vid_" + Math.random().toString(36).substring(2, 9), name: file.name, url: objectUrl, type: "video" });
+        } else if (["mp3", "wav", "ogg", "aac"].includes(ext)) {
+          editor.objectManager.createAudio(file);
+          addAsset({ id: "aud_" + Math.random().toString(36).substring(2, 9), name: file.name, url: objectUrl, type: "audio" });
+        }
+      } catch (err) {
+        console.error("Drop import failed:", err);
+      }
+    }
+  };
 
   useEffect(() => {
     if (!canvasRef.current) return;
@@ -176,11 +211,37 @@ export function Viewport() {
   };
 
   return (
-    <div className="relative w-full h-full bg-[#e8e8e8] overflow-hidden flex-1">
+    <div 
+      className="relative w-full h-full bg-[#e8e8e8] overflow-hidden flex-1"
+      onDragOver={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (!isDragOver) setIsDragOver(true);
+      }}
+      onDragLeave={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsDragOver(false);
+      }}
+      onDrop={handleCanvasDrop}
+    >
       <canvas
         ref={canvasRef}
         className="w-full h-full outline-none block touch-none"
       />
+
+      {/* Drag & Drop Visual Dropzone Overlay */}
+      {isDragOver && (
+        <div className="absolute inset-0 bg-emerald-600/15 backdrop-blur-[2px] border-4 border-dashed border-emerald-500 rounded-2xl m-4 flex flex-col items-center justify-center gap-3 z-50 pointer-events-none animate-in fade-in duration-150">
+          <div className="w-16 h-16 rounded-2xl bg-white shadow-xl flex items-center justify-center text-emerald-600">
+            <Move className="w-8 h-8 animate-bounce" />
+          </div>
+          <div className="bg-white/90 px-4 py-2 rounded-xl shadow-md flex flex-col items-center">
+            <span className="text-sm font-bold text-slate-800">Lepaskan File di Sini</span>
+            <span className="text-xs text-slate-500">Otomatis langsung dimuat & tampil di Canvas 3D</span>
+          </div>
+        </div>
+      )}
 
       {/* Floating Contextual Object Menu */}
       {menuPos && !isPreviewMode && (

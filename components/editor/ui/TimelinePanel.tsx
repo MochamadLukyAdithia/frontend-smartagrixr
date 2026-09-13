@@ -71,21 +71,21 @@ export function TimelinePanel() {
   };
 
   return (
-    <div className="h-16 bg-[#161619] border-t border-[#27272a] px-4 flex items-center gap-5 text-white select-none justify-between overflow-x-auto font-sans shadow-2xl">
+    <div className="h-16 bg-white border-t border-slate-200 px-4 flex items-center gap-5 text-slate-800 select-none justify-between overflow-x-auto font-sans shadow-sm">
       {/* Left: Scenes Manager */}
       <div className="flex items-center gap-2 flex-shrink-0">
-        <span className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider flex items-center gap-1.5 mr-1">
-          <Layers className="w-3.5 h-3.5 text-emerald-400" /> Scenes:
+        <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5 mr-1">
+          <Layers className="w-3.5 h-3.5 text-emerald-600" /> Scenes:
         </span>
-        <div className="flex items-center gap-1.5 bg-[#1e1e23] p-1 rounded-xl border border-zinc-800">
+        <div className="flex items-center gap-1.5 bg-slate-100 p-1 rounded-xl border border-slate-200">
           {scenes.map((scene) => (
             <div
               key={scene.id}
               onClick={() => setActiveSceneId(scene.id)}
               className={`bouncy-hover px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-2 cursor-pointer transition-all ${
                 activeSceneId === scene.id 
-                  ? "bg-emerald-500 text-zinc-950 font-bold shadow-sm" 
-                  : "text-zinc-400 hover:text-zinc-200 hover:bg-[#28282f]"
+                  ? "bg-emerald-600 text-white font-bold shadow-xs" 
+                  : "text-slate-600 hover:text-slate-900 hover:bg-slate-200/80"
               }`}
             >
               <span>{scene.name}</span>
@@ -95,7 +95,7 @@ export function TimelinePanel() {
                     e.stopPropagation();
                     deleteScene(scene.id);
                   }}
-                  className="hover:text-rose-400 rounded p-0.5 text-zinc-500 transition-colors"
+                  className="hover:text-rose-600 rounded p-0.5 text-slate-400 transition-colors"
                   title="Hapus Scene"
                 >
                   <Trash2 className="w-3 h-3" />
@@ -106,7 +106,7 @@ export function TimelinePanel() {
           {!isPreviewMode && (
             <button
               onClick={handleAddScene}
-              className="bouncy-hover p-1.5 hover:bg-[#28282f] rounded-lg text-zinc-400 hover:text-emerald-400 transition-colors"
+              className="bouncy-hover p-1.5 hover:bg-slate-200 rounded-lg text-slate-500 hover:text-emerald-700 transition-colors"
               title="Tambah Scene Baru"
             >
               <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
@@ -115,7 +115,7 @@ export function TimelinePanel() {
         </div>
       </div>
 
-      <div className="h-7 w-[1px] bg-zinc-800 flex-shrink-0" />
+      <div className="h-7 w-[1px] bg-slate-200 flex-shrink-0" />
 
       {/* Middle: Animation Scrub Timeline */}
       <div className="flex-1 flex items-center gap-4 max-w-2xl">
@@ -123,10 +123,10 @@ export function TimelinePanel() {
         <div className="flex items-center gap-2 flex-shrink-0">
           <button
             onClick={handlePlayToggle}
-            className={`bouncy-hover p-2 rounded-xl transition-all shadow-md ${
+            className={`bouncy-hover p-2 rounded-xl transition-all shadow-xs ${
               playing 
-                ? "bg-amber-500 hover:bg-amber-400 text-zinc-950 shadow-[0_0_12px_rgba(245,158,11,0.3)]" 
-                : "bg-emerald-500 hover:bg-emerald-400 text-zinc-950 shadow-[0_0_12px_rgba(16,185,129,0.3)]"
+                ? "bg-amber-500 hover:bg-amber-400 text-white" 
+                : "bg-emerald-600 hover:bg-emerald-500 text-white"
             }`}
             title={playing ? "Jeda" : "Putar"}
           >
@@ -134,7 +134,7 @@ export function TimelinePanel() {
           </button>
           <button
             onClick={handleStop}
-            className="bouncy-hover p-2 bg-[#1e1e23] hover:bg-[#25252b] border border-zinc-700 rounded-xl transition-all text-zinc-300 hover:text-white"
+            className="bouncy-hover p-2 bg-slate-100 hover:bg-slate-200 border border-slate-200 rounded-xl transition-all text-slate-600 hover:text-slate-900"
             title="Berhenti"
           >
             <Square className="w-4 h-4" />
@@ -143,7 +143,7 @@ export function TimelinePanel() {
 
         {/* Timeline Slider */}
         <div className="flex-1 flex items-center gap-3">
-          <span className="text-[11px] text-zinc-400 font-bold font-mono min-w-[35px] bg-[#1e1e23] px-2 py-0.5 rounded-md border border-zinc-800">
+          <span className="text-[11px] text-slate-700 font-bold font-mono min-w-[35px] bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200">
             {formatTime(time)}
           </span>
           <input
@@ -153,10 +153,10 @@ export function TimelinePanel() {
             step="0.01"
             value={time}
             onChange={handleScrubChange}
-            className="flex-1 accent-emerald-500 bg-zinc-800 h-1.5 rounded-lg cursor-pointer"
+            className="flex-1 accent-emerald-600 bg-slate-200 h-1.5 rounded-lg cursor-pointer"
             disabled={clips.length === 0}
           />
-          <span className="text-[11px] text-zinc-400 font-bold font-mono min-w-[35px] bg-[#1e1e23] px-2 py-0.5 rounded-md border border-zinc-800">
+          <span className="text-[11px] text-slate-700 font-bold font-mono min-w-[35px] bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200">
             {formatTime(duration)}
           </span>
         </div>
@@ -165,15 +165,15 @@ export function TimelinePanel() {
       {/* Right: Clip picker & Speed */}
       <div className="flex items-center gap-2.5 flex-shrink-0">
         {clips.length > 0 && (
-          <div className="flex items-center gap-1.5 bg-[#1e1e23] px-2.5 py-1 rounded-xl border border-zinc-700 text-xs">
-            <Film className="w-3.5 h-3.5 text-cyan-400" />
+          <div className="flex items-center gap-1.5 bg-slate-100 px-2.5 py-1 rounded-xl border border-slate-200 text-xs">
+            <Film className="w-3.5 h-3.5 text-cyan-600" />
             <select
               value={activeClip || ""}
               onChange={handleClipChange}
-              className="bg-transparent text-xs text-white outline-none font-medium cursor-pointer"
+              className="bg-transparent text-xs text-slate-900 outline-none font-medium cursor-pointer"
             >
               {clips.map((clip) => (
-                <option key={clip} value={clip} className="bg-[#1e1e23]">
+                <option key={clip} value={clip} className="bg-white">
                   {clip}
                 </option>
               ))}
@@ -184,13 +184,13 @@ export function TimelinePanel() {
         <select
           value={speed}
           onChange={handleSpeedChange}
-          className="bg-[#1e1e23] text-xs text-zinc-200 px-2.5 py-1.5 rounded-xl outline-none border border-zinc-700 font-bold cursor-pointer"
+          className="bg-slate-100 text-xs text-slate-800 px-2.5 py-1.5 rounded-xl outline-none border border-slate-200 font-bold cursor-pointer"
         >
-          <option value="0.25" className="bg-[#1e1e23]">0.25x</option>
-          <option value="0.5" className="bg-[#1e1e23]">0.5x</option>
-          <option value="1.0" className="bg-[#1e1e23]">1.0x</option>
-          <option value="1.5" className="bg-[#1e1e23]">1.5x</option>
-          <option value="2.0" className="bg-[#1e1e23]">2.0x</option>
+          <option value="0.25" className="bg-white">0.25x</option>
+          <option value="0.5" className="bg-white">0.5x</option>
+          <option value="1.0" className="bg-white">1.0x</option>
+          <option value="1.5" className="bg-white">1.5x</option>
+          <option value="2.0" className="bg-white">2.0x</option>
         </select>
       </div>
     </div>
