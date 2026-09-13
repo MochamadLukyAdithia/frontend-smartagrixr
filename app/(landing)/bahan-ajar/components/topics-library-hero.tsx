@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import type { LibraryTab, TabContent } from "./data";
+import type { LibraryTab, TabContent } from "../data";
 
 const TAB_LINKS: Record<string, string> = {
   "asset-belajar": "/bahan-ajar",

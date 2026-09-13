@@ -111,7 +111,7 @@ export default function SemuaMateriPage() {
                   {/* Ilustrasi 3D (Kiri) */}
                   <div className="relative z-10 h-24 w-24 flex-shrink-0 transition-transform duration-500 group-hover:scale-110">
                     <Image
-                      src={materi.image}
+                      src={materi.image || "/images/landing/wheat.png"}
                       alt={materi.title}
                       fill
                       className="object-contain"
