@@ -59,7 +59,7 @@ export function NavigationDropdown({ menu }: NavigationDropdownProps) {
             ))}
           </div>
 
-          {hasPreview && (
+          {/* {hasPreview && (
             <div>
               <div className="relative h-[105px] w-full overflow-hidden">
                 <Image
@@ -83,7 +83,7 @@ export function NavigationDropdown({ menu }: NavigationDropdownProps) {
                 Beri Masukan
               </Link>
             </div>
-          )}
+          )} */}
         </div>
       </div>
     </div>

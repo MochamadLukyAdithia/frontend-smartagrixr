@@ -36,28 +36,22 @@ export const navigationItems: NavigationItem[] = [
   },
   {
     label: "Bahan Ajar",
-    href: "#bahan-ajar",
+    href: "/bahan-ajar",
     dropdown: {
       hasPreview: true,
       align: "left",
       items: [
         {
-          label: "Topics Library",
-          description: "Lorem ipsum lorem ipsum lorem ip.",
-          href: "#topics-library",
-          icon: "cloud",
-        },
-        {
-          label: "Edu Kits & Sticky Annotation",
-          description: "Lorem ipsum lorem ipsum lorem ip.",
-          href: "#edu-kits",
-          icon: "folder",
-        },
-        {
-          label: "Materi Saya",
-          description: "Lorem ipsum lorem ipsum lorem ip.",
-          href: "#materi-saya",
+          label: "Aset Belajar",
+          description: "Buat aset belajar 3d dan Ar kamu sendiri",
+          href: "/bahan-ajar",
           icon: "book",
+        },
+        {
+          label: "Slide Interaktif",
+          description: "Belajar lebih menarik dengan slide interaktif",
+          href: "/bahan-ajar/topics-library",
+          icon: "cloud",
         },
       ],
     },
@@ -71,19 +65,19 @@ export const navigationItems: NavigationItem[] = [
       items: [
         {
           label: "Buat Project Baru",
-          description: "Lorem ipsum lorem ipsum lorem ip.",
+          description: "Buat project SmartAgriXrmu sendiri",
           href: "/editor",
           icon: "plus",
         },
         {
-          label: "HDRI Background",
-          description: "Lorem ipsum lorem ipsum lorem ip.",
+          label: "Marker Kustom",
+          description: "Buat marker kustom untuk project kamu",
           href: "/editor",
           icon: "background",
         },
         {
           label: "Objek 3D Saya",
-          description: "Lorem ipsum lorem ipsum lorem ip.",
+          description: "Lihat semua objek 3D yang sudah kamu buat",
           href: "/editor",
           icon: "cube",
         },
@@ -92,56 +86,34 @@ export const navigationItems: NavigationItem[] = [
   },
   {
     label: "Kelas",
-    href: "#kelas",
+    href: "/kelas",
     dropdown: {
       align: "left",
       items: [
         {
           label: "Kelas Saya",
-          description: "Lorem ipsum lorem ipsum lorem ip.",
-          href: "#kelas-saya",
+          description: "Lihat dan kelola daftar kelas",
+          href: "/kelas",
           icon: "class",
         },
         {
           label: "Buat Kelas Baru",
-          description: "Lorem ipsum lorem ipsum lorem ip.",
-          href: "#buat-kelas",
+          description:
+            "Buka ruang kelas baru dan undang siswa untuk belajar bersama",
+          href: "/kelas",
           icon: "new-class",
         },
         {
           label: "Gabung ke Kelas",
-          description: "Lorem ipsum lorem ipsum lorem ip.",
-          href: "#gabung-kelas",
+          description: "Gabung ke kelas yang sudah ada",
+          href: "/kelas",
           icon: "join",
         },
       ],
     },
   },
   {
-    label: "Inspirasi",
-    href: "#inspirasi",
-    dropdown: {
-      align: "right",
-      items: [
-        {
-          label: "Galeri Showcase",
-          description: "Lorem ipsum lorem ipsum lorem ip.",
-          href: "#galeri",
-          icon: "gallery",
-        },
-        {
-          label: "Template Populer",
-          description: "Lorem ipsum lorem ipsum lorem ip.",
-          href: "#template",
-          icon: "template",
-        },
-        {
-          label: "Tutorial & Tips",
-          description: "Lorem ipsum lorem ipsum lorem ip.",
-          href: "#tutorial",
-          icon: "idea",
-        },
-      ],
-    },
+    label: "Tutorial",
+    href: "/tutorial",
   },
 ];

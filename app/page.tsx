@@ -3,6 +3,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
 import { Navbar } from "@/components/layout/navbar";
+import Footer from "@/components/layout/footer";
 
 const TESTIMONI_DATA = [
   {
@@ -24,6 +25,7 @@ const TESTIMONI_DATA = [
     role: "Pelaku UMKM Pertanian",
   },
 ];
+
 export default function Home() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const handleNext = () => {
@@ -37,7 +39,7 @@ export default function Home() {
     );
   };
   return (
-    <div className="min-h-screen pb-[2000px] bg-[url('/bg.svg')] bg-top bg-no-repeat bg-[length:100%_auto]  text-[#171717]">
+    <div className="min-h-screen bg-[url('/bg.svg')] bg-top bg-no-repeat bg-[length:100%_auto] text-[#171717]">
       <Navbar />
       <main className="mt-20">
         <section className="relative  overflow-hidden px-5 pb-12 pt-5 sm:px-8 lg:pb-16 lg:pt-8">
@@ -108,11 +110,10 @@ export default function Home() {
 
             <p className="mt-5 max-w-[980px] font-serif text-[16px] leading-[1.45] text-[#202020] sm:mt-6 sm:text-[18px] lg:mt-1 lg:text-[20px]">
               <strong className="font-semibold">SmartAgriXR</strong>{" "}
-              menghadirkan solusi{" "}
-              <strong className="font-semibold">Extended Reality (XR)</strong>{" "}
-              untuk membantu petani, pelaku agribisnis, dan institusi pertanian
-              meningkatkan produktivitas, pembelajaran, serta pengambilan
-              keputusan berbasis teknologi.
+              menghadirkan solusi Extended Reality (XR) untuk membantu petani,
+              pelaku agribisnis, dan institusi pertanian meningkatkan
+              produktivitas, pembelajaran, serta pengambilan keputusan berbasis
+              teknologi.
             </p>
 
             <Link
@@ -128,11 +129,11 @@ export default function Home() {
             <div className="w-full lg:w-1/2">
               <div className="relative rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.05)] sm:p-3">
                 <Image
-                  src="/images/landing/visi/visi.svg"
+                  src="/images/landing/visi/visi.png"
                   alt="Ilustrasi dashboard dan lahan pertanian SmartAgriXR"
                   width={800}
                   height={500}
-                  className="h-auto w-full rounded-2xl object-cover"
+                  className="h-auto w-full shadow-xl border-2 border-green-400 rounded-2xl object-cover"
                 />
               </div>
             </div>
@@ -271,71 +272,134 @@ export default function Home() {
             </div>
           </div>
         </section>
-        <section id="testimoni" className="px-5 py-16 sm:px-8 lg:py-24">
-          <div className="mx-auto flex w-full max-w-[850px] flex-col items-center text-center">
-            <h2 className="font-serif text-[28px] font-bold text-black sm:text-[32px] lg:text-[36px]">
-              <span className="text-[#21a447]">Testimoni</span> Pengguna
-            </h2>
 
-            <div className="mt-8 flex min-h-[180px] flex-col items-center sm:mt-12 lg:min-h-[150px]">
-              <p className="font-serif text-[18px] leading-[1.6] text-[#202020] sm:text-[20px] lg:text-[22px]">
-                {TESTIMONI_DATA[currentIndex].quote}
+        {/* --- TESTIMONI: carousel 3 kartu, judul + panah di kiri --- */}
+        <section id="testimoni" className="px-5 py-16 sm:px-8 lg:py-24">
+          <div className="mx-auto flex w-full max-w-[1320px] flex-col gap-10 lg:flex-row lg:items-start lg:gap-16">
+            <div className="w-full flex-shrink-0 text-left lg:w-[300px]">
+              <h2 className="font-serif text-[28px] font-bold text-black sm:text-[32px] lg:text-[36px]">
+                <span className="text-[#21a447]">Testimoni</span> Pengguna
+              </h2>
+              <p className="mt-4 font-serif text-[15px] leading-[1.6] text-[#4a4a4a] sm:text-[16px]">
+                Setiap orang punya cara belajar yang berbeda. Dengar langsung
+                cerita mereka setelah mencoba cara baru belajar pertanian
+                bersama SmartAgriXR.
               </p>
 
-              <div className="mt-6 flex flex-col items-center">
-                <span className="font-serif text-[18px] font-bold text-black sm:text-[20px]">
-                  {TESTIMONI_DATA[currentIndex].name}
-                </span>
-                <span className="font-serif text-[16px] text-gray-600 sm:text-[18px]">
-                  {TESTIMONI_DATA[currentIndex].role}
-                </span>
+              <div className="mt-8 flex items-center gap-4">
+                <button
+                  onClick={handlePrev}
+                  className="group flex h-12 w-12 items-center justify-center rounded-full border border-[#21a447] text-[#21a447] transition-all hover:bg-[#21a447] hover:text-white focus:outline-none focus:ring-2 focus:ring-[#21a447] focus:ring-offset-2"
+                  aria-label="Testimoni Sebelumnya"
+                >
+                  <svg
+                    width="24"
+                    height="24"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className="transition-transform group-hover:-translate-x-1"
+                  >
+                    <path d="M15 18l-6-6 6-6" />
+                  </svg>
+                </button>
+
+                <button
+                  onClick={handleNext}
+                  className="group flex h-12 w-12 items-center justify-center rounded-full border border-[#21a447] text-[#21a447] transition-all hover:bg-[#21a447] hover:text-white focus:outline-none focus:ring-2 focus:ring-[#21a447] focus:ring-offset-2"
+                  aria-label="Testimoni Selanjutnya"
+                >
+                  <svg
+                    width="24"
+                    height="24"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className="transition-transform group-hover:translate-x-1"
+                  >
+                    <path d="M9 18l6-6-6-6" />
+                  </svg>
+                </button>
               </div>
             </div>
 
-            <div className="mt-10 flex items-center gap-4">
-              <button
-                onClick={handlePrev}
-                className="group flex h-12 w-12 items-center justify-center rounded-full border border-[#21a447] text-[#21a447] transition-all hover:bg-[#21a447] hover:text-white focus:outline-none focus:ring-2 focus:ring-[#21a447] focus:ring-offset-2"
-                aria-label="Testimoni Sebelumnya"
-              >
-                <svg
-                  width="24"
-                  height="24"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  className="transition-transform group-hover:-translate-x-1"
-                >
-                  <path d="M15 18l-6-6 6-6" />
-                </svg>
-              </button>
+            <div className="w-full lg:flex-1">
+              <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 lg:gap-6">
+                {TESTIMONI_DATA.map((item, idx) => (
+                  <div
+                    key={item.name}
+                    className={`flex flex-col justify-between rounded-2xl bg-white p-6 text-left shadow-[0_10px_30px_rgba(0,0,0,0.08)] transition-all lg:p-7 ${
+                      idx === currentIndex
+                        ? "ring-2 ring-[#21a447]/70"
+                        : "opacity-90"
+                    }`}
+                  >
+                    <p className="font-serif text-[15px] leading-[1.65] text-[#202020]">
+                      {item.quote}
+                    </p>
 
-              <button
-                onClick={handleNext}
-                className="group flex h-12 w-12 items-center justify-center rounded-full border border-[#21a447] text-[#21a447] transition-all hover:bg-[#21a447] hover:text-white focus:outline-none focus:ring-2 focus:ring-[#21a447] focus:ring-offset-2"
-                aria-label="Testimoni Selanjutnya"
-              >
-                <svg
-                  width="24"
-                  height="24"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  className="transition-transform group-hover:translate-x-1"
-                >
-                  <path d="M9 18l6-6-6-6" />
-                </svg>
-              </button>
+                    <div className="mt-6 flex items-center gap-3">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#21a447]/10 font-serif text-[16px] font-bold text-[#21a447]">
+                        {item.name.charAt(0)}
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="font-serif text-[15px] font-bold text-black">
+                          {item.name}
+                        </span>
+                        <span className="font-serif text-[13px] text-gray-600">
+                          {item.role}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="mt-8 flex justify-center gap-2 lg:justify-start">
+                {TESTIMONI_DATA.map((item, idx) => (
+                  <button
+                    key={item.name}
+                    onClick={() => setCurrentIndex(idx)}
+                    aria-label={`Lihat testimoni ${idx + 1}`}
+                    className={`h-2 rounded-full transition-all ${
+                      idx === currentIndex
+                        ? "w-6 bg-[#21a447]"
+                        : "w-2 bg-gray-300"
+                    }`}
+                  />
+                ))}
+              </div>
             </div>
           </div>
         </section>
+
+        {/* --- CTA: Buat Simulasi Pembelajaran Imersif --- */}
+        <section id="buat-modul" className="px-5 pb-20 pt-4 sm:px-8 lg:pb-28">
+          <div className="mx-auto flex w-full max-w-[1100px] flex-col items-center rounded-[32px] bg-gradient-to-br from-[#1f7a37] to-[#0f3d1c] px-6 py-14 text-center sm:px-14 sm:py-16">
+            <h2 className="font-serif text-[26px] font-bold text-white sm:text-[32px] lg:text-[36px]">
+              Buat Simulasi Pembelajaran Imersif
+            </h2>
+            <p className="mx-auto mt-4 max-w-[640px] font-serif text-[15px] leading-[1.65] text-white/85 sm:text-[17px]">
+              Ubah materi pembelajaran menjadi simulasi imersif yang menarik dan
+              mudah dipahami. Tidak perlu coding, cukup desain dan publikasikan.
+            </p>
+            <Link
+              href="#daftar"
+              className="mt-9 inline-flex h-[54px] items-center justify-center rounded-full bg-white px-9 font-serif text-[16px] font-semibold text-[#1f7a37] transition-all hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-[#1f7a37] sm:text-[18px]"
+            >
+              Buat Modul XR Mu Sekarang
+            </Link>
+          </div>
+        </section>
       </main>
+
+      <Footer />
     </div>
   );
 }

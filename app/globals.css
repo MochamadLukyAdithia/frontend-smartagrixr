@@ -18,6 +18,9 @@ body {
   box-sizing: border-box;
 }
 
+.container {
+  @apply max-w-[1580px] mx-auto;
+}
 /* Custom playful vibrant scrollbars */
 ::-webkit-scrollbar {
   width: 6px;
