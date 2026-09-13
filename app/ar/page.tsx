@@ -18,7 +18,6 @@ import { ObjectManager } from "@/components/editor/engine/ObjectManager";
 import { EditorEngine } from "@/components/editor/engine/EditorEngine";
 import { 
   Smartphone, 
-  Sparkles, 
   RefreshCw, 
   Layers, 
   Info, 
@@ -146,17 +145,17 @@ function ARViewerContent() {
   return (
     <div className="relative w-screen h-screen bg-[#0f172a] text-white flex flex-col select-none overflow-hidden font-sans">
       {/* Top Mobile Bar */}
-      <div className="absolute top-0 left-0 right-0 z-30 p-4 flex items-center justify-between bg-gradient-to-b from-black/80 to-transparent pointer-events-auto">
+      <div className="absolute top-0 left-0 right-0 z-30 p-3.5 flex items-center justify-between bg-black/60 backdrop-blur-md border-b border-zinc-800/80 pointer-events-auto">
         <Link
           href="/editor"
-          className="flex items-center gap-1.5 px-3 py-1.5 bg-white/10 hover:bg-white/20 backdrop-blur-md rounded-full text-xs font-bold text-white transition-all shadow-md"
+          className="flex items-center gap-1.5 px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 rounded-md text-xs font-medium text-white transition-colors"
         >
           <ChevronLeft className="w-4 h-4" /> Editor
         </Link>
 
         <div className="flex items-center gap-2">
-          <span className="text-xs font-bold text-emerald-400 bg-emerald-950/80 border border-emerald-500/30 px-3 py-1 rounded-full shadow-sm flex items-center gap-1">
-            <Sparkles className="w-3.5 h-3.5" /> SmartAgri XR
+          <span className="text-xs font-semibold text-zinc-100 flex items-center gap-1.5">
+            <div className="w-2 h-2 rounded-full bg-emerald-500" /> SmartAgri XR
           </span>
         </div>
       </div>
@@ -167,62 +166,58 @@ function ARViewerContent() {
 
         {/* Loading overlay */}
         {loading && (
-          <div className="absolute inset-0 bg-[#0f172a] flex flex-col items-center justify-center gap-3 z-40">
-            <div className="w-10 h-10 border-4 border-[#22a447] border-t-transparent rounded-full animate-spin" />
-            <span className="text-sm font-bold text-gray-300">Loading 3D Agri Scene...</span>
+          <div className="absolute inset-0 bg-[#09090b] flex flex-col items-center justify-center gap-2.5 z-40">
+            <div className="w-8 h-8 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+            <span className="text-xs font-medium text-zinc-400">Loading Scene...</span>
           </div>
         )}
 
         {/* Interaction Hint */}
         {!loading && (
-          <div className="absolute top-16 left-1/2 -translate-x-1/2 z-20 bg-black/60 backdrop-blur-md px-3.5 py-1.5 rounded-full text-[11px] text-gray-200 border border-white/10 shadow-lg pointer-events-none text-center">
-            👆 Touch & drag to orbit • Pinch to zoom • Tap objects for info
+          <div className="absolute top-14 left-1/2 -translate-x-1/2 z-20 bg-zinc-900/90 backdrop-blur-md px-3 py-1 rounded-md text-[10.5px] text-zinc-300 border border-zinc-800 pointer-events-none text-center">
+            Drag to orbit • Pinch to zoom • Tap objects for info
           </div>
         )}
       </div>
 
-      {/* Bottom AR Launcher Floating Action Bar */}
-      <div className="absolute bottom-6 left-0 right-0 z-30 px-6 flex flex-col items-center gap-3 pointer-events-none">
-        <div className="w-full max-w-sm flex items-center gap-3 pointer-events-auto">
+      {/* Bottom AR Launcher Action Bar */}
+      <div className="absolute bottom-5 left-0 right-0 z-30 px-5 flex flex-col items-center gap-2 pointer-events-none">
+        <div className="w-full max-w-xs flex items-center gap-2 pointer-events-auto">
           {/* Main AR Trigger Button */}
           <button
             onClick={handleStartAR}
-            className="flex-1 py-3.5 bg-gradient-to-r from-[#22a447] to-emerald-500 hover:from-[#198b3a] hover:to-emerald-600 text-white rounded-2xl font-bold text-sm shadow-xl shadow-[#22a447]/30 flex items-center justify-center gap-2 transition-all active:scale-98 cursor-pointer"
+            className="flex-1 py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg font-medium text-xs shadow-lg flex items-center justify-center gap-2 transition-colors cursor-pointer"
           >
-            <Smartphone className="w-5 h-5" /> View in Real Space (AR)
+            <Smartphone className="w-4 h-4" /> View in Real Space (AR)
           </button>
         </div>
-
-        <span className="text-[10px] text-gray-400 font-medium">
-          Powered by SmartAgriXR WebXR 3D Engine
-        </span>
       </div>
 
       {/* Info Dialog Popup on object click */}
       {activeInfo && (
-        <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-xs p-4 select-none animate-in fade-in zoom-in-95 duration-150 pointer-events-auto">
-          <div className="relative w-full max-w-sm bg-[#1e293b] border border-emerald-500/30 rounded-2xl shadow-2xl p-5 text-white">
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/70 p-4 select-none animate-in fade-in duration-100 pointer-events-auto">
+          <div className="relative w-full max-w-xs bg-[#18181b] border border-zinc-800 rounded-lg shadow-2xl p-4 text-white">
             <button
               onClick={() => setActiveInfo(null)}
-              className="absolute top-3.5 right-3.5 p-1.5 text-gray-400 hover:text-white rounded-full hover:bg-white/10"
+              className="absolute top-3 right-3 p-1 text-zinc-400 hover:text-white rounded hover:bg-zinc-800"
             >
-              <X className="w-5 h-5" />
+              <X className="w-4 h-4" />
             </button>
 
-            <div className="flex items-center gap-2.5 mb-3">
-              <div className="w-8 h-8 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center">
-                <Sparkles className="w-4 h-4" />
+            <div className="flex items-center gap-2 mb-2.5">
+              <div className="w-6 h-6 rounded bg-zinc-800 border border-zinc-700/60 text-emerald-400 flex items-center justify-center">
+                <Info className="w-3.5 h-3.5" />
               </div>
-              <h3 className="text-sm font-bold">{activeInfo.title}</h3>
+              <h3 className="text-xs font-semibold text-zinc-100">{activeInfo.title}</h3>
             </div>
 
-            <p className="text-xs text-gray-300 leading-relaxed bg-[#0f172a] p-3 rounded-xl border border-white/5">
+            <p className="text-xs text-zinc-300 leading-relaxed bg-[#111113] p-2.5 rounded border border-zinc-800">
               {activeInfo.content}
             </p>
 
             <button
               onClick={() => setActiveInfo(null)}
-              className="mt-4 w-full py-2 bg-[#22a447] text-white text-xs font-bold rounded-xl shadow"
+              className="mt-3 w-full py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-medium rounded transition-colors"
             >
               Close
             </button>

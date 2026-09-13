@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { Quaternion } from "@babylonjs/core";
 import { useEditorStore, Behaviour, Annotation } from "../store/useEditorStore";
-import { getEditorInstance } from "../engine/editorInstance";
+import { getEditorInstance, useEditorInstance } from "../engine/editorInstance";
 import { 
   Settings, 
   Eye, 
@@ -17,7 +17,10 @@ import {
   Type, 
   Palette, 
   Activity,
-  Layers
+  Layers,
+  Box,
+  Compass,
+  Maximize2
 } from "lucide-react";
 
 export function InspectorPanel() {
@@ -27,7 +30,7 @@ export function InspectorPanel() {
   const sceneObjects = getObjects();
   const obj = sceneObjects.find((o) => o.id === selectedId);
 
-  const editor = getEditorInstance();
+  const editor = useEditorInstance();
 
   // Local state for transforms
   const [posX, setPosX] = useState(0);
@@ -60,7 +63,7 @@ export function InspectorPanel() {
 
   // Text inputs
   const [textVal, setTextVal] = useState("");
-  const [textColor, setTextColor] = useState("#22c55e");
+  const [textColor, setTextColor] = useState("#10b981");
   const [textSize, setTextSize] = useState(48);
 
   // Sync state with selected object
@@ -84,66 +87,110 @@ export function InspectorPanel() {
         setTextSize(obj.textConfig.size);
       }
 
-      if (editor) {
-        const slots = editor.materialManager.getMaterialSlots(obj.id);
+      const ed = getEditorInstance();
+      if (ed) {
+        const slots = ed.materialManager.getMaterialSlots(obj.id);
         setMaterialSlots(slots);
         if (slots.length > 0) {
           setActiveSlotId(slots[0].slotId);
         }
       }
     }
-  }, [obj, selectedId]);
+  }, [obj, selectedId, editor]);
 
   const updateTransform = (
     axis: "x" | "y" | "z",
     val: number,
     type: "position" | "rotation" | "scale"
   ) => {
-    const node = editor?.nodesMap.get(obj!.id);
-    if (!node) return;
+    if (!obj) return;
+    const ed = getEditorInstance();
+    ed?.historyManager.recordSnapshot();
+    const node = ed?.nodesMap.get(obj.id);
 
-    if (type === "position") {
-      node.position[axis] = val;
-    } else if (type === "rotation") {
-      const rad = (val * Math.PI) / 180;
-      if (node.rotationQuaternion) {
-        const euler = node.rotationQuaternion.toEulerAngles();
-        euler[axis] = rad;
-        node.rotationQuaternion = Quaternion.FromEulerAngles(euler.x, euler.y, euler.z);
-      } else {
-        node.rotation[axis] = rad;
+    if (node) {
+      if (type === "position" && node.position) {
+        node.position[axis] = val;
+      } else if (type === "rotation") {
+        const rad = (val * Math.PI) / 180;
+        if (node.rotationQuaternion) {
+          const euler = node.rotationQuaternion.toEulerAngles();
+          euler[axis] = rad;
+          node.rotationQuaternion = Quaternion.FromEulerAngles(euler.x, euler.y, euler.z);
+        } else if (node.rotation) {
+          node.rotation[axis] = rad;
+        }
+      } else if (type === "scale" && node.scaling) {
+        node.scaling[axis] = val;
       }
-    } else if (type === "scale") {
-      node.scaling[axis] = val;
+
+      const pos = (node as any).position;
+      const rotQuat = (node as any).rotationQuaternion;
+      const rotEuler = (node as any).rotation;
+
+      let rotX = 0;
+      let rotY = 0;
+      let rotZ = 0;
+
+      if (rotQuat) {
+        const euler = rotQuat.toEulerAngles();
+        rotX = (euler.x * 180) / Math.PI;
+        rotY = (euler.y * 180) / Math.PI;
+        rotZ = (euler.z * 180) / Math.PI;
+      } else if (rotEuler && typeof rotEuler.x === "number") {
+        rotX = (rotEuler.x * 180) / Math.PI;
+        rotY = (rotEuler.y * 180) / Math.PI;
+        rotZ = (rotEuler.z * 180) / Math.PI;
+      }
+
+      const posX = pos && typeof pos.x === "number" ? pos.x : obj.position[0];
+      const posY = pos && typeof pos.y === "number" ? pos.y : obj.position[1];
+      const posZ = pos && typeof pos.z === "number" ? pos.z : obj.position[2];
+
+      const scl = (node as any).scaling;
+      const sclX = scl && typeof scl.x === "number" ? scl.x : obj.scale[0];
+      const sclY = scl && typeof scl.y === "number" ? scl.y : obj.scale[1];
+      const sclZ = scl && typeof scl.z === "number" ? scl.z : obj.scale[2];
+
+      updateObject(obj.id, {
+        position: [posX, posY, posZ],
+        rotation: [rotX, rotY, rotZ],
+        scale: [sclX, sclY, sclZ],
+      });
+    } else {
+      const currentPos = [...obj.position] as [number, number, number];
+      const currentRot = [...obj.rotation] as [number, number, number];
+      const currentScl = [...obj.scale] as [number, number, number];
+      const axisIdx = axis === "x" ? 0 : axis === "y" ? 1 : 2;
+
+      if (type === "position") currentPos[axisIdx] = val;
+      if (type === "rotation") currentRot[axisIdx] = val;
+      if (type === "scale") currentScl[axisIdx] = val;
+
+      updateObject(obj.id, {
+        position: currentPos,
+        rotation: currentRot,
+        scale: currentScl,
+      });
     }
-
-    const rot = node.rotationQuaternion
-      ? node.rotationQuaternion.toEulerAngles()
-      : node.rotation;
-
-    updateObject(obj!.id, {
-      position: [node.position.x, node.position.y, node.position.z],
-      rotation: [
-        (rot.x * 180) / Math.PI,
-        (rot.y * 180) / Math.PI,
-        (rot.z * 180) / Math.PI,
-      ],
-      scale: [node.scaling.x, node.scaling.y, node.scaling.z],
-    });
   };
 
   const handleMaterialChange = (prop: string, val: any) => {
-    if (editor && activeSlotId && obj) {
-      editor.materialManager.updateMaterialSlot(obj.id, activeSlotId, {
+    const ed = getEditorInstance();
+    if (ed && activeSlotId && obj) {
+      ed.historyManager.recordSnapshot();
+      ed.materialManager.updateMaterialSlot(obj.id, activeSlotId, {
         [prop]: val,
       });
-      const slots = editor.materialManager.getMaterialSlots(obj.id);
+      const slots = ed.materialManager.getMaterialSlots(obj.id);
       setMaterialSlots(slots);
     }
   };
 
   const handleAddBehaviour = () => {
     if (!obj) return;
+    const ed = getEditorInstance();
+    ed?.historyManager.recordSnapshot();
     const newBehaviour: Behaviour = {
       trigger,
       action,
@@ -163,6 +210,8 @@ export function InspectorPanel() {
 
   const handleAddAnnotation = () => {
     if (!obj || !annoTitle) return;
+    const ed = getEditorInstance();
+    ed?.historyManager.recordSnapshot();
     const newAnno: Annotation = {
       id: "anno_" + Math.random().toString(36).substring(2, 9),
       title: annoTitle,
@@ -177,41 +226,53 @@ export function InspectorPanel() {
   };
 
   const handleUpdateText = (newText: string, newColor: string, newSize: number) => {
-    if (!obj || !editor) return;
+    if (!obj) return;
     setTextVal(newText);
     setTextColor(newColor);
     setTextSize(newSize);
-    editor.objectManager.updateText(obj.id, { text: newText, color: newColor, size: newSize });
+    const ed = getEditorInstance();
+    if (ed) {
+      ed.objectManager.updateText(obj.id, { text: newText, color: newColor, size: newSize });
+    }
   };
 
   // If nothing is selected, show Scene Overview
   if (!obj) {
     return (
-      <div className="w-80 bg-[#161618] border-l border-[#2d2d30] flex flex-col h-full text-white select-none">
-        <div className="p-4 border-b border-[#2d2d30] flex items-center justify-between bg-[#121214]">
-          <span className="text-xs font-bold uppercase tracking-wider text-gray-400 flex items-center gap-1.5">
-            <Layers className="w-4 h-4 text-[#22a447]" /> Scene Objects
+      <div className="w-80 bg-[#161619] border-l border-[#27272a] flex flex-col h-full text-white select-none font-sans shadow-2xl">
+        <div className="p-3.5 border-b border-[#27272a] flex items-center justify-between bg-[#131316]">
+          <span className="text-xs font-bold uppercase tracking-wider text-zinc-300 flex items-center gap-2">
+            <Layers className="w-4 h-4 text-emerald-400" /> Scene Objects
           </span>
-          <span className="text-[10px] bg-white/10 px-2 py-0.5 rounded font-bold text-gray-300">
+          <span className="text-[10px] bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 px-2 py-0.5 rounded-full font-bold">
             {sceneObjects.length} Nodes
           </span>
         </div>
-        <div className="p-4 flex-1 overflow-y-auto">
-          <h4 className="text-xs font-bold text-gray-400 mb-3 uppercase tracking-wider">Object List</h4>
+        <div className="p-3.5 flex-1 overflow-y-auto flex flex-col gap-3">
+          <div className="flex items-center justify-between text-[11px] text-zinc-400 font-semibold uppercase tracking-wider">
+            <span>Daftar Objek</span>
+          </div>
           {sceneObjects.length === 0 ? (
-            <div className="text-xs text-gray-500 text-center py-8">
-              No objects in this scene.<br />Use the left toolbar to add 3D Agriculture presets or primitives.
+            <div className="text-xs text-zinc-500 text-center py-8">
+              Pilih objek di 3D canvas atau dari toolbar.
             </div>
           ) : (
             <div className="flex flex-col gap-2">
               {sceneObjects.map((sObj) => (
                 <div
                   key={sObj.id}
-                  onClick={() => editor?.selectionManager.selectObject(sObj.id)}
-                  className="px-3 py-2.5 bg-[#202024] hover:bg-[#28282d] rounded-xl text-xs cursor-pointer flex items-center justify-between border border-white/5 transition-colors"
+                  onClick={() => {
+                    const ed = getEditorInstance();
+                    if (ed) {
+                      ed.selectionManager.selectObject(sObj.id);
+                    } else {
+                      useEditorStore.getState().setSelectedIds([sObj.id]);
+                    }
+                  }}
+                  className="px-3 py-2.5 bg-[#1e1e23] hover:bg-[#25252b] rounded-xl text-xs cursor-pointer flex items-center justify-between border border-zinc-800 hover:border-emerald-500/50 transition-all bouncy-hover"
                 >
-                  <span className="font-semibold text-gray-200 truncate">{sObj.name}</span>
-                  <span className="text-[9px] text-[#22a447] px-2 py-0.5 bg-[#22a447]/10 rounded-full uppercase font-bold">
+                  <span className="font-semibold text-zinc-200 truncate">{sObj.name}</span>
+                  <span className="text-[9.5px] text-emerald-400 px-2 py-0.5 bg-emerald-500/15 border border-emerald-500/30 rounded-full uppercase font-bold">
                     {sObj.type}
                   </span>
                 </div>
@@ -226,85 +287,103 @@ export function InspectorPanel() {
   const activeSlot = materialSlots.find((s) => s.slotId === activeSlotId);
 
   return (
-    <div className="w-80 bg-[#161618] border-l border-[#2d2d30] flex flex-col h-full text-white select-none overflow-y-auto shadow-2xl">
+    <div className="w-80 bg-[#161619] border-l border-[#27272a] flex flex-col h-full text-white select-none overflow-y-auto shadow-2xl font-sans">
       {/* Top Header */}
-      <div className="p-4 border-b border-[#2d2d30] flex items-center justify-between bg-[#121214]">
+      <div className="p-3.5 border-b border-[#27272a] flex items-center justify-between bg-[#131316]">
         <button
-          onClick={() => editor?.selectionManager.clearSelection()}
-          className="flex items-center gap-1 text-xs text-gray-400 hover:text-white transition-colors cursor-pointer font-bold"
+          onClick={() => {
+            const ed = getEditorInstance();
+            if (ed) {
+              ed.selectionManager.clearSelection();
+            } else {
+              useEditorStore.getState().setSelectedIds([]);
+            }
+          }}
+          className="flex items-center gap-1.5 text-xs text-zinc-400 hover:text-emerald-400 transition-colors cursor-pointer font-bold"
         >
-          <ArrowLeft className="w-3.5 h-3.5" /> Back
+          <ArrowLeft className="w-3.5 h-3.5" /> Kembali
         </button>
-        <span className="text-xs font-bold text-[#22a447] uppercase tracking-wider bg-[#22a447]/10 px-2 py-0.5 rounded-full border border-[#22a447]/20">
+        <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider bg-emerald-500/15 px-2.5 py-0.5 rounded-full border border-emerald-500/30">
           {obj.type}
         </span>
       </div>
 
       {/* 1. Basic Information & Renaming */}
-      <div className="p-4 border-b border-[#2d2d30] flex flex-col gap-3">
-        <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider">Object Info</h4>
+      <div className="p-3.5 border-b border-[#27272a] flex flex-col gap-3 bg-[#161619]">
+        <div className="flex items-center justify-between">
+          <h4 className="text-xs font-bold text-zinc-300 uppercase tracking-wider flex items-center gap-1.5">
+            <Box className="w-3.5 h-3.5 text-emerald-400" /> Informasi Objek
+          </h4>
+        </div>
         <div className="flex flex-col gap-1.5">
-          <label className="text-xs text-gray-400 font-semibold">Name</label>
+          <label className="text-[11px] text-zinc-400 font-semibold">Nama Node</label>
           <input
             type="text"
             value={obj.name}
             onChange={(e) => {
               updateObject(obj.id, { name: e.target.value });
-              const node = editor?.nodesMap.get(obj.id);
+              const ed = getEditorInstance();
+              const node = ed?.nodesMap.get(obj.id);
               if (node) node.name = e.target.value;
             }}
-            className="bg-[#242429] text-xs text-white px-3 py-2 rounded-xl outline-none border border-white/10 focus:border-[#22a447]"
+            className="bg-[#1e1e23] text-xs text-white px-3 py-2 rounded-xl outline-none border border-zinc-700/80 focus:border-emerald-500 transition-colors font-medium"
           />
         </div>
 
         {/* Quick Object Actions */}
-        <div className="flex gap-2 mt-1">
+        <div className="flex gap-2 mt-0.5">
           <button
-            onClick={() => editor?.objectManager.duplicateObject(obj.id)}
-            className="flex-1 py-1.5 bg-[#242429] hover:bg-[#2e2e36] text-xs font-bold rounded-lg text-gray-200 flex items-center justify-center gap-1 border border-white/5 transition-colors cursor-pointer"
+            onClick={() => {
+              const ed = getEditorInstance();
+              if (ed) ed.objectManager.duplicateObject(obj.id);
+            }}
+            className="bouncy-hover flex-1 py-1.5 bg-[#1e1e23] hover:bg-[#25252b] text-xs font-bold rounded-xl text-zinc-200 flex items-center justify-center gap-1.5 border border-zinc-700 transition-colors cursor-pointer"
           >
-            <Copy className="w-3.5 h-3.5" /> Duplicate
+            <Copy className="w-3.5 h-3.5 text-cyan-400" /> Duplikat
           </button>
           <button
-            onClick={() => editor?.objectManager.deleteObject(obj.id)}
-            className="flex-1 py-1.5 bg-red-950/40 hover:bg-red-900/60 text-xs font-bold rounded-lg text-red-400 flex items-center justify-center gap-1 border border-red-500/20 transition-colors cursor-pointer"
+            onClick={() => {
+              const ed = getEditorInstance();
+              if (ed) ed.objectManager.deleteObject(obj.id);
+            }}
+            className="bouncy-hover flex-1 py-1.5 bg-rose-950/40 hover:bg-rose-900/60 text-xs font-bold rounded-xl text-rose-300 flex items-center justify-center gap-1.5 border border-rose-500/30 transition-colors cursor-pointer"
           >
-            <Trash2 className="w-3.5 h-3.5" /> Delete
+            <Trash2 className="w-3.5 h-3.5 text-rose-400" /> Hapus
           </button>
         </div>
       </div>
 
       {/* 2. Text 3D Customizer */}
       {obj.type === "text" && obj.textConfig && (
-        <div className="p-4 border-b border-[#2d2d30] flex flex-col gap-3 bg-[#131316]">
-          <h4 className="text-xs font-bold text-emerald-400 uppercase tracking-wider flex items-center gap-1.5">
+        <div className="p-3.5 border-b border-[#27272a] flex flex-col gap-3 bg-[#131316]">
+          <h4 className="text-xs font-bold text-amber-400 uppercase tracking-wider flex items-center gap-1.5">
             <Type className="w-4 h-4" /> 3D Text Settings
           </h4>
 
           <div className="flex flex-col gap-1.5">
-            <span className="text-xs text-gray-400">Content</span>
+            <span className="text-[11px] text-zinc-400">Content</span>
             <input
               type="text"
               value={textVal}
               onChange={(e) => handleUpdateText(e.target.value, textColor, textSize)}
-              className="bg-[#242429] text-xs text-white px-3 py-1.5 rounded-lg border border-white/10 outline-none focus:border-[#22a447]"
+              className="bg-[#1e1e23] text-xs text-white px-3 py-1.5 rounded-xl border border-zinc-700 outline-none focus:border-emerald-500"
             />
           </div>
 
-          <div className="flex justify-between items-center">
-            <span className="text-xs text-gray-400">Text Color</span>
+          <div className="flex justify-between items-center bg-[#1e1e23] p-2 rounded-xl border border-zinc-800">
+            <span className="text-[11px] text-zinc-300 font-medium">Text Color</span>
             <input
               type="color"
               value={textColor}
               onChange={(e) => handleUpdateText(textVal, e.target.value, textSize)}
-              className="w-10 h-7 bg-transparent border-0 cursor-pointer"
+              className="w-9 h-7 bg-transparent border-0 cursor-pointer rounded"
             />
           </div>
 
-          <div className="flex flex-col gap-1">
-            <div className="flex justify-between text-xs text-gray-400">
+          <div className="flex flex-col gap-1.5 bg-[#1e1e23] p-2.5 rounded-xl border border-zinc-800">
+            <div className="flex justify-between text-xs text-zinc-300 font-semibold">
               <span>Font Size</span>
-              <span>{textSize}px</span>
+              <span className="text-emerald-400">{textSize}px</span>
             </div>
             <input
               type="range"
@@ -313,22 +392,24 @@ export function InspectorPanel() {
               step="2"
               value={textSize}
               onChange={(e) => handleUpdateText(textVal, textColor, parseInt(e.target.value))}
-              className="accent-[#22a447]"
+              className="accent-emerald-500 cursor-pointer"
             />
           </div>
         </div>
       )}
 
       {/* 3. Transform Controls (Position, Rotation, Scale) */}
-      <div className="p-4 border-b border-[#2d2d30] flex flex-col gap-4">
-        <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider">Transform</h4>
+      <div className="p-3.5 border-b border-[#27272a] flex flex-col gap-3.5">
+        <h4 className="text-xs font-bold text-zinc-300 uppercase tracking-wider flex items-center gap-1.5">
+          <Compass className="w-3.5 h-3.5 text-cyan-400" /> Transform
+        </h4>
 
         {/* Position */}
         <div className="flex items-center justify-between">
-          <span className="text-xs text-gray-300 font-semibold">Position</span>
+          <span className="text-xs text-zinc-300 font-semibold">Posisi</span>
           <div className="flex gap-1.5 text-xs">
-            <label className="flex items-center gap-1 bg-[#242429] px-2 py-1 rounded-lg border border-white/5">
-              <span className="text-red-500 font-bold text-[10px]">X</span>
+            <label className="flex items-center gap-1 bg-[#1e1e23] px-2 py-1.5 rounded-xl border border-rose-500/20">
+              <span className="text-rose-400 font-bold text-[10px]">X</span>
               <input
                 type="number"
                 step="0.25"
@@ -338,11 +419,11 @@ export function InspectorPanel() {
                   setPosX(val);
                   updateTransform("x", val, "position");
                 }}
-                className="w-10 bg-transparent text-center outline-none text-white font-mono"
+                className="w-10 bg-transparent text-center outline-none text-white font-mono text-xs"
               />
             </label>
-            <label className="flex items-center gap-1 bg-[#242429] px-2 py-1 rounded-lg border border-white/5">
-              <span className="text-green-500 font-bold text-[10px]">Y</span>
+            <label className="flex items-center gap-1 bg-[#1e1e23] px-2 py-1.5 rounded-xl border border-emerald-500/20">
+              <span className="text-emerald-400 font-bold text-[10px]">Y</span>
               <input
                 type="number"
                 step="0.25"
@@ -352,11 +433,11 @@ export function InspectorPanel() {
                   setPosY(val);
                   updateTransform("y", val, "position");
                 }}
-                className="w-10 bg-transparent text-center outline-none text-white font-mono"
+                className="w-10 bg-transparent text-center outline-none text-white font-mono text-xs"
               />
             </label>
-            <label className="flex items-center gap-1 bg-[#242429] px-2 py-1 rounded-lg border border-white/5">
-              <span className="text-blue-500 font-bold text-[10px]">Z</span>
+            <label className="flex items-center gap-1 bg-[#1e1e23] px-2 py-1.5 rounded-xl border border-cyan-500/20">
+              <span className="text-cyan-400 font-bold text-[10px]">Z</span>
               <input
                 type="number"
                 step="0.25"
@@ -366,7 +447,7 @@ export function InspectorPanel() {
                   setPosZ(val);
                   updateTransform("z", val, "position");
                 }}
-                className="w-10 bg-transparent text-center outline-none text-white font-mono"
+                className="w-10 bg-transparent text-center outline-none text-white font-mono text-xs"
               />
             </label>
           </div>
@@ -374,10 +455,10 @@ export function InspectorPanel() {
 
         {/* Rotation */}
         <div className="flex items-center justify-between">
-          <span className="text-xs text-gray-300 font-semibold">Rotation</span>
+          <span className="text-xs text-zinc-300 font-semibold">Rotasi</span>
           <div className="flex gap-1.5 text-xs">
-            <label className="flex items-center gap-1 bg-[#242429] px-2 py-1 rounded-lg border border-white/5">
-              <span className="text-red-500 font-bold text-[10px]">X</span>
+            <label className="flex items-center gap-1 bg-[#1e1e23] px-2 py-1.5 rounded-xl border border-rose-500/20">
+              <span className="text-rose-400 font-bold text-[10px]">X</span>
               <input
                 type="number"
                 step="15"
@@ -387,11 +468,11 @@ export function InspectorPanel() {
                   setRotX(val);
                   updateTransform("x", val, "rotation");
                 }}
-                className="w-10 bg-transparent text-center outline-none text-white font-mono"
+                className="w-10 bg-transparent text-center outline-none text-white font-mono text-xs"
               />
             </label>
-            <label className="flex items-center gap-1 bg-[#242429] px-2 py-1 rounded-lg border border-white/5">
-              <span className="text-green-500 font-bold text-[10px]">Y</span>
+            <label className="flex items-center gap-1 bg-[#1e1e23] px-2 py-1.5 rounded-xl border border-emerald-500/20">
+              <span className="text-emerald-400 font-bold text-[10px]">Y</span>
               <input
                 type="number"
                 step="15"
@@ -401,11 +482,11 @@ export function InspectorPanel() {
                   setRotY(val);
                   updateTransform("y", val, "rotation");
                 }}
-                className="w-10 bg-transparent text-center outline-none text-white font-mono"
+                className="w-10 bg-transparent text-center outline-none text-white font-mono text-xs"
               />
             </label>
-            <label className="flex items-center gap-1 bg-[#242429] px-2 py-1 rounded-lg border border-white/5">
-              <span className="text-blue-500 font-bold text-[10px]">Z</span>
+            <label className="flex items-center gap-1 bg-[#1e1e23] px-2 py-1.5 rounded-xl border border-cyan-500/20">
+              <span className="text-cyan-400 font-bold text-[10px]">Z</span>
               <input
                 type="number"
                 step="15"
@@ -415,7 +496,7 @@ export function InspectorPanel() {
                   setRotZ(val);
                   updateTransform("z", val, "rotation");
                 }}
-                className="w-10 bg-transparent text-center outline-none text-white font-mono"
+                className="w-10 bg-transparent text-center outline-none text-white font-mono text-xs"
               />
             </label>
           </div>
@@ -423,10 +504,10 @@ export function InspectorPanel() {
 
         {/* Scale */}
         <div className="flex items-center justify-between">
-          <span className="text-xs text-gray-300 font-semibold">Scale</span>
+          <span className="text-xs text-zinc-300 font-semibold">Skala</span>
           <div className="flex gap-1.5 text-xs">
-            <label className="flex items-center gap-1 bg-[#242429] px-2 py-1 rounded-lg border border-white/5">
-              <span className="text-red-500 font-bold text-[10px]">X</span>
+            <label className="flex items-center gap-1 bg-[#1e1e23] px-2 py-1.5 rounded-xl border border-rose-500/20">
+              <span className="text-rose-400 font-bold text-[10px]">X</span>
               <input
                 type="number"
                 step="0.1"
@@ -436,11 +517,11 @@ export function InspectorPanel() {
                   setSclX(val);
                   updateTransform("x", val, "scale");
                 }}
-                className="w-10 bg-transparent text-center outline-none text-white font-mono"
+                className="w-10 bg-transparent text-center outline-none text-white font-mono text-xs"
               />
             </label>
-            <label className="flex items-center gap-1 bg-[#242429] px-2 py-1 rounded-lg border border-white/5">
-              <span className="text-green-500 font-bold text-[10px]">Y</span>
+            <label className="flex items-center gap-1 bg-[#1e1e23] px-2 py-1.5 rounded-xl border border-emerald-500/20">
+              <span className="text-emerald-400 font-bold text-[10px]">Y</span>
               <input
                 type="number"
                 step="0.1"
@@ -450,11 +531,11 @@ export function InspectorPanel() {
                   setSclY(val);
                   updateTransform("y", val, "scale");
                 }}
-                className="w-10 bg-transparent text-center outline-none text-white font-mono"
+                className="w-10 bg-transparent text-center outline-none text-white font-mono text-xs"
               />
             </label>
-            <label className="flex items-center gap-1 bg-[#242429] px-2 py-1 rounded-lg border border-white/5">
-              <span className="text-blue-500 font-bold text-[10px]">Z</span>
+            <label className="flex items-center gap-1 bg-[#1e1e23] px-2 py-1.5 rounded-xl border border-cyan-500/20">
+              <span className="text-cyan-400 font-bold text-[10px]">Z</span>
               <input
                 type="number"
                 step="0.1"
@@ -464,7 +545,7 @@ export function InspectorPanel() {
                   setSclZ(val);
                   updateTransform("z", val, "scale");
                 }}
-                className="w-10 bg-transparent text-center outline-none text-white font-mono"
+                className="w-10 bg-transparent text-center outline-none text-white font-mono text-xs"
               />
             </label>
           </div>
@@ -473,16 +554,16 @@ export function InspectorPanel() {
 
       {/* 4. Materials & Colors */}
       {materialSlots.length > 0 && (
-        <div className="p-4 border-b border-[#2d2d30] flex flex-col gap-3">
-          <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
-            <Palette className="w-4 h-4 text-emerald-400" /> Material & Shader
+        <div className="p-3.5 border-b border-[#27272a] flex flex-col gap-3">
+          <h4 className="text-xs font-bold text-zinc-300 uppercase tracking-wider flex items-center gap-1.5">
+            <Palette className="w-4 h-4 text-lime-400" /> Material & Shader
           </h4>
           
           {materialSlots.length > 1 && (
             <select
               value={activeSlotId || ""}
               onChange={(e) => setActiveSlotId(e.target.value)}
-              className="bg-[#242429] text-xs text-white px-3 py-2 rounded-xl outline-none border border-white/10"
+              className="bg-[#1e1e23] text-xs text-white px-3 py-2 rounded-xl outline-none border border-zinc-700 font-medium"
             >
               {materialSlots.map((s) => (
                 <option key={s.slotId} value={s.slotId}>
@@ -493,21 +574,21 @@ export function InspectorPanel() {
           )}
 
           {activeSlot && (
-            <div className="flex flex-col gap-3 mt-1 text-xs">
-              <div className="flex items-center justify-between">
-                <span className="text-gray-300 font-semibold">Albedo Color</span>
+            <div className="flex flex-col gap-3 text-xs">
+              <div className="flex items-center justify-between bg-[#1e1e23] p-2 rounded-xl border border-zinc-800">
+                <span className="text-zinc-300 font-medium">Albedo Color</span>
                 <input
                   type="color"
                   value={activeSlot.properties.baseColor}
                   onChange={(e) => handleMaterialChange("baseColor", e.target.value)}
-                  className="w-9 h-7 bg-transparent border-0 cursor-pointer"
+                  className="w-9 h-7 bg-transparent border-0 cursor-pointer rounded"
                 />
               </div>
 
-              <div className="flex flex-col gap-1">
-                <div className="flex justify-between text-gray-400">
+              <div className="flex flex-col gap-1.5 bg-[#1e1e23] p-2.5 rounded-xl border border-zinc-800">
+                <div className="flex justify-between text-zinc-400 text-xs">
                   <span>Metallic</span>
-                  <span>{activeSlot.properties.metallic}</span>
+                  <span className="text-emerald-400 font-mono">{activeSlot.properties.metallic}</span>
                 </div>
                 <input
                   type="range"
@@ -516,14 +597,14 @@ export function InspectorPanel() {
                   step="0.05"
                   value={activeSlot.properties.metallic}
                   onChange={(e) => handleMaterialChange("metallic", parseFloat(e.target.value))}
-                  className="accent-[#22a447]"
+                  className="accent-emerald-500 cursor-pointer"
                 />
               </div>
 
-              <div className="flex flex-col gap-1">
-                <div className="flex justify-between text-gray-400">
+              <div className="flex flex-col gap-1.5 bg-[#1e1e23] p-2.5 rounded-xl border border-zinc-800">
+                <div className="flex justify-between text-zinc-400 text-xs">
                   <span>Roughness</span>
-                  <span>{activeSlot.properties.roughness}</span>
+                  <span className="text-emerald-400 font-mono">{activeSlot.properties.roughness}</span>
                 </div>
                 <input
                   type="range"
@@ -532,17 +613,17 @@ export function InspectorPanel() {
                   step="0.05"
                   value={activeSlot.properties.roughness}
                   onChange={(e) => handleMaterialChange("roughness", parseFloat(e.target.value))}
-                  className="accent-[#22a447]"
+                  className="accent-emerald-500 cursor-pointer"
                 />
               </div>
 
-              <div className="flex items-center justify-between mt-1">
-                <span className="text-gray-400">Wireframe</span>
+              <div className="flex items-center justify-between bg-[#1e1e23] p-2.5 rounded-xl border border-zinc-800">
+                <span className="text-zinc-300 font-medium">Wireframe Mode</span>
                 <input
                   type="checkbox"
                   checked={!!activeSlot.properties.wireframe}
                   onChange={(e) => handleMaterialChange("wireframe", e.target.checked)}
-                  className="accent-[#22a447] w-4 h-4"
+                  className="accent-emerald-500 w-4 h-4 cursor-pointer"
                 />
               </div>
             </div>
@@ -551,72 +632,55 @@ export function InspectorPanel() {
       )}
 
       {/* 5. Motion & Animation Presets */}
-      <div className="p-4 border-b border-[#2d2d30] flex flex-col gap-3">
-        <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
-          <Sparkles className="w-4 h-4 text-amber-400" /> Motion & Animation
+      <div className="p-3.5 border-b border-[#27272a] flex flex-col gap-3">
+        <h4 className="text-xs font-bold text-zinc-300 uppercase tracking-wider flex items-center gap-1.5">
+          <Sparkles className="w-4 h-4 text-amber-400" /> Animasi & Gerakan
         </h4>
 
-        <div className="flex flex-col gap-2 text-xs">
-          <div className="flex items-center justify-between">
-            <span className="text-gray-300 font-semibold">Motion Preset</span>
+        <div className="flex flex-col gap-2.5 text-xs">
+          <div className="flex flex-col gap-1.5">
+            <span className="text-zinc-400 text-[11px] font-medium">Preset Gerakan</span>
             <select
               onChange={(e) => {
-                if (editor) {
-                  editor.animationManager.applyMotionPreset(obj.id, e.target.value as any);
+                const ed = getEditorInstance();
+                if (ed) {
+                  ed.animationManager.applyMotionPreset(obj.id, e.target.value as any);
                 }
               }}
               defaultValue="none"
-              className="bg-[#242429] text-white px-2.5 py-1.5 rounded-lg outline-none border border-white/10 text-xs"
+              className="bg-[#1e1e23] text-white px-3 py-2 rounded-xl outline-none border border-zinc-700 text-xs font-medium"
             >
-              <option value="none">Static (None)</option>
-              <option value="spin">Spin 360° Continuous</option>
-              <option value="bounce">Floating Hover Bob</option>
-              <option value="pulse">Pulse Scaling</option>
-              <option value="sway">Pendulum Sway</option>
+              <option value="none">Statis (Tidak Ada)</option>
+              <option value="spin">Putar 360° Berkelanjutan</option>
+              <option value="bounce">Melayang Bobbing</option>
+              <option value="pulse">Pulse Skala Denyut</option>
+              <option value="sway">Goyangan Bandul (Sway)</option>
             </select>
           </div>
 
-          {/* If object has GLB Animation clips */}
-          {animationState.clips.length > 1 && (
-            <div className="flex items-center justify-between mt-1">
-              <span className="text-gray-400">Clip</span>
-              <select
-                value={animationState.activeClip || ""}
-                onChange={(e) => {
-                  if (editor) editor.animationManager.selectClip(e.target.value);
-                }}
-                className="bg-[#242429] text-white px-2 py-1 rounded outline-none w-36 text-xs"
-              >
-                {animationState.clips.map((clip) => (
-                  <option key={clip} value={clip}>
-                    {clip}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
-
           {/* Quick Playback Controls */}
-          <div className="flex gap-2 mt-2">
+          <div className="flex gap-2 mt-1">
             <button
               onClick={() => {
-                if (editor) {
+                const ed = getEditorInstance();
+                if (ed) {
                   if (animationState.playing) {
-                    editor.animationManager.pause();
+                    ed.animationManager.pause();
                   } else {
-                    editor.animationManager.play(animationState.loop);
+                    ed.animationManager.play(animationState.loop);
                   }
                 }
               }}
-              className="flex-1 py-2 bg-[#22a447] hover:bg-[#198b3a] font-bold rounded-lg text-xs text-white shadow transition-all cursor-pointer"
+              className="bouncy-hover flex-1 py-2 bg-emerald-500 hover:bg-emerald-400 font-bold rounded-xl text-xs text-zinc-950 shadow-sm transition-all cursor-pointer"
             >
-              {animationState.playing ? "Pause Motion" : "Play Motion"}
+              {animationState.playing ? "Jeda Gerakan" : "Putar Gerakan"}
             </button>
             <button
               onClick={() => {
-                if (editor) editor.animationManager.stop();
+                const ed = getEditorInstance();
+                if (ed) ed.animationManager.stop();
               }}
-              className="px-3 py-2 bg-[#242429] hover:bg-[#2e2e36] font-bold rounded-lg text-xs text-gray-300 transition-all cursor-pointer"
+              className="bouncy-hover px-3 py-2 bg-[#1e1e23] hover:bg-[#25252b] font-bold rounded-xl text-xs text-zinc-300 border border-zinc-700 transition-all cursor-pointer"
             >
               Reset
             </button>
@@ -625,23 +689,23 @@ export function InspectorPanel() {
       </div>
 
       {/* 6. Interactivity & Behaviours */}
-      <div className="p-4 border-b border-[#2d2d30] flex flex-col gap-3">
-        <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
-          <Activity className="w-4 h-4 text-blue-400" /> Interactivity (AR Tap)
+      <div className="p-3.5 border-b border-[#27272a] flex flex-col gap-3">
+        <h4 className="text-xs font-bold text-zinc-300 uppercase tracking-wider flex items-center gap-1.5">
+          <Activity className="w-4 h-4 text-cyan-400" /> Interaktivitas (Tap AR)
         </h4>
 
         {/* Existing Interactions List */}
         {obj.behaviours && obj.behaviours.length > 0 ? (
-          <div className="flex flex-col gap-1.5 text-xs">
+          <div className="flex flex-col gap-2 text-xs">
             {obj.behaviours.map((b, idx) => (
-              <div key={idx} className="flex justify-between items-center bg-[#242429] p-2.5 rounded-xl border border-white/5">
-                <span className="text-emerald-400 font-bold">On {b.trigger} → <span className="text-white">{b.action}</span></span>
+              <div key={idx} className="flex justify-between items-center bg-[#1e1e23] p-2.5 rounded-xl border border-zinc-800">
+                <span className="text-emerald-400 font-bold">Saat {b.trigger} → <span className="text-white">{b.action}</span></span>
                 <button
                   onClick={() => {
                     const nextB = obj.behaviours!.filter((_, i) => i !== idx);
                     updateObject(obj.id, { behaviours: nextB });
                   }}
-                  className="text-red-400 hover:text-red-300 p-1"
+                  className="text-rose-400 hover:text-rose-300 p-1"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
                 </button>
@@ -649,39 +713,39 @@ export function InspectorPanel() {
             ))}
           </div>
         ) : (
-          <div className="text-xs text-gray-500 text-center py-2">
-            No interactivity configured yet.
+          <div className="text-xs text-zinc-500 text-center py-2">
+            Belum ada aksi interaksi terpasang.
           </div>
         )}
 
         {/* Add Interactivity form */}
-        <div className="bg-[#242429] p-3.5 rounded-xl flex flex-col gap-2.5 border border-white/5">
+        <div className="bg-[#1e1e23] p-3 rounded-xl flex flex-col gap-2.5 border border-zinc-800">
           <div className="flex justify-between items-center text-xs">
-            <span className="text-gray-400 font-semibold">Trigger</span>
+            <span className="text-zinc-400 font-semibold">Pemicu</span>
             <select
               value={trigger}
               onChange={(e) => setTrigger(e.target.value as any)}
-              className="bg-[#161618] text-white px-2 py-1 rounded-lg outline-none text-xs"
+              className="bg-[#161619] text-white px-2.5 py-1.5 rounded-lg outline-none text-xs border border-zinc-700"
             >
-              <option value="click">On Tap / Click</option>
-              <option value="start">On Scene Start</option>
+              <option value="click">Saat Tap / Klik</option>
+              <option value="start">Saat Scene Dimulai</option>
             </select>
           </div>
 
           <div className="flex justify-between items-center text-xs">
-            <span className="text-gray-400 font-semibold">Response</span>
+            <span className="text-zinc-400 font-semibold">Aksi Respon</span>
             <select
               value={action}
               onChange={(e) => setAction(e.target.value as any)}
-              className="bg-[#161618] text-white px-2 py-1 rounded-lg outline-none text-xs"
+              className="bg-[#161619] text-white px-2.5 py-1.5 rounded-lg outline-none text-xs border border-zinc-700"
             >
-              <option value="showInfo">Show Info Popup</option>
-              <option value="rotateObject">Rotate 45°</option>
-              <option value="moveObject">Lift Up 1m</option>
-              <option value="showObject">Show Node</option>
-              <option value="hideObject">Hide Node</option>
-              <option value="openUrl">Open URL</option>
-              <option value="changeScene">Change Scene</option>
+              <option value="showInfo">Buka Popup Info</option>
+              <option value="rotateObject">Putar 45°</option>
+              <option value="moveObject">Angkat 1m</option>
+              <option value="showObject">Tampilkan Node</option>
+              <option value="hideObject">Sembunyikan Node</option>
+              <option value="openUrl">Buka Link URL</option>
+              <option value="changeScene">Ganti Scene</option>
             </select>
           </div>
 
@@ -689,17 +753,17 @@ export function InspectorPanel() {
             <div className="flex flex-col gap-1.5">
               <input
                 type="text"
-                placeholder="Title (e.g. Smart Sensor Data)"
+                placeholder="Judul (contoh: Sensor Kelembaban Tanah)"
                 value={infoTitle}
                 onChange={(e) => setInfoTitle(e.target.value)}
-                className="bg-[#161618] text-xs px-2.5 py-1.5 rounded-lg outline-none border border-white/5"
+                className="bg-[#161619] text-xs px-2.5 py-1.5 rounded-lg outline-none border border-zinc-700 text-white"
               />
               <textarea
-                placeholder="Description of agricultural module..."
+                placeholder="Deskripsi data agrikultur..."
                 value={infoDesc}
                 onChange={(e) => setInfoDesc(e.target.value)}
                 rows={2}
-                className="bg-[#161618] text-xs px-2.5 py-1.5 rounded-lg outline-none border border-white/5 resize-none"
+                className="bg-[#161619] text-xs px-2.5 py-1.5 rounded-lg outline-none border border-zinc-700 resize-none text-white"
               />
             </div>
           )}
@@ -710,20 +774,22 @@ export function InspectorPanel() {
               placeholder="https://example.com"
               value={actionUrl}
               onChange={(e) => setActionUrl(e.target.value)}
-              className="bg-[#161618] text-xs px-2.5 py-1.5 rounded-lg outline-none"
+              className="bg-[#161619] text-xs px-2.5 py-1.5 rounded-lg outline-none border border-zinc-700 text-white"
             />
           )}
 
           <button
             onClick={handleAddBehaviour}
-            className="w-full py-2 bg-[#22a447] hover:bg-[#198b3a] text-xs font-bold rounded-lg flex items-center justify-center gap-1.5 text-white shadow transition-all cursor-pointer"
+            className="bouncy-hover w-full py-2 bg-emerald-500 hover:bg-emerald-400 text-xs font-bold rounded-xl flex items-center justify-center gap-1.5 text-zinc-950 shadow-sm transition-all cursor-pointer"
           >
-            <Plus className="w-3.5 h-3.5" /> Attach Interactivity
+            <Plus className="w-3.5 h-3.5 stroke-[3]" /> Pasang Interaksi
           </button>
         </div>
       </div>
     </div>
   );
 }
+
+
 
 

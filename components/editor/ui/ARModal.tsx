@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import QRCode from "qrcode";
 import { useEditorStore } from "../store/useEditorStore";
-import { getEditorInstance } from "../engine/editorInstance";
+import { getEditorInstance, useEditorInstance } from "../engine/editorInstance";
 import { 
   X, 
   QrCode, 
@@ -12,11 +12,11 @@ import {
   Copy, 
   Check, 
   ExternalLink, 
-  Sparkles, 
   Layers, 
   Camera, 
   Info,
-  Loader2 
+  Loader2,
+  Sparkles
 } from "lucide-react";
 
 export function ARModal() {
@@ -27,9 +27,8 @@ export function ARModal() {
   const [copied, setCopied] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [isSavingScene, setIsSavingScene] = useState(false);
-  const [sceneKey, setSceneKey] = useState<string>("");
 
-  const editor = getEditorInstance();
+  const editor = useEditorInstance();
 
   useEffect(() => {
     if (!isARModalOpen) return;
@@ -40,7 +39,6 @@ export function ARModal() {
         const objects = getObjects();
         const currentOrigin = typeof window !== "undefined" ? window.location.origin : "http://localhost:3000";
         const generatedKey = `scene_${activeSceneId}_${Date.now().toString(36)}`;
-        setSceneKey(generatedKey);
 
         // Sync scene to temporary AR API
         await fetch("/api/ar", {
@@ -59,15 +57,15 @@ export function ARModal() {
         // Generate QR code Data URL
         const dataUrl = await QRCode.toDataURL(targetUrl, {
           width: 320,
-          margin: 2,
+          margin: 1,
           color: {
-            dark: "#0f172a",
-            light: "#ffffff",
+            dark: "#10b981",
+            light: "#00000000",
           },
         });
         setQrDataUrl(dataUrl);
       } catch (err) {
-        console.error("Failed to generate AR QR code", err);
+        console.error("Failed to generate QR code", err);
       } finally {
         setIsSavingScene(false);
       }
@@ -86,10 +84,11 @@ export function ARModal() {
   };
 
   const handleDownloadGLB = async () => {
-    if (!editor) return;
+    const ed = getEditorInstance();
+    if (!ed) return;
     setIsExporting(true);
     try {
-      await editor.exportManager.exportToGLB("smartagri-ar-model");
+      await ed.exportManager.exportToGLB("smartagri-ar-model");
     } catch (err) {
       alert("Failed to export GLB model");
     } finally {
@@ -104,122 +103,120 @@ export function ARModal() {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 select-none animate-in fade-in duration-150">
-      <div className="relative w-full max-w-xl bg-[#18181b] border border-white/10 rounded-2xl shadow-2xl overflow-hidden flex flex-col text-white">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 select-none animate-in fade-in duration-150 font-sans">
+      <div className="relative w-full max-w-lg bg-[#161619] border border-zinc-700/80 rounded-2xl shadow-2xl overflow-hidden flex flex-col text-white">
         
         {/* Header */}
-        <div className="p-5 border-b border-white/10 flex items-center justify-between bg-gradient-to-r from-[#18181b] via-[#22a447]/10 to-[#18181b]">
+        <div className="p-4 border-b border-zinc-800 flex items-center justify-between bg-[#131316]">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-[#22a447]/20 border border-[#22a447]/40 flex items-center justify-center text-[#22a447]">
-              <Sparkles className="w-5 h-5" />
+            <div className="w-9 h-9 rounded-xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 shadow-sm">
+              <QrCode className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="text-base font-bold tracking-tight text-white flex items-center gap-2">
-                Convert to Augmented Reality
-                <span className="text-[10px] uppercase font-bold bg-[#22a447] text-white px-2 py-0.5 rounded-full">
-                  AR Ready
-                </span>
+              <h2 className="text-sm font-bold tracking-tight text-zinc-100 flex items-center gap-1.5">
+                Mode Augmented Reality (AR)
+                <Sparkles className="w-3.5 h-3.5 text-amber-400" />
               </h2>
-              <p className="text-xs text-gray-400">
-                View your 3D SmartAgri scene in real-world space via mobile QR or Barcode
+              <p className="text-[11px] text-zinc-400">
+                Visualisasikan scene 3D di dunia nyata melalui scanner kamera
               </p>
             </div>
           </div>
 
           <button
             onClick={() => setIsARModalOpen(false)}
-            className="p-2 text-gray-400 hover:text-white rounded-full hover:bg-white/10 transition-colors"
+            className="bouncy-hover p-1.5 text-zinc-400 hover:text-white rounded-xl hover:bg-zinc-800 transition-colors"
           >
-            <X className="w-5 h-5" />
+            <X className="w-4 h-4" />
           </button>
         </div>
 
         {/* Tab Navigation */}
-        <div className="flex border-b border-white/10 bg-[#121214] px-4 pt-2">
+        <div className="flex border-b border-zinc-800 bg-[#161619] px-4 pt-1.5 text-xs gap-2">
           <button
             onClick={() => setActiveTab("qr")}
-            className={`flex items-center gap-2 px-4 py-2.5 text-xs font-bold border-b-2 transition-all ${
+            className={`flex items-center gap-1.5 px-3.5 py-2.5 rounded-t-xl font-bold transition-all cursor-pointer ${
               activeTab === "qr"
-                ? "border-[#22a447] text-[#22a447]"
-                : "border-transparent text-gray-400 hover:text-gray-200"
+                ? "bg-[#1e1e23] border-t-2 border-emerald-500 text-emerald-400 shadow-sm"
+                : "border-transparent text-zinc-400 hover:text-zinc-200 hover:bg-[#1e1e23]/50"
             }`}
           >
-            <QrCode className="w-4 h-4" /> Scan QR Barcode
+            <QrCode className="w-3.5 h-3.5" /> Mobile QR
           </button>
           <button
             onClick={() => setActiveTab("marker")}
-            className={`flex items-center gap-2 px-4 py-2.5 text-xs font-bold border-b-2 transition-all ${
+            className={`flex items-center gap-1.5 px-3.5 py-2.5 rounded-t-xl font-bold transition-all cursor-pointer ${
               activeTab === "marker"
-                ? "border-[#22a447] text-[#22a447]"
-                : "border-transparent text-gray-400 hover:text-gray-200"
+                ? "bg-[#1e1e23] border-t-2 border-cyan-500 text-cyan-400 shadow-sm"
+                : "border-transparent text-zinc-400 hover:text-zinc-200 hover:bg-[#1e1e23]/50"
             }`}
           >
-            <Camera className="w-4 h-4" /> AR Marker Mode
+            <Camera className="w-3.5 h-3.5" /> AR Marker
           </button>
           <button
             onClick={() => setActiveTab("export")}
-            className={`flex items-center gap-2 px-4 py-2.5 text-xs font-bold border-b-2 transition-all ${
+            className={`flex items-center gap-1.5 px-3.5 py-2.5 rounded-t-xl font-bold transition-all cursor-pointer ${
               activeTab === "export"
-                ? "border-[#22a447] text-[#22a447]"
-                : "border-transparent text-gray-400 hover:text-gray-200"
+                ? "bg-[#1e1e23] border-t-2 border-amber-500 text-amber-400 shadow-sm"
+                : "border-transparent text-zinc-400 hover:text-zinc-200 hover:bg-[#1e1e23]/50"
             }`}
           >
-            <Download className="w-4 h-4" /> Download 3D Model
+            <Download className="w-3.5 h-3.5" /> Export GLB
           </button>
         </div>
 
         {/* Tab Content */}
-        <div className="p-6 flex-1 overflow-y-auto">
+        <div className="p-5 flex-1 overflow-y-auto bg-[#1a1a1e]">
           {activeTab === "qr" && (
-            <div className="flex flex-col md:flex-row items-center gap-6">
+            <div className="flex flex-col md:flex-row items-center gap-5">
               {/* QR Code Container */}
-              <div className="flex flex-col items-center bg-white p-4 rounded-2xl shadow-lg border border-black/10 flex-shrink-0">
+              <div className="flex flex-col items-center bg-white p-3.5 rounded-2xl border-2 border-emerald-500/40 shadow-xl flex-shrink-0">
                 {isSavingScene || !qrDataUrl ? (
-                  <div className="w-56 h-56 flex flex-col items-center justify-center text-gray-600 gap-2">
-                    <Loader2 className="w-8 h-8 text-[#22a447] animate-spin" />
-                    <span className="text-xs font-medium">Generating AR Barcode...</span>
+                  <div className="w-44 h-44 flex flex-col items-center justify-center text-zinc-700 gap-2">
+                    <Loader2 className="w-6 h-6 text-emerald-600 animate-spin" />
+                    <span className="text-[11px] font-bold">Membuat QR AR...</span>
                   </div>
                 ) : (
                   <img
                     src={qrDataUrl}
                     alt="AR QR Code"
-                    className="w-56 h-56 rounded-lg"
+                    className="w-44 h-44 rounded-lg"
                   />
                 )}
-                <span className="text-[11px] font-bold text-gray-700 mt-2 flex items-center gap-1">
-                  <Smartphone className="w-3.5 h-3.5 text-[#22a447]" /> Point Phone Camera to Scan
+                <span className="text-[10.5px] font-bold text-zinc-800 mt-2 flex items-center gap-1">
+                  <Smartphone className="w-3.5 h-3.5 text-emerald-600" /> Arahkan Kamera HP
                 </span>
               </div>
 
               {/* Instructions & Links */}
               <div className="flex flex-col gap-3 flex-1">
-                <div className="bg-[#242429] p-3.5 rounded-xl border border-white/5 flex flex-col gap-2">
-                  <span className="text-xs font-bold text-gray-200 flex items-center gap-1.5">
-                    <Sparkles className="w-3.5 h-3.5 text-[#22a447]" /> Instant WebXR & SceneViewer AR
+                <div className="bg-[#212127] p-3.5 rounded-xl border border-zinc-700/80 flex flex-col gap-1.5">
+                  <span className="text-xs font-bold text-zinc-200">
+                    Petunjuk Scan WebXR
                   </span>
-                  <p className="text-[11px] text-gray-400 leading-relaxed">
-                    1. Open your smartphone camera (iOS or Android).<br />
-                    2. Scan the barcode above to launch the 3D SmartAgri viewer.<br />
-                    3. Tap <strong>"View in your space"</strong> to project the 3D model onto your real floor or farm field!
+                  <p className="text-[11px] text-zinc-400 leading-relaxed">
+                    1. Buka kamera ponsel (iOS Safari / Android Chrome).<br />
+                    2. Scan QR untuk membuka scene 3D.<br />
+                    3. Tekan <strong>"Lihat di Ruang Nyata"</strong> untuk menempatkan di lantai/tanah pertanian.
                   </p>
                 </div>
 
                 {/* Shareable Link Input */}
-                <div className="flex flex-col gap-1.5">
-                  <span className="text-[11px] text-gray-400 font-semibold">AR Viewer Link:</span>
-                  <div className="flex items-center gap-2 bg-[#121214] p-1.5 rounded-xl border border-white/10">
+                <div className="flex flex-col gap-1">
+                  <span className="text-[11px] text-zinc-400 font-semibold">Tautan Langsung</span>
+                  <div className="flex items-center gap-1.5 bg-[#161619] p-1.5 rounded-xl border border-zinc-700">
                     <input
                       type="text"
                       readOnly
                       value={arUrl}
-                      className="bg-transparent text-xs text-gray-300 px-2 outline-none flex-1 font-mono truncate"
+                      className="bg-transparent text-xs text-zinc-300 px-2 outline-none flex-1 font-mono truncate"
                     />
                     <button
                       onClick={handleCopyLink}
-                      className="px-3 py-1.5 bg-[#252528] hover:bg-[#323236] text-white rounded-lg text-xs font-bold flex items-center gap-1 transition-colors"
+                      className="bouncy-hover px-3 py-1.5 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 rounded-lg text-xs font-bold flex items-center gap-1 transition-colors cursor-pointer"
                     >
-                      {copied ? <Check className="w-3.5 h-3.5 text-green-400" /> : <Copy className="w-3.5 h-3.5" />}
-                      {copied ? "Copied!" : "Copy"}
+                      {copied ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                      {copied ? "Tersalin" : "Salin"}
                     </button>
                   </div>
                 </div>
@@ -227,67 +224,67 @@ export function ARModal() {
                 {/* Open in new tab button */}
                 <button
                   onClick={handleLaunchInBrowser}
-                  className="w-full py-2.5 bg-[#22a447] hover:bg-[#198b3a] text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2 shadow-lg shadow-[#22a447]/20 transition-all cursor-pointer"
+                  className="bouncy-hover w-full py-2.5 bg-emerald-500 hover:bg-emerald-400 text-zinc-950 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all shadow-sm cursor-pointer"
                 >
-                  <ExternalLink className="w-4 h-4" /> Open AR Viewer in Browser
+                  <ExternalLink className="w-3.5 h-3.5" /> Buka Viewer di Tab Baru
                 </button>
               </div>
             </div>
           )}
 
           {activeTab === "marker" && (
-            <div className="flex flex-col items-center gap-4 text-center">
-              <div className="bg-white p-4 rounded-xl border-4 border-black inline-block shadow-lg">
-                <div className="w-44 h-44 bg-black flex items-center justify-center p-6">
-                  <div className="w-full h-full bg-white flex items-center justify-center font-bold text-black text-center text-xs tracking-wider p-2">
+            <div className="flex flex-col items-center gap-3.5 text-center py-2">
+              <div className="bg-white p-3 rounded-2xl border-2 border-zinc-900 inline-block shadow-lg">
+                <div className="w-36 h-36 bg-zinc-950 flex items-center justify-center p-4 rounded-xl">
+                  <div className="w-full h-full bg-white flex items-center justify-center font-bold text-zinc-950 text-center text-xs tracking-wider p-2 font-mono rounded">
                     SMARTAGRI<br />XR MARKER
                   </div>
                 </div>
               </div>
 
-              <div className="max-w-md flex flex-col gap-2">
-                <h3 className="text-sm font-bold text-white">Image / Marker-Based AR</h3>
-                <p className="text-xs text-gray-400 leading-relaxed">
-                  Print or display this marker pattern. When scanned with an AR camera, your 3D SmartAgri models and interactive pins anchor precisely to this barcode surface.
+              <div className="max-w-xs flex flex-col gap-1">
+                <h3 className="text-xs font-bold text-zinc-200">Pola Marker Permukaan</h3>
+                <p className="text-[11px] text-zinc-400">
+                  Cetak atau tempel marker di permukaan fisik untuk tracking model 3D yang stabil.
                 </p>
               </div>
 
               <button
                 onClick={() => window.print()}
-                className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold flex items-center gap-2 shadow"
+                className="bouncy-hover px-4 py-2 bg-[#212127] hover:bg-[#282830] text-zinc-200 rounded-xl text-xs font-bold flex items-center gap-2 border border-zinc-700 cursor-pointer"
               >
-                <Download className="w-4 h-4" /> Print / Save Marker Sheet
+                <Download className="w-3.5 h-3.5 text-cyan-400" /> Cetak Marker
               </button>
             </div>
           )}
 
           {activeTab === "export" && (
-            <div className="flex flex-col gap-4">
-              <div className="bg-[#242429] p-4 rounded-xl border border-white/5 flex flex-col gap-3">
+            <div className="flex flex-col gap-3.5">
+              <div className="bg-[#212127] p-4 rounded-xl border border-zinc-700/80 flex flex-col gap-3">
                 <div className="flex items-center gap-3">
-                  <div className="p-3 bg-[#22a447]/10 text-[#22a447] rounded-xl">
-                    <Layers className="w-6 h-6" />
+                  <div className="p-2 bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 rounded-xl">
+                    <Layers className="w-5 h-5" />
                   </div>
                   <div>
-                    <h4 className="text-sm font-bold text-white">Universal 3D / AR Asset (.GLB)</h4>
-                    <p className="text-xs text-gray-400">
-                      Standard glTF 2.0 binary package compatible with WebXR, Google SceneViewer, Unity, Unreal Engine, and Blender.
+                    <h4 className="text-xs font-bold text-zinc-200">Format Standar 3D (.GLB)</h4>
+                    <p className="text-[10.5px] text-zinc-400">
+                      Paket biner glTF 2.0 standar kompatibel dengan WebXR, Blender, Unity, & Unreal.
                     </p>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-3 gap-2 mt-2 bg-[#121214] p-3 rounded-lg text-center text-xs">
+                <div className="grid grid-cols-3 gap-2 mt-1 bg-[#161619] p-2.5 rounded-xl border border-zinc-800 text-center text-xs">
                   <div>
-                    <span className="text-gray-500 block text-[10px] uppercase font-bold">Total Objects</span>
-                    <span className="font-bold text-white text-sm">{getObjects().length}</span>
+                    <span className="text-zinc-500 block text-[9.5px] uppercase font-bold">Total Node</span>
+                    <span className="font-bold text-zinc-200 text-xs">{getObjects().length}</span>
                   </div>
                   <div>
-                    <span className="text-gray-500 block text-[10px] uppercase font-bold">Format</span>
-                    <span className="font-bold text-emerald-400 text-sm">GLB / glTF 2.0</span>
+                    <span className="text-zinc-500 block text-[9.5px] uppercase font-bold">Format</span>
+                    <span className="font-bold text-emerald-400 text-xs">GLB 2.0</span>
                   </div>
                   <div>
-                    <span className="text-gray-500 block text-[10px] uppercase font-bold">PBR Materials</span>
-                    <span className="font-bold text-blue-400 text-sm">Included</span>
+                    <span className="text-zinc-500 block text-[9.5px] uppercase font-bold">PBR Shader</span>
+                    <span className="font-bold text-teal-400 text-xs">Aktif</span>
                   </div>
                 </div>
               </div>
@@ -295,15 +292,15 @@ export function ARModal() {
               <button
                 onClick={handleDownloadGLB}
                 disabled={isExporting}
-                className="w-full py-3 bg-[#22a447] hover:bg-[#198b3a] text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2 shadow-lg shadow-[#22a447]/20 transition-all"
+                className="bouncy-hover w-full py-2.5 bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-bold rounded-xl text-xs flex items-center justify-center gap-2 transition-all shadow-sm cursor-pointer"
               >
                 {isExporting ? (
                   <>
-                    <Loader2 className="w-4 h-4 animate-spin" /> Exporting GLB Package...
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" /> Sedang Mengekspor...
                   </>
                 ) : (
                   <>
-                    <Download className="w-4 h-4" /> Download Scene as .GLB
+                    <Download className="w-3.5 h-3.5 stroke-[2.5]" /> Unduh File .GLB
                   </>
                 )}
               </button>
@@ -312,14 +309,15 @@ export function ARModal() {
         </div>
 
         {/* Footer info */}
-        <div className="px-6 py-3 border-t border-white/10 bg-[#121214] flex items-center justify-between text-[11px] text-gray-500">
+        <div className="px-4 py-3 border-t border-zinc-800 bg-[#131316] flex items-center justify-between text-[11px] text-zinc-400">
           <div className="flex items-center gap-1.5">
-            <Info className="w-3.5 h-3.5 text-[#22a447]" />
-            <span>Works seamlessly on iOS (Safari) & Android (Chrome).</span>
+            <Info className="w-3.5 h-3.5 text-emerald-400" />
+            <span>Mendukung iOS Safari (QuickLook) & Android Chrome (WebXR).</span>
           </div>
-          <span className="font-mono text-gray-400">SmartAgriXR Engine v1.0</span>
+          <span className="font-bold text-emerald-400">SmartAgriXR</span>
         </div>
       </div>
     </div>
   );
 }
+
