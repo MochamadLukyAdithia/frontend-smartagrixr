@@ -450,7 +450,7 @@ export default function DashboardBeranda() {
                 classrooms.map((cls) => (
                   <Link
                     key={cls.id}
-                    href={`/dashboard/kelas/${cls.id}`}
+                    href={`/kelas/${cls.id}`}
                     className="group relative h-[180px] w-full cursor-pointer overflow-hidden rounded-2xl bg-gray-200 shadow-sm transition-all hover:shadow-md"
                   >
                     <Image
@@ -662,6 +662,7 @@ export default function DashboardBeranda() {
           token={token}
           onClose={() => setShowUploadModal(false)}
           onSuccess={refreshAssets}
+          categories={categories.filter((c) => c !== "Semua")}
         />
       )}
 

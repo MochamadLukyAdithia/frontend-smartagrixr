@@ -23,6 +23,32 @@ export function AssetThumbnail({
   asset: ApiAsset;
   autoRotate?: boolean;
 }) {
+  if (asset.thumbnail_url) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src={`/api/assets/${asset.id}/asset?url=${encodeURIComponent(
+          asset.thumbnail_url,
+        )}`}
+        alt={asset.name}
+        className="h-full w-full object-cover"
+        loading="lazy"
+      />
+    );
+  }
+
+  return <ModelThumbnail token={token} asset={asset} autoRotate={autoRotate} />;
+}
+
+function ModelThumbnail({
+  token,
+  asset,
+  autoRotate,
+}: {
+  token: string | null;
+  asset: ApiAsset;
+  autoRotate: boolean;
+}) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [failed, setFailed] = useState(false);
 

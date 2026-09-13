@@ -6,15 +6,13 @@ import { useParams, useRouter } from "next/navigation";
 import { Navbar } from "@/components/layout/navbar";
 import Footer from "@/components/layout/footer";
 import { useAuthStore } from "@/stores/useAuthStore";
-import { fetchClassroom, updateClassroom, deleteClassroom } from "@/lib/api";
-import type { ClassroomDetail, ClassroomStudent } from "@/lib/api";
+import { fetchClassroom, updateClassroom, deleteClassroom, fetchClassroomFeed } from "@/lib/api";
+import type { ClassroomDetail, ClassroomStudent, FeedPost } from "@/lib/api";
+import { PostCard } from "./components/post-card";
 import {
   ArrowLeft,
   MoreHorizontal,
   Share2,
-  Link as LinkIcon,
-  Box,
-  Star,
   Pencil,
   Trash2,
   X,
@@ -32,11 +30,14 @@ export const DetailKelas = () => {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const token = useAuthStore((s) => s.token);
+  const user = useAuthStore((s) => s.user);
   const [activeTab, setActiveTab] = useState<"beranda" | "materi" | "anggota">(
     "beranda",
   );
   const [selectedMateri, setSelectedMateri] = useState<MateriItem | null>(null);
-  const [commentText, setCommentText] = useState("");
+  const [feedPosts, setFeedPosts] = useState<FeedPost[]>([]);
+  const [feedLoading, setFeedLoading] = useState(true);
+  const [feedError, setFeedError] = useState<string | null>(null);
   const [classroom, setClassroom] = useState<ClassroomDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -67,6 +68,28 @@ export const DetailKelas = () => {
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [token, id]);
+
+  useEffect(() => {
+    if (!token || !id) return;
+
+    let cancelled = false;
+    fetchClassroomFeed(token, id)
+      .then((posts) => {
+        if (cancelled) return;
+        setFeedPosts(posts);
+      })
+      .catch((err) => {
+        if (!cancelled)
+          setFeedError(err instanceof Error ? err.message : "Gagal memuat feed.");
+      })
+      .finally(() => {
+        if (!cancelled) setFeedLoading(false);
       });
 
     return () => {
@@ -153,24 +176,8 @@ export const DetailKelas = () => {
     },
   ];
 
-  const comments = [
-    {
-      id: "1",
-      name: "Andini Sayna",
-      rating: "4.5",
-      text: "Kelasnya seru banget, jadi bisa praktek 3D dengan interaktif.",
-      avatar:
-        "https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=150&auto=format&fit=crop",
-    },
-    {
-      id: "2",
-      name: "Ahmad Rafi",
-      rating: "5",
-      text: "Kelasnya seru banget, jadi bisa praktek 3D dengan interaktif. Membantu saya memahami materi lebih dalam.",
-      avatar:
-        "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=150&auto=format&fit=crop",
-    },
-  ];
+  const isFeedOwner = (userId: number): boolean =>
+    Boolean(user && userId && Number(user.id) === Number(userId));
 
   return (
     <div className="relative min-h-screen flex flex-col bg-[url('/bg.svg')] text-[#171717] overflow-hidden">
@@ -315,64 +322,40 @@ export const DetailKelas = () => {
         {activeTab === "beranda" && (
           <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-3">
             <div className="lg:col-span-2 space-y-6">
-              <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
-                <textarea
-                  value={commentText}
-                  onChange={(e) => setCommentText(e.target.value)}
-                  placeholder="Ketik komentar anda disini"
-                  className="w-full resize-none rounded-lg bg-[#f3f4f6] p-4 font-serif text-sm text-gray-800 outline-none placeholder:text-gray-400 min-h-[100px]"
-                />
-                <div className="mt-3 flex items-center gap-4">
-                  <button
-                    type="button"
-                    className="flex items-center gap-1.5 text-xs font-semibold text-gray-700 hover:text-[#21a447] cursor-pointer"
-                  >
-                    <Box className="h-4 w-4" />
-                    Project Assemblr
-                  </button>
-                  <button
-                    type="button"
-                    className="flex items-center gap-1.5 text-xs font-semibold text-gray-700 hover:text-[#21a447] cursor-pointer"
-                  >
-                    <LinkIcon className="h-4 w-4" />
-                    Tautan
-                  </button>
-                </div>
-              </div>
-
-              <div>
-                <h3 className="font-serif text-sm font-semibold text-gray-800 mb-3">
-                  Komentar
-                </h3>
+              {feedLoading && (
                 <div className="space-y-3">
-                  {comments.map((item) => (
+                  {Array.from({ length: 2 }).map((_, i) => (
                     <div
-                      key={item.id}
-                      className="flex gap-3 rounded-lg bg-white p-3 border border-gray-100 shadow-2xs"
-                    >
-                      <img
-                        src={item.avatar}
-                        alt={item.name}
-                        className="h-9 w-9 rounded-full object-cover"
-                      />
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <span className="font-serif text-sm font-bold text-gray-900">
-                            {item.name}
-                          </span>
-                          <span className="flex items-center gap-0.5 text-[11px] font-bold text-amber-500 bg-amber-50 px-1.5 py-0.5 rounded">
-                            {item.rating}{" "}
-                            <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
-                          </span>
-                        </div>
-                        <p className="mt-1 font-serif text-xs text-gray-600 leading-relaxed">
-                          {item.text}
-                        </p>
-                      </div>
-                    </div>
+                      key={i}
+                      className="h-32 animate-pulse rounded-xl border border-gray-200 bg-white"
+                    />
                   ))}
                 </div>
-              </div>
+              )}
+
+              {!feedLoading && feedError && (
+                <div className="rounded-xl border border-red-200 bg-red-50 p-4">
+                  <p className="font-serif text-xs text-red-600">{feedError}</p>
+                </div>
+              )}
+
+              {!feedLoading && !feedError && feedPosts.length === 0 && (
+                <div className="rounded-xl border border-gray-200 bg-white p-6 text-center">
+                  <p className="font-serif text-sm text-gray-500">
+                    Belum ada post di kelas ini.
+                  </p>
+                </div>
+              )}
+
+              {feedPosts.map((post) => (
+                <PostCard
+                  key={post.id}
+                  token={token}
+                  classroomId={id}
+                  post={post}
+                  isOwner={isFeedOwner}
+                />
+              ))}
             </div>
 
             <div className="space-y-6">

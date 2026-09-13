@@ -493,6 +493,7 @@ export default function TopicsLibrary() {
             token={token}
             onClose={() => setShowUploadModal(false)}
             onSuccess={refreshAssets}
+            categories={categories.filter((c) => c !== "Semua")}
           />
         )}
 

@@ -264,6 +264,8 @@ export interface UploadAssetParams {
   name: string;
   category: string;
   is_public: boolean;
+  /** Thumbnail hasil generate dari model 3D (opsional). */
+  thumbnail?: File | null;
 }
 
 export interface Classroom {
@@ -497,6 +499,7 @@ export async function uploadAsset(
   formData.append("name", params.name);
   formData.append("category", params.category);
   formData.append("is_public", params.is_public ? "1" : "0");
+  if (params.thumbnail) formData.append("thumbnail", params.thumbnail);
 
   const res = await fetch(`${API_URL}/api/assets/upload`, {
     method: "POST",
@@ -518,4 +521,251 @@ export async function uploadAsset(
   const created = (data as { data?: ApiAsset } | null)?.data;
   if (!created) throw new Error("Response upload tidak valid.");
   return created;
+}
+
+// ── Feed & Komentar Kelas ──
+
+export interface SocialAuthor {
+  id: number;
+  name: string;
+  avatar: string | null;
+}
+
+export interface SocialComment {
+  id: number;
+  body: string;
+  user: SocialAuthor;
+  likes_count: number;
+  is_liked: boolean;
+  created_at: string;
+  parent_id: number | null;
+  replies: SocialComment[];
+}
+
+export interface FeedPost {
+  id: number;
+  body: string;
+  user: SocialAuthor;
+  likes_count: number;
+  is_liked: boolean;
+  comments_count: number;
+  created_at: string;
+}
+
+type LikeResult = { likes_count: number; is_liked: boolean };
+
+function normalizeAuthor(raw: unknown): SocialAuthor {
+  const a = (raw ?? {}) as Record<string, unknown>;
+  const anyA = raw as {
+    id?: unknown;
+    name?: string;
+    username?: string;
+    full_name?: string;
+    avatar?: string | null;
+    profile?: { name?: string; avatar?: string | null };
+  } | null;
+  return {
+    id: Number(anyA?.id ?? 0),
+    name: String(
+      anyA?.name ??
+        anyA?.full_name ??
+        (anyA?.profile as { name?: string } | undefined)?.name ??
+        (a.username as string) ??
+        "Pengguna"
+    ),
+    avatar:
+      anyA?.avatar ??
+      (anyA?.profile as { avatar?: string | null } | undefined)?.avatar ??
+      null,
+  };
+}
+
+export function normalizeComment(raw: unknown): SocialComment {
+  const c = (raw ?? {}) as Record<string, unknown>;
+  const anyC = raw as {
+    id?: unknown;
+    body?: string;
+    content?: string;
+    text?: string;
+    comment?: string;
+    user?: unknown;
+    author?: unknown;
+    creator?: unknown;
+    likes_count?: unknown;
+    likes?: unknown;
+    is_liked?: unknown;
+    liked?: unknown;
+    created_at?: string;
+    parent_id?: unknown;
+    replies?: unknown[];
+  } | null;
+  return {
+    id: Number(anyC?.id ?? 0),
+    body: String(
+      anyC?.body ??
+        anyC?.content ??
+        anyC?.text ??
+        anyC?.comment ??
+        c.value ??
+        ""
+    ),
+    user: normalizeAuthor(anyC?.user ?? anyC?.author ?? anyC?.creator),
+    likes_count: Number(anyC?.likes_count ?? anyC?.likes ?? 0),
+    is_liked: Boolean(anyC?.is_liked ?? anyC?.liked ?? false),
+    created_at: String(anyC?.created_at ?? ""),
+    parent_id: anyC?.parent_id != null ? Number(anyC.parent_id) : null,
+    replies: Array.isArray(anyC?.replies)
+      ? anyC.replies.map((r) => normalizeComment(r))
+      : [],
+  };
+}
+
+function normalizePost(raw: unknown): FeedPost {
+  const anyP = raw as {
+    id?: unknown;
+    body?: string;
+    content?: string;
+    text?: string;
+    caption?: string;
+    user?: unknown;
+    author?: unknown;
+    creator?: unknown;
+    likes_count?: unknown;
+    likes?: unknown;
+    is_liked?: unknown;
+    liked?: unknown;
+    comments_count?: unknown;
+    created_at?: string;
+  } | null;
+  const r = (raw ?? {}) as Record<string, unknown>;
+  return {
+    id: Number(anyP?.id ?? 0),
+    body: String(
+      anyP?.body ?? anyP?.content ?? anyP?.text ?? anyP?.caption ?? r.value ?? ""
+    ),
+    user: normalizeAuthor(anyP?.user ?? anyP?.author ?? anyP?.creator),
+    likes_count: Number(anyP?.likes_count ?? anyP?.likes ?? 0),
+    is_liked: Boolean(anyP?.is_liked ?? anyP?.liked ?? false),
+    comments_count: Number(
+      anyP?.comments_count ?? (r.comment_count as unknown) ?? 0
+    ),
+    created_at: String(anyP?.created_at ?? ""),
+  };
+}
+
+function unwrapList<T>(json: unknown, normalize: (raw: unknown) => T): T[] {
+  const anyJson = json as { data?: unknown } & Record<string, unknown>;
+  const d = anyJson?.data ?? anyJson;
+  const list = Array.isArray(d)
+    ? d
+    : (d as { data?: unknown[] })?.data ?? (d as { posts?: unknown[] })?.posts;
+  return Array.isArray(list) ? list.map(normalize) : [];
+}
+
+function readLikeResult(json: unknown): LikeResult {
+  const anyJson = json as { data?: unknown } & Record<string, unknown>;
+  const d = (anyJson?.data ?? anyJson) as Record<string, unknown> | null;
+  return {
+    likes_count: Number(d?.likes_count ?? d?.likes ?? 0),
+    is_liked: Boolean(d?.is_liked ?? d?.liked ?? false),
+  };
+}
+
+async function socialRequest<T>(
+  path: string,
+  token: string | null,
+  init: RequestInit = {}
+): Promise<{ status: number; data: T | null }> {
+  const res = await fetch(`${API_URL}${path}`, {
+    ...init,
+    headers: {
+      Accept: "application/json",
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...(init.headers ?? {}),
+    },
+  });
+  const body =
+    res.status !== 204 ? await res.json().catch(() => null) : null;
+
+  if (!res.ok) {
+    const message = (body as { message?: string } | null)?.message;
+    throw new Error(
+      res.status === 401
+        ? "Sesi berakhir. Silakan masuk kembali."
+        : message || `Gagal memuat data (status ${res.status}).`
+    );
+  }
+  return { status: res.status, data: body as T | null };
+}
+
+export async function fetchClassroomFeed(
+  token: string,
+  classroomId: number | string
+): Promise<FeedPost[]> {
+  const { data } = await socialRequest(`/api/classrooms/${classroomId}/feed`, token);
+  return unwrapList<FeedPost>(data ?? {}, normalizePost);
+}
+
+export async function likePost(
+  token: string,
+  postId: number
+): Promise<LikeResult> {
+  const { data } = await socialRequest(`/api/posts/${postId}/like`, token, {
+    method: "POST",
+  });
+  return readLikeResult(data ?? {});
+}
+
+export async function fetchPostComments(
+  token: string,
+  postId: number
+): Promise<SocialComment[]> {
+  const { data } = await socialRequest(`/api/posts/${postId}/comments`, token);
+  return unwrapList<SocialComment>(data ?? {}, normalizeComment);
+}
+
+export async function createPostComment(
+  token: string,
+  postId: number,
+  body: string
+): Promise<SocialComment> {
+  const { data } = await socialRequest(`/api/posts/${postId}/comments`, token, {
+    method: "POST",
+    body: JSON.stringify({ comment: body, body }),
+  });
+  const d = (data as { data?: unknown } | null)?.data ?? data;
+  return normalizeComment(d);
+}
+
+export async function likeComment(
+  token: string,
+  commentId: number
+): Promise<LikeResult> {
+  const { data } = await socialRequest(`/api/comments/${commentId}/like`, token, {
+    method: "POST",
+  });
+  return readLikeResult(data ?? {});
+}
+
+export async function replyComment(
+  token: string,
+  commentId: number,
+  body: string
+): Promise<SocialComment> {
+  const { data } = await socialRequest(`/api/comments/${commentId}/reply`, token, {
+    method: "POST",
+    body: JSON.stringify({ comment: body, body }),
+  });
+  const d = (data as { data?: unknown } | null)?.data ?? data;
+  return normalizeComment(d);
+}
+
+export async function deleteComment(
+  token: string,
+  commentId: number
+): Promise<void> {
+  await socialRequest<unknown>(`/api/comments/${commentId}`, token, {
+    method: "DELETE",
+  });
 }
