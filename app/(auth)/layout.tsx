@@ -15,7 +15,7 @@ export default function AuthLayout({
 
   useEffect(() => {
     if (!hasHydrated) return;
-    if (token) router.replace("/dashboard");
+    if (token) router.replace("/dashboard/beranda");
   }, [hasHydrated, token, router]);
 
   if (!hasHydrated) return null;
