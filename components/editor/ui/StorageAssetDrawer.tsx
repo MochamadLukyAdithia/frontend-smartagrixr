@@ -11,9 +11,14 @@ import {
   deleteAsset, 
   fetchAssetUrl,
   resolveAssetFileUrl,
+  resolveThumbnailUrl,
   AssetCategory, 
   CloudAsset 
 } from "@/lib/api/assets";
+import {
+  generateGlbThumbnailFile,
+  generateGlbThumbnailDataUrl,
+} from "@/utils/generateGlbThumbnail";
 import { 
   Cloud, 
   HardDrive, 
@@ -63,6 +68,40 @@ export function StorageAssetDrawer() {
   const [uploadDescription, setUploadDescription] = useState("");
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [thumbnailPreviewUrl, setThumbnailPreviewUrl] = useState<string | null>(null);
+  const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
+  const [isGeneratingThumbnail, setIsGeneratingThumbnail] = useState(false);
+
+  const handleFileChange = async (file: File | null) => {
+    setUploadFile(file);
+    setThumbnailPreviewUrl(null);
+    setThumbnailFile(null);
+
+    if (!file) return;
+    if (!uploadName) {
+      setUploadName(file.name.replace(/\.[^/.]+$/, ""));
+    }
+
+    const ext = file.name.split(".").pop()?.toLowerCase() || "";
+    if (ext === "glb" || ext === "gltf") {
+      setIsGeneratingThumbnail(true);
+      try {
+        const [dataUrl, thumbFile] = await Promise.all([
+          generateGlbThumbnailDataUrl(file),
+          generateGlbThumbnailFile(file, "thumbnail.jpg"),
+        ]);
+        setThumbnailPreviewUrl(dataUrl);
+        setThumbnailFile(thumbFile);
+      } catch (err) {
+        console.warn("Failed to generate GLB thumbnail preview:", err);
+      } finally {
+        setIsGeneratingThumbnail(false);
+      }
+    } else if (["png", "jpg", "jpeg", "webp"].includes(ext)) {
+      const url = URL.createObjectURL(file);
+      setThumbnailPreviewUrl(url);
+    }
+  };
 
   // New Category Modal State
   const [isNewCategoryModalOpen, setIsNewCategoryModalOpen] = useState(false);
@@ -217,6 +256,20 @@ export function StorageAssetDrawer() {
     const fileExt = uploadFile.name.split(".").pop()?.toLowerCase() || "glb";
     formData.append("type", fileExt);
 
+    // Auto generate & attach 3D model thumbnail if not already generated
+    let thumbToSend = thumbnailFile;
+    if (!thumbToSend && (fileExt === "glb" || fileExt === "gltf")) {
+      try {
+        thumbToSend = await generateGlbThumbnailFile(uploadFile, "thumbnail.jpg");
+      } catch (err) {
+        console.warn("Could not generate thumbnail during upload submission:", err);
+      }
+    }
+
+    if (thumbToSend) {
+      formData.append("thumbnail", thumbToSend, "thumbnail.jpg");
+    }
+
     try {
       const newAsset = await uploadAsset(formData, (progress) => {
         setUploadProgress(progress);
@@ -225,6 +278,8 @@ export function StorageAssetDrawer() {
       setAssets((prev) => [newAsset, ...prev]);
       setIsUploadModalOpen(false);
       setUploadFile(null);
+      setThumbnailPreviewUrl(null);
+      setThumbnailFile(null);
       setUploadName("");
       setUploadCategoryName("");
       setUploadDescription("");
@@ -304,6 +359,16 @@ export function StorageAssetDrawer() {
           formData.append("category_name", catName);
           formData.append("category_id", String(selectedCategory));
         }
+
+        if (ext === "glb" || ext === "gltf") {
+          try {
+            const thumb = await generateGlbThumbnailFile(file, "thumbnail.jpg");
+            formData.append("thumbnail", thumb, "thumbnail.jpg");
+          } catch (e) {
+            console.warn("Background thumbnail generation skipped:", e);
+          }
+        }
+
         uploadAsset(formData).then((cloud) => {
           setAssets((prev) => [cloud, ...prev]);
         }).catch((e) => console.warn("Background upload skipped:", e));
@@ -450,6 +515,7 @@ export function StorageAssetDrawer() {
                 {assets.map((asset) => {
                   const isBeingInserted = insertingId === asset.id;
                   const is3D = !asset.type || asset.type.includes("glb") || asset.type.includes("gltf");
+                  const thumbUrl = resolveThumbnailUrl(asset);
 
                   return (
                     <div
@@ -466,8 +532,8 @@ export function StorageAssetDrawer() {
                             <Loader2 className="w-5 h-5 animate-spin" />
                             <span className="text-[10px] font-mono font-bold">{insertProgress}%</span>
                           </div>
-                        ) : asset.thumbnail_url ? (
-                          <img src={asset.thumbnail_url} alt={asset.name} className="w-full h-full object-cover" />
+                        ) : thumbUrl ? (
+                          <img src={thumbUrl} alt={asset.name} className="w-full h-full object-cover" />
                         ) : is3D ? (
                           <div className="flex flex-col items-center gap-1 text-emerald-600">
                             <Box className="w-6 h-6" />
@@ -630,15 +696,46 @@ export function StorageAssetDrawer() {
                   type="file"
                   accept=".glb,.gltf,.png,.jpg,.jpeg,.webp,.mp4,.mp3"
                   onChange={(e) => {
-                    const f = e.target.files?.[0];
-                    if (f) {
-                      setUploadFile(f);
-                      if (!uploadName) setUploadName(f.name.replace(/\.[^/.]+$/, ""));
-                    }
+                    const f = e.target.files?.[0] || null;
+                    handleFileChange(f);
                   }}
                   className="bg-slate-50 p-2 rounded-xl border border-slate-200 text-slate-700 file:mr-2 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-emerald-600 file:text-white hover:file:bg-emerald-500 cursor-pointer"
                 />
               </div>
+
+              {/* Live 3D / Image Thumbnail Preview */}
+              {uploadFile && (
+                <div className="flex items-center gap-3 p-2.5 bg-slate-50 rounded-xl border border-slate-200">
+                  <div className="w-14 h-14 bg-slate-200/80 rounded-lg overflow-hidden border border-slate-300 flex items-center justify-center shrink-0">
+                    {isGeneratingThumbnail ? (
+                      <Loader2 className="w-5 h-5 text-emerald-600 animate-spin" />
+                    ) : thumbnailPreviewUrl ? (
+                      <img src={thumbnailPreviewUrl} alt="Preview" className="w-full h-full object-cover" />
+                    ) : (
+                      <Box className="w-5 h-5 text-slate-400" />
+                    )}
+                  </div>
+                  <div className="flex flex-col gap-0.5 overflow-hidden">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[11px] font-bold text-slate-800 truncate">
+                        {uploadFile.name}
+                      </span>
+                    </div>
+                    <span className="text-[10px] text-emerald-700 font-medium flex items-center gap-1">
+                      {isGeneratingThumbnail ? (
+                        "Sedang membuat thumbnail 3D..."
+                      ) : thumbnailPreviewUrl ? (
+                        <>
+                          <Check className="w-3 h-3 text-emerald-600 inline" /> Screenshot 3D siap diupload
+                        </>
+                      ) : (
+                        `${(uploadFile.size / 1024 / 1024).toFixed(2)} MB`
+                      )}
+                    </span>
+                  </div>
+                </div>
+              )}
+
 
               <div className="flex flex-col gap-1.5">
                 <span className="text-slate-700 font-semibold">Nama Asset</span>
