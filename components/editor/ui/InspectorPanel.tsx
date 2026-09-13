@@ -239,21 +239,22 @@ export function InspectorPanel() {
   // If nothing is selected, show Scene Overview
   if (!obj) {
     return (
-      <div className="w-80 bg-[#161619] border-l border-[#27272a] flex flex-col h-full text-white select-none font-sans shadow-2xl">
-        <div className="p-3.5 border-b border-[#27272a] flex items-center justify-between bg-[#131316]">
-          <span className="text-xs font-bold uppercase tracking-wider text-zinc-300 flex items-center gap-2">
-            <Layers className="w-4 h-4 text-emerald-400" /> Scene Objects
+      <div className="w-80 bg-white border-l border-slate-200 flex flex-col h-full text-slate-800 select-none font-sans shadow-sm">
+        <div className="p-3.5 border-b border-slate-200 flex items-center justify-between bg-slate-50">
+          <span className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-2">
+            <Layers className="w-4 h-4 text-emerald-600" /> Scene Objects
           </span>
-          <span className="text-[10px] bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 px-2 py-0.5 rounded-full font-bold">
+          <span className="text-[10px] bg-emerald-100 text-emerald-800 border border-emerald-300/60 px-2 py-0.5 rounded-full font-bold">
             {sceneObjects.length} Nodes
           </span>
         </div>
+
         <div className="p-3.5 flex-1 overflow-y-auto flex flex-col gap-3">
-          <div className="flex items-center justify-between text-[11px] text-zinc-400 font-semibold uppercase tracking-wider">
+          <div className="flex items-center justify-between text-[11px] text-slate-500 font-semibold uppercase tracking-wider">
             <span>Daftar Objek</span>
           </div>
           {sceneObjects.length === 0 ? (
-            <div className="text-xs text-zinc-500 text-center py-8">
+            <div className="text-xs text-slate-400 text-center py-8">
               Pilih objek di 3D canvas atau dari toolbar.
             </div>
           ) : (
@@ -269,10 +270,10 @@ export function InspectorPanel() {
                       useEditorStore.getState().setSelectedIds([sObj.id]);
                     }
                   }}
-                  className="px-3 py-2.5 bg-[#1e1e23] hover:bg-[#25252b] rounded-xl text-xs cursor-pointer flex items-center justify-between border border-zinc-800 hover:border-emerald-500/50 transition-all bouncy-hover"
+                  className="px-3 py-2.5 bg-slate-50 hover:bg-slate-100 rounded-xl text-xs cursor-pointer flex items-center justify-between border border-slate-200 hover:border-emerald-500/50 transition-all bouncy-hover"
                 >
-                  <span className="font-semibold text-zinc-200 truncate">{sObj.name}</span>
-                  <span className="text-[9.5px] text-emerald-400 px-2 py-0.5 bg-emerald-500/15 border border-emerald-500/30 rounded-full uppercase font-bold">
+                  <span className="font-semibold text-slate-800 truncate">{sObj.name}</span>
+                  <span className="text-[9.5px] text-emerald-800 px-2 py-0.5 bg-emerald-100 border border-emerald-300/60 rounded-full uppercase font-bold">
                     {sObj.type}
                   </span>
                 </div>
@@ -287,9 +288,9 @@ export function InspectorPanel() {
   const activeSlot = materialSlots.find((s) => s.slotId === activeSlotId);
 
   return (
-    <div className="w-80 bg-[#161619] border-l border-[#27272a] flex flex-col h-full text-white select-none overflow-y-auto shadow-2xl font-sans">
+    <div className="w-80 bg-white border-l border-slate-200 flex flex-col h-full text-slate-800 select-none overflow-y-auto shadow-sm font-sans">
       {/* Top Header */}
-      <div className="p-3.5 border-b border-[#27272a] flex items-center justify-between bg-[#131316]">
+      <div className="p-3.5 border-b border-slate-200 flex items-center justify-between bg-slate-50">
         <button
           onClick={() => {
             const ed = getEditorInstance();
@@ -299,24 +300,24 @@ export function InspectorPanel() {
               useEditorStore.getState().setSelectedIds([]);
             }
           }}
-          className="flex items-center gap-1.5 text-xs text-zinc-400 hover:text-emerald-400 transition-colors cursor-pointer font-bold"
+          className="flex items-center gap-1.5 text-xs text-slate-500 hover:text-emerald-700 transition-colors cursor-pointer font-bold"
         >
           <ArrowLeft className="w-3.5 h-3.5" /> Kembali
         </button>
-        <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider bg-emerald-500/15 px-2.5 py-0.5 rounded-full border border-emerald-500/30">
+        <span className="text-[10px] font-bold text-emerald-800 uppercase tracking-wider bg-emerald-100 px-2.5 py-0.5 rounded-full border border-emerald-300/60">
           {obj.type}
         </span>
       </div>
 
       {/* 1. Basic Information & Renaming */}
-      <div className="p-3.5 border-b border-[#27272a] flex flex-col gap-3 bg-[#161619]">
+      <div className="p-3.5 border-b border-slate-200 flex flex-col gap-3 bg-white">
         <div className="flex items-center justify-between">
-          <h4 className="text-xs font-bold text-zinc-300 uppercase tracking-wider flex items-center gap-1.5">
-            <Box className="w-3.5 h-3.5 text-emerald-400" /> Informasi Objek
+          <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+            <Box className="w-3.5 h-3.5 text-emerald-600" /> Informasi Objek
           </h4>
         </div>
         <div className="flex flex-col gap-1.5">
-          <label className="text-[11px] text-zinc-400 font-semibold">Nama Node</label>
+          <label className="text-[11px] text-slate-600 font-semibold">Nama Node</label>
           <input
             type="text"
             value={obj.name}
@@ -326,7 +327,7 @@ export function InspectorPanel() {
               const node = ed?.nodesMap.get(obj.id);
               if (node) node.name = e.target.value;
             }}
-            className="bg-[#1e1e23] text-xs text-white px-3 py-2 rounded-xl outline-none border border-zinc-700/80 focus:border-emerald-500 transition-colors font-medium"
+            className="bg-slate-50 text-xs text-slate-900 px-3 py-2 rounded-xl outline-none border border-slate-200 focus:border-emerald-500 transition-colors font-medium"
           />
         </div>
 
@@ -337,41 +338,41 @@ export function InspectorPanel() {
               const ed = getEditorInstance();
               if (ed) ed.objectManager.duplicateObject(obj.id);
             }}
-            className="bouncy-hover flex-1 py-1.5 bg-[#1e1e23] hover:bg-[#25252b] text-xs font-bold rounded-xl text-zinc-200 flex items-center justify-center gap-1.5 border border-zinc-700 transition-colors cursor-pointer"
+            className="bouncy-hover flex-1 py-1.5 bg-slate-100 hover:bg-slate-200 text-xs font-bold rounded-xl text-slate-700 flex items-center justify-center gap-1.5 border border-slate-200 transition-colors cursor-pointer"
           >
-            <Copy className="w-3.5 h-3.5 text-cyan-400" /> Duplikat
+            <Copy className="w-3.5 h-3.5 text-cyan-600" /> Duplikat
           </button>
           <button
             onClick={() => {
               const ed = getEditorInstance();
               if (ed) ed.objectManager.deleteObject(obj.id);
             }}
-            className="bouncy-hover flex-1 py-1.5 bg-rose-950/40 hover:bg-rose-900/60 text-xs font-bold rounded-xl text-rose-300 flex items-center justify-center gap-1.5 border border-rose-500/30 transition-colors cursor-pointer"
+            className="bouncy-hover flex-1 py-1.5 bg-rose-50 hover:bg-rose-100 text-xs font-bold rounded-xl text-rose-700 flex items-center justify-center gap-1.5 border border-rose-200 transition-colors cursor-pointer"
           >
-            <Trash2 className="w-3.5 h-3.5 text-rose-400" /> Hapus
+            <Trash2 className="w-3.5 h-3.5 text-rose-600" /> Hapus
           </button>
         </div>
       </div>
 
       {/* 2. Text 3D Customizer */}
       {obj.type === "text" && obj.textConfig && (
-        <div className="p-3.5 border-b border-[#27272a] flex flex-col gap-3 bg-[#131316]">
-          <h4 className="text-xs font-bold text-amber-400 uppercase tracking-wider flex items-center gap-1.5">
+        <div className="p-3.5 border-b border-slate-200 flex flex-col gap-3 bg-slate-50">
+          <h4 className="text-xs font-bold text-amber-700 uppercase tracking-wider flex items-center gap-1.5">
             <Type className="w-4 h-4" /> 3D Text Settings
           </h4>
 
           <div className="flex flex-col gap-1.5">
-            <span className="text-[11px] text-zinc-400">Content</span>
+            <span className="text-[11px] text-slate-600">Content</span>
             <input
               type="text"
               value={textVal}
               onChange={(e) => handleUpdateText(e.target.value, textColor, textSize)}
-              className="bg-[#1e1e23] text-xs text-white px-3 py-1.5 rounded-xl border border-zinc-700 outline-none focus:border-emerald-500"
+              className="bg-white text-xs text-slate-900 px-3 py-1.5 rounded-xl border border-slate-200 outline-none focus:border-emerald-500"
             />
           </div>
 
-          <div className="flex justify-between items-center bg-[#1e1e23] p-2 rounded-xl border border-zinc-800">
-            <span className="text-[11px] text-zinc-300 font-medium">Text Color</span>
+          <div className="flex justify-between items-center bg-white p-2 rounded-xl border border-slate-200">
+            <span className="text-[11px] text-slate-700 font-medium">Text Color</span>
             <input
               type="color"
               value={textColor}
@@ -380,10 +381,10 @@ export function InspectorPanel() {
             />
           </div>
 
-          <div className="flex flex-col gap-1.5 bg-[#1e1e23] p-2.5 rounded-xl border border-zinc-800">
-            <div className="flex justify-between text-xs text-zinc-300 font-semibold">
+          <div className="flex flex-col gap-1.5 bg-white p-2.5 rounded-xl border border-slate-200">
+            <div className="flex justify-between text-xs text-slate-700 font-semibold">
               <span>Font Size</span>
-              <span className="text-emerald-400">{textSize}px</span>
+              <span className="text-emerald-700 font-bold">{textSize}px</span>
             </div>
             <input
               type="range"
@@ -392,24 +393,24 @@ export function InspectorPanel() {
               step="2"
               value={textSize}
               onChange={(e) => handleUpdateText(textVal, textColor, parseInt(e.target.value))}
-              className="accent-emerald-500 cursor-pointer"
+              className="accent-emerald-600 cursor-pointer"
             />
           </div>
         </div>
       )}
 
       {/* 3. Transform Controls (Position, Rotation, Scale) */}
-      <div className="p-3.5 border-b border-[#27272a] flex flex-col gap-3.5">
-        <h4 className="text-xs font-bold text-zinc-300 uppercase tracking-wider flex items-center gap-1.5">
-          <Compass className="w-3.5 h-3.5 text-cyan-400" /> Transform
+      <div className="p-3.5 border-b border-slate-200 flex flex-col gap-3.5 bg-white">
+        <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+          <Compass className="w-3.5 h-3.5 text-cyan-600" /> Transform
         </h4>
 
         {/* Position */}
         <div className="flex items-center justify-between">
-          <span className="text-xs text-zinc-300 font-semibold">Posisi</span>
+          <span className="text-xs text-slate-700 font-semibold">Posisi</span>
           <div className="flex gap-1.5 text-xs">
-            <label className="flex items-center gap-1 bg-[#1e1e23] px-2 py-1.5 rounded-xl border border-rose-500/20">
-              <span className="text-rose-400 font-bold text-[10px]">X</span>
+            <label className="flex items-center gap-1 bg-slate-100 px-2 py-1.5 rounded-xl border border-rose-300/40">
+              <span className="text-rose-600 font-bold text-[10px]">X</span>
               <input
                 type="number"
                 step="0.25"
@@ -419,11 +420,11 @@ export function InspectorPanel() {
                   setPosX(val);
                   updateTransform("x", val, "position");
                 }}
-                className="w-10 bg-transparent text-center outline-none text-white font-mono text-xs"
+                className="w-10 bg-transparent text-center outline-none text-slate-900 font-mono text-xs font-bold"
               />
             </label>
-            <label className="flex items-center gap-1 bg-[#1e1e23] px-2 py-1.5 rounded-xl border border-emerald-500/20">
-              <span className="text-emerald-400 font-bold text-[10px]">Y</span>
+            <label className="flex items-center gap-1 bg-slate-100 px-2 py-1.5 rounded-xl border border-emerald-300/40">
+              <span className="text-emerald-700 font-bold text-[10px]">Y</span>
               <input
                 type="number"
                 step="0.25"
@@ -433,11 +434,11 @@ export function InspectorPanel() {
                   setPosY(val);
                   updateTransform("y", val, "position");
                 }}
-                className="w-10 bg-transparent text-center outline-none text-white font-mono text-xs"
+                className="w-10 bg-transparent text-center outline-none text-slate-900 font-mono text-xs font-bold"
               />
             </label>
-            <label className="flex items-center gap-1 bg-[#1e1e23] px-2 py-1.5 rounded-xl border border-cyan-500/20">
-              <span className="text-cyan-400 font-bold text-[10px]">Z</span>
+            <label className="flex items-center gap-1 bg-slate-100 px-2 py-1.5 rounded-xl border border-cyan-300/40">
+              <span className="text-cyan-700 font-bold text-[10px]">Z</span>
               <input
                 type="number"
                 step="0.25"
@@ -447,7 +448,7 @@ export function InspectorPanel() {
                   setPosZ(val);
                   updateTransform("z", val, "position");
                 }}
-                className="w-10 bg-transparent text-center outline-none text-white font-mono text-xs"
+                className="w-10 bg-transparent text-center outline-none text-slate-900 font-mono text-xs font-bold"
               />
             </label>
           </div>
@@ -455,10 +456,10 @@ export function InspectorPanel() {
 
         {/* Rotation */}
         <div className="flex items-center justify-between">
-          <span className="text-xs text-zinc-300 font-semibold">Rotasi</span>
+          <span className="text-xs text-slate-700 font-semibold">Rotasi</span>
           <div className="flex gap-1.5 text-xs">
-            <label className="flex items-center gap-1 bg-[#1e1e23] px-2 py-1.5 rounded-xl border border-rose-500/20">
-              <span className="text-rose-400 font-bold text-[10px]">X</span>
+            <label className="flex items-center gap-1 bg-slate-100 px-2 py-1.5 rounded-xl border border-rose-300/40">
+              <span className="text-rose-600 font-bold text-[10px]">X</span>
               <input
                 type="number"
                 step="15"
@@ -468,11 +469,11 @@ export function InspectorPanel() {
                   setRotX(val);
                   updateTransform("x", val, "rotation");
                 }}
-                className="w-10 bg-transparent text-center outline-none text-white font-mono text-xs"
+                className="w-10 bg-transparent text-center outline-none text-slate-900 font-mono text-xs font-bold"
               />
             </label>
-            <label className="flex items-center gap-1 bg-[#1e1e23] px-2 py-1.5 rounded-xl border border-emerald-500/20">
-              <span className="text-emerald-400 font-bold text-[10px]">Y</span>
+            <label className="flex items-center gap-1 bg-slate-100 px-2 py-1.5 rounded-xl border border-emerald-300/40">
+              <span className="text-emerald-700 font-bold text-[10px]">Y</span>
               <input
                 type="number"
                 step="15"
@@ -482,11 +483,11 @@ export function InspectorPanel() {
                   setRotY(val);
                   updateTransform("y", val, "rotation");
                 }}
-                className="w-10 bg-transparent text-center outline-none text-white font-mono text-xs"
+                className="w-10 bg-transparent text-center outline-none text-slate-900 font-mono text-xs font-bold"
               />
             </label>
-            <label className="flex items-center gap-1 bg-[#1e1e23] px-2 py-1.5 rounded-xl border border-cyan-500/20">
-              <span className="text-cyan-400 font-bold text-[10px]">Z</span>
+            <label className="flex items-center gap-1 bg-slate-100 px-2 py-1.5 rounded-xl border border-cyan-300/40">
+              <span className="text-cyan-700 font-bold text-[10px]">Z</span>
               <input
                 type="number"
                 step="15"
@@ -496,7 +497,7 @@ export function InspectorPanel() {
                   setRotZ(val);
                   updateTransform("z", val, "rotation");
                 }}
-                className="w-10 bg-transparent text-center outline-none text-white font-mono text-xs"
+                className="w-10 bg-transparent text-center outline-none text-slate-900 font-mono text-xs font-bold"
               />
             </label>
           </div>
@@ -504,10 +505,10 @@ export function InspectorPanel() {
 
         {/* Scale */}
         <div className="flex items-center justify-between">
-          <span className="text-xs text-zinc-300 font-semibold">Skala</span>
+          <span className="text-xs text-slate-700 font-semibold">Skala</span>
           <div className="flex gap-1.5 text-xs">
-            <label className="flex items-center gap-1 bg-[#1e1e23] px-2 py-1.5 rounded-xl border border-rose-500/20">
-              <span className="text-rose-400 font-bold text-[10px]">X</span>
+            <label className="flex items-center gap-1 bg-slate-100 px-2 py-1.5 rounded-xl border border-rose-300/40">
+              <span className="text-rose-600 font-bold text-[10px]">X</span>
               <input
                 type="number"
                 step="0.1"
@@ -517,11 +518,11 @@ export function InspectorPanel() {
                   setSclX(val);
                   updateTransform("x", val, "scale");
                 }}
-                className="w-10 bg-transparent text-center outline-none text-white font-mono text-xs"
+                className="w-10 bg-transparent text-center outline-none text-slate-900 font-mono text-xs font-bold"
               />
             </label>
-            <label className="flex items-center gap-1 bg-[#1e1e23] px-2 py-1.5 rounded-xl border border-emerald-500/20">
-              <span className="text-emerald-400 font-bold text-[10px]">Y</span>
+            <label className="flex items-center gap-1 bg-slate-100 px-2 py-1.5 rounded-xl border border-emerald-300/40">
+              <span className="text-emerald-700 font-bold text-[10px]">Y</span>
               <input
                 type="number"
                 step="0.1"
@@ -531,11 +532,11 @@ export function InspectorPanel() {
                   setSclY(val);
                   updateTransform("y", val, "scale");
                 }}
-                className="w-10 bg-transparent text-center outline-none text-white font-mono text-xs"
+                className="w-10 bg-transparent text-center outline-none text-slate-900 font-mono text-xs font-bold"
               />
             </label>
-            <label className="flex items-center gap-1 bg-[#1e1e23] px-2 py-1.5 rounded-xl border border-cyan-500/20">
-              <span className="text-cyan-400 font-bold text-[10px]">Z</span>
+            <label className="flex items-center gap-1 bg-slate-100 px-2 py-1.5 rounded-xl border border-cyan-300/40">
+              <span className="text-cyan-700 font-bold text-[10px]">Z</span>
               <input
                 type="number"
                 step="0.1"
@@ -545,7 +546,7 @@ export function InspectorPanel() {
                   setSclZ(val);
                   updateTransform("z", val, "scale");
                 }}
-                className="w-10 bg-transparent text-center outline-none text-white font-mono text-xs"
+                className="w-10 bg-transparent text-center outline-none text-slate-900 font-mono text-xs font-bold"
               />
             </label>
           </div>
@@ -554,16 +555,16 @@ export function InspectorPanel() {
 
       {/* 4. Materials & Colors */}
       {materialSlots.length > 0 && (
-        <div className="p-3.5 border-b border-[#27272a] flex flex-col gap-3">
-          <h4 className="text-xs font-bold text-zinc-300 uppercase tracking-wider flex items-center gap-1.5">
-            <Palette className="w-4 h-4 text-lime-400" /> Material & Shader
+        <div className="p-3.5 border-b border-slate-200 flex flex-col gap-3 bg-white">
+          <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+            <Palette className="w-4 h-4 text-emerald-600" /> Material & Shader
           </h4>
           
           {materialSlots.length > 1 && (
             <select
               value={activeSlotId || ""}
               onChange={(e) => setActiveSlotId(e.target.value)}
-              className="bg-[#1e1e23] text-xs text-white px-3 py-2 rounded-xl outline-none border border-zinc-700 font-medium"
+              className="bg-slate-50 text-xs text-slate-900 px-3 py-2 rounded-xl outline-none border border-slate-200 font-medium"
             >
               {materialSlots.map((s) => (
                 <option key={s.slotId} value={s.slotId}>
@@ -575,8 +576,8 @@ export function InspectorPanel() {
 
           {activeSlot && (
             <div className="flex flex-col gap-3 text-xs">
-              <div className="flex items-center justify-between bg-[#1e1e23] p-2 rounded-xl border border-zinc-800">
-                <span className="text-zinc-300 font-medium">Albedo Color</span>
+              <div className="flex items-center justify-between bg-slate-50 p-2 rounded-xl border border-slate-200">
+                <span className="text-slate-700 font-medium">Albedo Color</span>
                 <input
                   type="color"
                   value={activeSlot.properties.baseColor}
@@ -585,10 +586,10 @@ export function InspectorPanel() {
                 />
               </div>
 
-              <div className="flex flex-col gap-1.5 bg-[#1e1e23] p-2.5 rounded-xl border border-zinc-800">
-                <div className="flex justify-between text-zinc-400 text-xs">
+              <div className="flex flex-col gap-1.5 bg-slate-50 p-2.5 rounded-xl border border-slate-200">
+                <div className="flex justify-between text-slate-600 text-xs">
                   <span>Metallic</span>
-                  <span className="text-emerald-400 font-mono">{activeSlot.properties.metallic}</span>
+                  <span className="text-emerald-700 font-mono font-bold">{activeSlot.properties.metallic}</span>
                 </div>
                 <input
                   type="range"
@@ -597,14 +598,14 @@ export function InspectorPanel() {
                   step="0.05"
                   value={activeSlot.properties.metallic}
                   onChange={(e) => handleMaterialChange("metallic", parseFloat(e.target.value))}
-                  className="accent-emerald-500 cursor-pointer"
+                  className="accent-emerald-600 cursor-pointer"
                 />
               </div>
 
-              <div className="flex flex-col gap-1.5 bg-[#1e1e23] p-2.5 rounded-xl border border-zinc-800">
-                <div className="flex justify-between text-zinc-400 text-xs">
+              <div className="flex flex-col gap-1.5 bg-slate-50 p-2.5 rounded-xl border border-slate-200">
+                <div className="flex justify-between text-slate-600 text-xs">
                   <span>Roughness</span>
-                  <span className="text-emerald-400 font-mono">{activeSlot.properties.roughness}</span>
+                  <span className="text-emerald-700 font-mono font-bold">{activeSlot.properties.roughness}</span>
                 </div>
                 <input
                   type="range"
@@ -613,17 +614,17 @@ export function InspectorPanel() {
                   step="0.05"
                   value={activeSlot.properties.roughness}
                   onChange={(e) => handleMaterialChange("roughness", parseFloat(e.target.value))}
-                  className="accent-emerald-500 cursor-pointer"
+                  className="accent-emerald-600 cursor-pointer"
                 />
               </div>
 
-              <div className="flex items-center justify-between bg-[#1e1e23] p-2.5 rounded-xl border border-zinc-800">
-                <span className="text-zinc-300 font-medium">Wireframe Mode</span>
+              <div className="flex items-center justify-between bg-slate-50 p-2.5 rounded-xl border border-slate-200">
+                <span className="text-slate-700 font-medium">Wireframe Mode</span>
                 <input
                   type="checkbox"
                   checked={!!activeSlot.properties.wireframe}
                   onChange={(e) => handleMaterialChange("wireframe", e.target.checked)}
-                  className="accent-emerald-500 w-4 h-4 cursor-pointer"
+                  className="accent-emerald-600 w-4 h-4 cursor-pointer"
                 />
               </div>
             </div>
@@ -632,14 +633,14 @@ export function InspectorPanel() {
       )}
 
       {/* 5. Motion & Animation Presets */}
-      <div className="p-3.5 border-b border-[#27272a] flex flex-col gap-3">
-        <h4 className="text-xs font-bold text-zinc-300 uppercase tracking-wider flex items-center gap-1.5">
-          <Sparkles className="w-4 h-4 text-amber-400" /> Animasi & Gerakan
+      <div className="p-3.5 border-b border-slate-200 flex flex-col gap-3 bg-white">
+        <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+          <Sparkles className="w-4 h-4 text-amber-500" /> Animasi & Gerakan
         </h4>
 
         <div className="flex flex-col gap-2.5 text-xs">
           <div className="flex flex-col gap-1.5">
-            <span className="text-zinc-400 text-[11px] font-medium">Preset Gerakan</span>
+            <span className="text-slate-600 text-[11px] font-medium">Preset Gerakan</span>
             <select
               onChange={(e) => {
                 const ed = getEditorInstance();
@@ -648,7 +649,7 @@ export function InspectorPanel() {
                 }
               }}
               defaultValue="none"
-              className="bg-[#1e1e23] text-white px-3 py-2 rounded-xl outline-none border border-zinc-700 text-xs font-medium"
+              className="bg-slate-50 text-slate-900 px-3 py-2 rounded-xl outline-none border border-slate-200 text-xs font-medium"
             >
               <option value="none">Statis (Tidak Ada)</option>
               <option value="spin">Putar 360° Berkelanjutan</option>
@@ -671,7 +672,7 @@ export function InspectorPanel() {
                   }
                 }
               }}
-              className="bouncy-hover flex-1 py-2 bg-emerald-500 hover:bg-emerald-400 font-bold rounded-xl text-xs text-zinc-950 shadow-sm transition-all cursor-pointer"
+              className="bouncy-hover flex-1 py-2 bg-emerald-600 hover:bg-emerald-500 font-bold rounded-xl text-xs text-white shadow-sm transition-all cursor-pointer"
             >
               {animationState.playing ? "Jeda Gerakan" : "Putar Gerakan"}
             </button>
@@ -680,7 +681,7 @@ export function InspectorPanel() {
                 const ed = getEditorInstance();
                 if (ed) ed.animationManager.stop();
               }}
-              className="bouncy-hover px-3 py-2 bg-[#1e1e23] hover:bg-[#25252b] font-bold rounded-xl text-xs text-zinc-300 border border-zinc-700 transition-all cursor-pointer"
+              className="bouncy-hover px-3 py-2 bg-slate-100 hover:bg-slate-200 font-bold rounded-xl text-xs text-slate-700 border border-slate-200 transition-all cursor-pointer"
             >
               Reset
             </button>
@@ -689,23 +690,23 @@ export function InspectorPanel() {
       </div>
 
       {/* 6. Interactivity & Behaviours */}
-      <div className="p-3.5 border-b border-[#27272a] flex flex-col gap-3">
-        <h4 className="text-xs font-bold text-zinc-300 uppercase tracking-wider flex items-center gap-1.5">
-          <Activity className="w-4 h-4 text-cyan-400" /> Interaktivitas (Tap AR)
+      <div className="p-3.5 border-b border-slate-200 flex flex-col gap-3 bg-white">
+        <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+          <Activity className="w-4 h-4 text-cyan-600" /> Interaktivitas (Tap AR)
         </h4>
 
         {/* Existing Interactions List */}
         {obj.behaviours && obj.behaviours.length > 0 ? (
           <div className="flex flex-col gap-2 text-xs">
             {obj.behaviours.map((b, idx) => (
-              <div key={idx} className="flex justify-between items-center bg-[#1e1e23] p-2.5 rounded-xl border border-zinc-800">
-                <span className="text-emerald-400 font-bold">Saat {b.trigger} → <span className="text-white">{b.action}</span></span>
+              <div key={idx} className="flex justify-between items-center bg-slate-50 p-2.5 rounded-xl border border-slate-200">
+                <span className="text-emerald-700 font-bold">Saat {b.trigger} → <span className="text-slate-800">{b.action}</span></span>
                 <button
                   onClick={() => {
                     const nextB = obj.behaviours!.filter((_, i) => i !== idx);
                     updateObject(obj.id, { behaviours: nextB });
                   }}
-                  className="text-rose-400 hover:text-rose-300 p-1"
+                  className="text-rose-600 hover:text-rose-700 p-1"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
                 </button>
@@ -713,19 +714,19 @@ export function InspectorPanel() {
             ))}
           </div>
         ) : (
-          <div className="text-xs text-zinc-500 text-center py-2">
+          <div className="text-xs text-slate-400 text-center py-2">
             Belum ada aksi interaksi terpasang.
           </div>
         )}
 
         {/* Add Interactivity form */}
-        <div className="bg-[#1e1e23] p-3 rounded-xl flex flex-col gap-2.5 border border-zinc-800">
+        <div className="bg-slate-50 p-3 rounded-xl flex flex-col gap-2.5 border border-slate-200">
           <div className="flex justify-between items-center text-xs">
-            <span className="text-zinc-400 font-semibold">Pemicu</span>
+            <span className="text-slate-600 font-semibold">Pemicu</span>
             <select
               value={trigger}
               onChange={(e) => setTrigger(e.target.value as any)}
-              className="bg-[#161619] text-white px-2.5 py-1.5 rounded-lg outline-none text-xs border border-zinc-700"
+              className="bg-white text-slate-900 px-2.5 py-1.5 rounded-lg outline-none text-xs border border-slate-200 font-medium"
             >
               <option value="click">Saat Tap / Klik</option>
               <option value="start">Saat Scene Dimulai</option>
@@ -733,11 +734,11 @@ export function InspectorPanel() {
           </div>
 
           <div className="flex justify-between items-center text-xs">
-            <span className="text-zinc-400 font-semibold">Aksi Respon</span>
+            <span className="text-slate-600 font-semibold">Aksi Respon</span>
             <select
               value={action}
               onChange={(e) => setAction(e.target.value as any)}
-              className="bg-[#161619] text-white px-2.5 py-1.5 rounded-lg outline-none text-xs border border-zinc-700"
+              className="bg-white text-slate-900 px-2.5 py-1.5 rounded-lg outline-none text-xs border border-slate-200 font-medium"
             >
               <option value="showInfo">Buka Popup Info</option>
               <option value="rotateObject">Putar 45°</option>
@@ -756,14 +757,14 @@ export function InspectorPanel() {
                 placeholder="Judul (contoh: Sensor Kelembaban Tanah)"
                 value={infoTitle}
                 onChange={(e) => setInfoTitle(e.target.value)}
-                className="bg-[#161619] text-xs px-2.5 py-1.5 rounded-lg outline-none border border-zinc-700 text-white"
+                className="bg-white text-xs px-2.5 py-1.5 rounded-lg outline-none border border-slate-200 text-slate-900 placeholder-slate-400"
               />
               <textarea
                 placeholder="Deskripsi data agrikultur..."
                 value={infoDesc}
                 onChange={(e) => setInfoDesc(e.target.value)}
                 rows={2}
-                className="bg-[#161619] text-xs px-2.5 py-1.5 rounded-lg outline-none border border-zinc-700 resize-none text-white"
+                className="bg-white text-xs px-2.5 py-1.5 rounded-lg outline-none border border-slate-200 resize-none text-slate-900 placeholder-slate-400"
               />
             </div>
           )}
@@ -774,13 +775,13 @@ export function InspectorPanel() {
               placeholder="https://example.com"
               value={actionUrl}
               onChange={(e) => setActionUrl(e.target.value)}
-              className="bg-[#161619] text-xs px-2.5 py-1.5 rounded-lg outline-none border border-zinc-700 text-white"
+              className="bg-white text-xs px-2.5 py-1.5 rounded-lg outline-none border border-slate-200 text-slate-900 placeholder-slate-400"
             />
           )}
 
           <button
             onClick={handleAddBehaviour}
-            className="bouncy-hover w-full py-2 bg-emerald-500 hover:bg-emerald-400 text-xs font-bold rounded-xl flex items-center justify-center gap-1.5 text-zinc-950 shadow-sm transition-all cursor-pointer"
+            className="bouncy-hover w-full py-2 bg-emerald-600 hover:bg-emerald-500 text-xs font-bold rounded-xl flex items-center justify-center gap-1.5 text-white shadow-sm transition-all cursor-pointer"
           >
             <Plus className="w-3.5 h-3.5 stroke-[3]" /> Pasang Interaksi
           </button>

@@ -11,9 +11,14 @@ import {
   deleteAsset, 
   fetchAssetUrl,
   resolveAssetFileUrl,
+  resolveThumbnailUrl,
   AssetCategory, 
   CloudAsset 
 } from "@/lib/api/assets";
+import {
+  generateGlbThumbnailFile,
+  generateGlbThumbnailDataUrl,
+} from "@/utils/generateGlbThumbnail";
 import { 
   Cloud, 
   HardDrive, 
@@ -63,6 +68,40 @@ export function StorageAssetDrawer() {
   const [uploadDescription, setUploadDescription] = useState("");
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [thumbnailPreviewUrl, setThumbnailPreviewUrl] = useState<string | null>(null);
+  const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
+  const [isGeneratingThumbnail, setIsGeneratingThumbnail] = useState(false);
+
+  const handleFileChange = async (file: File | null) => {
+    setUploadFile(file);
+    setThumbnailPreviewUrl(null);
+    setThumbnailFile(null);
+
+    if (!file) return;
+    if (!uploadName) {
+      setUploadName(file.name.replace(/\.[^/.]+$/, ""));
+    }
+
+    const ext = file.name.split(".").pop()?.toLowerCase() || "";
+    if (ext === "glb" || ext === "gltf") {
+      setIsGeneratingThumbnail(true);
+      try {
+        const [dataUrl, thumbFile] = await Promise.all([
+          generateGlbThumbnailDataUrl(file),
+          generateGlbThumbnailFile(file, "thumbnail.jpg"),
+        ]);
+        setThumbnailPreviewUrl(dataUrl);
+        setThumbnailFile(thumbFile);
+      } catch (err) {
+        console.warn("Failed to generate GLB thumbnail preview:", err);
+      } finally {
+        setIsGeneratingThumbnail(false);
+      }
+    } else if (["png", "jpg", "jpeg", "webp"].includes(ext)) {
+      const url = URL.createObjectURL(file);
+      setThumbnailPreviewUrl(url);
+    }
+  };
 
   // New Category Modal State
   const [isNewCategoryModalOpen, setIsNewCategoryModalOpen] = useState(false);
@@ -217,6 +256,20 @@ export function StorageAssetDrawer() {
     const fileExt = uploadFile.name.split(".").pop()?.toLowerCase() || "glb";
     formData.append("type", fileExt);
 
+    // Auto generate & attach 3D model thumbnail if not already generated
+    let thumbToSend = thumbnailFile;
+    if (!thumbToSend && (fileExt === "glb" || fileExt === "gltf")) {
+      try {
+        thumbToSend = await generateGlbThumbnailFile(uploadFile, "thumbnail.jpg");
+      } catch (err) {
+        console.warn("Could not generate thumbnail during upload submission:", err);
+      }
+    }
+
+    if (thumbToSend) {
+      formData.append("thumbnail", thumbToSend, "thumbnail.jpg");
+    }
+
     try {
       const newAsset = await uploadAsset(formData, (progress) => {
         setUploadProgress(progress);
@@ -225,6 +278,8 @@ export function StorageAssetDrawer() {
       setAssets((prev) => [newAsset, ...prev]);
       setIsUploadModalOpen(false);
       setUploadFile(null);
+      setThumbnailPreviewUrl(null);
+      setThumbnailFile(null);
       setUploadName("");
       setUploadCategoryName("");
       setUploadDescription("");
@@ -304,6 +359,16 @@ export function StorageAssetDrawer() {
           formData.append("category_name", catName);
           formData.append("category_id", String(selectedCategory));
         }
+
+        if (ext === "glb" || ext === "gltf") {
+          try {
+            const thumb = await generateGlbThumbnailFile(file, "thumbnail.jpg");
+            formData.append("thumbnail", thumb, "thumbnail.jpg");
+          } catch (e) {
+            console.warn("Background thumbnail generation skipped:", e);
+          }
+        }
+
         uploadAsset(formData).then((cloud) => {
           setAssets((prev) => [cloud, ...prev]);
         }).catch((e) => console.warn("Background upload skipped:", e));
@@ -317,36 +382,36 @@ export function StorageAssetDrawer() {
   };
 
   return (
-    <div className="w-80 bg-[#161619] border-r border-[#27272a] flex flex-col h-full text-white select-none z-10 shadow-2xl font-sans">
+    <div className="w-80 bg-white border-r border-slate-200 flex flex-col h-full text-slate-800 select-none z-10 shadow-lg font-sans">
       {/* Top Header */}
-      <div className="p-3.5 border-b border-[#27272a] bg-[#131316] flex flex-col gap-2.5">
+      <div className="p-3.5 border-b border-slate-200 bg-slate-50 flex flex-col gap-2.5">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded-lg bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400">
+            <div className="w-6 h-6 rounded-lg bg-emerald-100 border border-emerald-300/60 flex items-center justify-center text-emerald-700">
               <FileBox className="w-3.5 h-3.5" />
             </div>
-            <span className="text-xs font-bold tracking-tight text-zinc-100">
+            <span className="text-xs font-bold tracking-tight text-slate-900">
               Asset Storage & Library
             </span>
           </div>
 
           <button
             onClick={() => loadAssets()}
-            className="p-1.5 text-zinc-400 hover:text-emerald-400 rounded-lg hover:bg-zinc-800 transition-colors"
+            className="p-1.5 text-slate-500 hover:text-emerald-700 rounded-lg hover:bg-slate-200 transition-colors"
             title="Refresh assets"
           >
-            <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin text-emerald-400" : ""}`} />
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin text-emerald-600" : ""}`} />
           </button>
         </div>
 
         {/* Source Selector: Cloud Storage (API) vs Browse Local */}
-        <div className="grid grid-cols-2 p-1 bg-[#1e1e23] rounded-xl border border-zinc-800 text-xs font-semibold">
+        <div className="grid grid-cols-2 p-1 bg-slate-200/70 rounded-xl border border-slate-200 text-xs font-semibold">
           <button
             onClick={() => setSourceMode("storage")}
             className={`py-1.5 rounded-lg flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
               sourceMode === "storage"
-                ? "bg-emerald-500 text-zinc-950 font-bold shadow-sm"
-                : "text-zinc-400 hover:text-zinc-200"
+                ? "bg-white text-emerald-700 font-bold shadow-xs"
+                : "text-slate-600 hover:text-slate-900"
             }`}
           >
             <Cloud className="w-3.5 h-3.5" />
@@ -356,8 +421,8 @@ export function StorageAssetDrawer() {
             onClick={() => setSourceMode("browse")}
             className={`py-1.5 rounded-lg flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
               sourceMode === "browse"
-                ? "bg-emerald-500 text-zinc-950 font-bold shadow-sm"
-                : "text-zinc-400 hover:text-zinc-200"
+                ? "bg-white text-emerald-700 font-bold shadow-xs"
+                : "text-slate-600 hover:text-slate-900"
             }`}
           >
             <HardDrive className="w-3.5 h-3.5" />
@@ -370,34 +435,34 @@ export function StorageAssetDrawer() {
       {sourceMode === "storage" && (
         <div className="flex-1 flex flex-col overflow-hidden">
           {/* Action Bar: Upload to Cloud + New Category */}
-          <div className="p-3 border-b border-[#27272a] flex items-center gap-2 bg-[#161619]">
+          <div className="p-3 border-b border-slate-200 flex items-center gap-2 bg-white">
             <button
               onClick={() => setIsUploadModalOpen(true)}
-              className="bouncy-hover flex-1 py-2 px-3 bg-emerald-500 hover:bg-emerald-400 text-zinc-950 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all shadow-sm cursor-pointer"
+              className="bouncy-hover flex-1 py-2 px-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all shadow-sm cursor-pointer"
             >
               <Upload className="w-3.5 h-3.5 stroke-[2.5]" />
               Upload Asset
             </button>
             <button
               onClick={() => setIsNewCategoryModalOpen(true)}
-              className="py-2 px-3 bg-[#1e1e23] hover:bg-[#25252b] text-zinc-200 border border-zinc-700/80 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+              className="py-2 px-3 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
               title="Add Category"
             >
-              <FolderPlus className="w-3.5 h-3.5 text-emerald-400" />
+              <FolderPlus className="w-3.5 h-3.5 text-emerald-600" />
               Category
             </button>
           </div>
 
           {/* Search and Category Filter */}
-          <div className="p-3 border-b border-[#27272a] flex flex-col gap-2.5 bg-[#131316]">
+          <div className="p-3 border-b border-slate-200 flex flex-col gap-2.5 bg-slate-50">
             <form onSubmit={handleSearchSubmit} className="relative flex items-center">
-              <Search className="w-4 h-4 text-zinc-400 absolute left-3" />
+              <Search className="w-4 h-4 text-slate-400 absolute left-3" />
               <input
                 type="text"
                 placeholder="Search models & textures..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-[#1e1e23] text-xs text-white pl-9 pr-3 py-2 rounded-xl outline-none border border-zinc-800 focus:border-emerald-500 transition-colors font-medium"
+                className="w-full bg-white text-xs text-slate-900 pl-9 pr-3 py-2 rounded-xl outline-none border border-slate-200 focus:border-emerald-500 transition-colors font-medium"
               />
             </form>
 
@@ -407,8 +472,8 @@ export function StorageAssetDrawer() {
                 onClick={() => setSelectedCategory("all")}
                 className={`px-3 py-1 rounded-full whitespace-nowrap transition-all font-semibold cursor-pointer ${
                   selectedCategory === "all"
-                    ? "bg-emerald-500 text-zinc-950 font-bold shadow-sm"
-                    : "bg-[#1e1e23] text-zinc-400 hover:text-zinc-200 hover:bg-[#25252b]"
+                    ? "bg-emerald-600 text-white font-bold shadow-xs"
+                    : "bg-slate-200/70 text-slate-600 hover:text-slate-900 hover:bg-slate-200"
                 }`}
               >
                 All ({assets.length})
@@ -419,8 +484,8 @@ export function StorageAssetDrawer() {
                   onClick={() => setSelectedCategory(cat.id)}
                   className={`px-3 py-1 rounded-full whitespace-nowrap transition-all font-semibold cursor-pointer ${
                     selectedCategory === cat.id
-                      ? "bg-emerald-500 text-zinc-950 font-bold shadow-sm"
-                      : "bg-[#1e1e23] text-zinc-400 hover:text-zinc-200 hover:bg-[#25252b]"
+                      ? "bg-emerald-600 text-white font-bold shadow-xs"
+                      : "bg-slate-200/70 text-slate-600 hover:text-slate-900 hover:bg-slate-200"
                   }`}
                 >
                   {cat.name}
@@ -432,16 +497,16 @@ export function StorageAssetDrawer() {
           {/* Asset List Grid */}
           <div className="flex-1 overflow-y-auto p-3">
             {loading && (
-              <div className="flex flex-col items-center justify-center p-8 gap-2 text-zinc-400">
-                <Loader2 className="w-6 h-6 text-emerald-400 animate-spin" />
+              <div className="flex flex-col items-center justify-center p-8 gap-2 text-slate-400">
+                <Loader2 className="w-6 h-6 text-emerald-600 animate-spin" />
                 <span className="text-xs font-medium">Memuat aset cloud...</span>
               </div>
             )}
 
             {!loading && assets.length === 0 && (
-              <div className="flex flex-col items-center justify-center p-6 text-center text-zinc-400 gap-1.5 border border-zinc-800 rounded-xl my-2 bg-[#1e1e23]/30">
-                <span className="text-xs font-bold text-zinc-300">Belum ada aset tersimpan</span>
-                <span className="text-[11px] text-zinc-500">Upload model 3D di atas untuk memulai.</span>
+              <div className="flex flex-col items-center justify-center p-6 text-center text-slate-400 gap-1.5 border border-slate-200 rounded-xl my-2 bg-slate-50">
+                <span className="text-xs font-bold text-slate-700">Belum ada aset tersimpan</span>
+                <span className="text-[11px] text-slate-500">Upload model 3D di atas untuk memulai.</span>
               </div>
             )}
 
@@ -450,54 +515,55 @@ export function StorageAssetDrawer() {
                 {assets.map((asset) => {
                   const isBeingInserted = insertingId === asset.id;
                   const is3D = !asset.type || asset.type.includes("glb") || asset.type.includes("gltf");
+                  const thumbUrl = resolveThumbnailUrl(asset);
 
                   return (
                     <div
                       key={asset.id}
                       onClick={() => !isBeingInserted && handleInsertCloudAsset(asset)}
-                      className={`group relative bg-[#1e1e23] hover:bg-[#25252b] border border-zinc-800 hover:border-emerald-500/60 p-2 rounded-xl cursor-pointer transition-all flex flex-col items-center gap-1.5 bouncy-hover ${
+                      className={`group relative bg-slate-50 hover:bg-slate-100 border border-slate-200 hover:border-emerald-500/60 p-2 rounded-xl cursor-pointer transition-all flex flex-col items-center gap-1.5 bouncy-hover shadow-xs ${
                         isBeingInserted ? "border-emerald-500 ring-2 ring-emerald-500/30" : ""
                       }`}
                     >
                       {/* Asset Preview Frame */}
-                      <div className="w-full aspect-square bg-[#131316] rounded-lg border border-zinc-800/80 relative overflow-hidden flex items-center justify-center">
+                      <div className="w-full aspect-square bg-slate-200/60 rounded-lg border border-slate-200 relative overflow-hidden flex items-center justify-center">
                         {isBeingInserted ? (
-                          <div className="flex flex-col items-center gap-1 text-emerald-400">
+                          <div className="flex flex-col items-center gap-1 text-emerald-600">
                             <Loader2 className="w-5 h-5 animate-spin" />
                             <span className="text-[10px] font-mono font-bold">{insertProgress}%</span>
                           </div>
-                        ) : asset.thumbnail_url ? (
-                          <img src={asset.thumbnail_url} alt={asset.name} className="w-full h-full object-cover" />
+                        ) : thumbUrl ? (
+                          <img src={thumbUrl} alt={asset.name} className="w-full h-full object-cover" />
                         ) : is3D ? (
-                          <div className="flex flex-col items-center gap-1 text-emerald-400">
+                          <div className="flex flex-col items-center gap-1 text-emerald-600">
                             <Box className="w-6 h-6" />
                             <span className="text-[8.5px] uppercase font-bold tracking-wider">3D</span>
                           </div>
                         ) : asset.type === "image" ? (
-                          <ImageIcon className="w-6 h-6 text-pink-400" />
+                          <ImageIcon className="w-6 h-6 text-pink-500" />
                         ) : asset.type === "video" ? (
-                          <Video className="w-6 h-6 text-blue-400" />
+                          <Video className="w-6 h-6 text-blue-500" />
                         ) : (
-                          <Music className="w-6 h-6 text-teal-400" />
+                          <Music className="w-6 h-6 text-teal-600" />
                         )}
 
                         {/* Format badge */}
-                        <div className="absolute top-1.5 left-1.5 px-1.5 py-0.5 bg-black/75 backdrop-blur-sm rounded-md text-[8px] font-bold text-emerald-300 uppercase">
+                        <div className="absolute top-1.5 left-1.5 px-1.5 py-0.5 bg-white/90 shadow-xs backdrop-blur-sm rounded-md text-[8px] font-bold text-emerald-800 uppercase border border-slate-200">
                           {asset.type || "3D"}
                         </div>
 
                         {/* Hover Overlay Action */}
-                        <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1.5">
+                        <div className="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1.5">
                           <button
                             onClick={() => handleInsertCloudAsset(asset)}
-                            className="p-1.5 bg-emerald-500 hover:bg-emerald-400 rounded-lg text-zinc-950 font-bold shadow-md"
+                            className="p-1.5 bg-emerald-600 hover:bg-emerald-500 rounded-lg text-white font-bold shadow-md cursor-pointer"
                             title="Insert into Scene"
                           >
                             <Plus className="w-4 h-4 stroke-[3]" />
                           </button>
                           <button
                             onClick={(e) => handleDeleteCloudAsset(e, asset)}
-                            className="p-1.5 bg-zinc-800 hover:bg-red-600 rounded-lg text-zinc-300 hover:text-white transition-colors"
+                            className="p-1.5 bg-white hover:bg-rose-600 hover:text-white rounded-lg text-slate-700 transition-colors cursor-pointer"
                             title="Delete"
                           >
                             <Trash2 className="w-4 h-4" />
@@ -507,7 +573,7 @@ export function StorageAssetDrawer() {
 
                       {/* Asset Title & Category Badge */}
                       <div className="w-full flex flex-col overflow-hidden text-center gap-0.5 px-1">
-                        <span className="text-[11px] font-bold text-zinc-200 group-hover:text-emerald-300 truncate" title={asset.name}>
+                        <span className="text-[11px] font-bold text-slate-800 group-hover:text-emerald-700 truncate" title={asset.name}>
                           {asset.name}
                         </span>
                         {(() => {
@@ -517,7 +583,7 @@ export function StorageAssetDrawer() {
                             ? asset.category
                             : categories.find((c) => String(c.id) === String(asset.category_id))?.name;
                           return catName ? (
-                            <span className="text-[9px] text-emerald-400 font-medium truncate px-1.5 py-0.2 rounded-full bg-emerald-950/60 border border-emerald-800/60 self-center max-w-full">
+                            <span className="text-[9px] text-emerald-800 font-medium truncate px-1.5 py-0.2 rounded-full bg-emerald-100 border border-emerald-300/60 self-center max-w-full">
                               {catName}
                             </span>
                           ) : null;
@@ -536,8 +602,8 @@ export function StorageAssetDrawer() {
       {sourceMode === "browse" && (
         <div className="flex-1 overflow-y-auto p-3.5 flex flex-col gap-3">
           <div className="flex flex-col gap-1">
-            <span className="text-xs font-bold text-zinc-100">Local File Import</span>
-            <span className="text-[11px] text-zinc-400">
+            <span className="text-xs font-bold text-slate-900">Local File Import</span>
+            <span className="text-[11px] text-slate-500">
               Muat file .glb, .gltf, tekstur, atau media langsung ke scene 3D.
             </span>
           </div>
@@ -559,20 +625,20 @@ export function StorageAssetDrawer() {
             }}
             className={`border-2 border-dashed rounded-2xl p-6 flex flex-col items-center justify-center gap-3 text-center transition-all ${
               isDraggingOver
-                ? "border-emerald-400 bg-emerald-950/30 scale-102"
-                : "border-zinc-700 bg-[#1e1e23] hover:border-emerald-500/50"
+                ? "border-emerald-500 bg-emerald-50 scale-102"
+                : "border-slate-300 bg-slate-50 hover:border-emerald-500/50"
             }`}
           >
-            <div className="w-11 h-11 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 flex items-center justify-center">
+            <div className="w-11 h-11 rounded-xl bg-emerald-100 border border-emerald-300/60 text-emerald-700 flex items-center justify-center">
               <Upload className="w-5 h-5" />
             </div>
 
             <div className="flex flex-col gap-0.5">
-              <span className="text-xs font-bold text-zinc-100">Tarik & Lepas file di sini</span>
-              <span className="text-[10px] text-zinc-400">.GLB, .GLTF, .PNG, .JPG, .MP4, .MP3</span>
+              <span className="text-xs font-bold text-slate-800">Tarik & Lepas file di sini</span>
+              <span className="text-[10px] text-slate-500">.GLB, .GLTF, .PNG, .JPG, .MP4, .MP3</span>
             </div>
 
-            <label className="bouncy-hover cursor-pointer px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-zinc-950 rounded-xl text-xs font-bold transition-all shadow-sm mt-1">
+            <label className="bouncy-hover cursor-pointer px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition-all shadow-sm mt-1">
               {localBrowseLoading ? "Sedang Mengimpor..." : "Pilih File dari Komputer"}
               <input
                 type="file"
@@ -589,16 +655,16 @@ export function StorageAssetDrawer() {
           </div>
 
           {/* Sync Option: Also save to Cloud Storage */}
-          <label className="p-3 bg-[#1e1e23] rounded-xl border border-zinc-800 hover:border-zinc-700 flex items-center justify-between cursor-pointer transition-colors">
+          <label className="p-3 bg-slate-50 rounded-xl border border-slate-200 hover:border-slate-300 flex items-center justify-between cursor-pointer transition-colors">
             <div className="flex flex-col">
-              <span className="text-xs font-semibold text-zinc-200">Sinkronkan ke Cloud API</span>
-              <span className="text-[10px] text-zinc-400">Otomatis simpan salinan ke API backend</span>
+              <span className="text-xs font-semibold text-slate-800">Sinkronkan ke Cloud API</span>
+              <span className="text-[10px] text-slate-500">Otomatis simpan salinan ke API backend</span>
             </div>
             <input
               type="checkbox"
               checked={alsoUploadToCloud}
               onChange={(e) => setAlsoUploadToCloud(e.target.checked)}
-              className="w-4 h-4 accent-emerald-500 rounded"
+              className="w-4 h-4 accent-emerald-600 rounded"
             />
           </label>
         </div>
@@ -606,18 +672,18 @@ export function StorageAssetDrawer() {
 
       {/* ===================== UPLOAD TO CLOUD MODAL ===================== */}
       {isUploadModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4 font-sans">
-          <div className="bg-[#18181c] border border-zinc-700/80 rounded-2xl w-full max-w-sm p-5 text-white shadow-2xl animate-in fade-in zoom-in-95">
-            <div className="flex items-center justify-between pb-3 border-b border-zinc-800 mb-4">
+        <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4 font-sans">
+          <div className="bg-white border border-slate-200 rounded-2xl w-full max-w-sm p-5 text-slate-900 shadow-2xl animate-in fade-in zoom-in-95">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-200 mb-4">
               <div className="flex items-center gap-2.5">
-                <div className="w-7 h-7 rounded-lg bg-emerald-500/20 flex items-center justify-center text-emerald-400">
+                <div className="w-7 h-7 rounded-lg bg-emerald-100 flex items-center justify-center text-emerald-700">
                   <Cloud className="w-4 h-4" />
                 </div>
-                <h3 className="text-sm font-bold">Upload Asset Baru</h3>
+                <h3 className="text-sm font-bold text-slate-900">Upload Asset Baru</h3>
               </div>
               <button
                 onClick={() => setIsUploadModalOpen(false)}
-                className="p-1 hover:bg-zinc-800 rounded-lg text-zinc-400 hover:text-white transition-colors"
+                className="p-1 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-slate-700 transition-colors"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -625,29 +691,60 @@ export function StorageAssetDrawer() {
 
             <form onSubmit={handleUploadSubmit} className="flex flex-col gap-3 text-xs">
               <div className="flex flex-col gap-1.5">
-                <span className="text-zinc-300 font-semibold">File 3D / Media</span>
+                <span className="text-slate-700 font-semibold">File 3D / Media</span>
                 <input
                   type="file"
                   accept=".glb,.gltf,.png,.jpg,.jpeg,.webp,.mp4,.mp3"
                   onChange={(e) => {
-                    const f = e.target.files?.[0];
-                    if (f) {
-                      setUploadFile(f);
-                      if (!uploadName) setUploadName(f.name.replace(/\.[^/.]+$/, ""));
-                    }
+                    const f = e.target.files?.[0] || null;
+                    handleFileChange(f);
                   }}
-                  className="bg-[#121215] p-2 rounded-xl border border-zinc-800 text-zinc-300 file:mr-2 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-emerald-500 file:text-zinc-950 hover:file:bg-emerald-400 cursor-pointer"
+                  className="bg-slate-50 p-2 rounded-xl border border-slate-200 text-slate-700 file:mr-2 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-emerald-600 file:text-white hover:file:bg-emerald-500 cursor-pointer"
                 />
               </div>
 
+              {/* Live 3D / Image Thumbnail Preview */}
+              {uploadFile && (
+                <div className="flex items-center gap-3 p-2.5 bg-slate-50 rounded-xl border border-slate-200">
+                  <div className="w-14 h-14 bg-slate-200/80 rounded-lg overflow-hidden border border-slate-300 flex items-center justify-center shrink-0">
+                    {isGeneratingThumbnail ? (
+                      <Loader2 className="w-5 h-5 text-emerald-600 animate-spin" />
+                    ) : thumbnailPreviewUrl ? (
+                      <img src={thumbnailPreviewUrl} alt="Preview" className="w-full h-full object-cover" />
+                    ) : (
+                      <Box className="w-5 h-5 text-slate-400" />
+                    )}
+                  </div>
+                  <div className="flex flex-col gap-0.5 overflow-hidden">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[11px] font-bold text-slate-800 truncate">
+                        {uploadFile.name}
+                      </span>
+                    </div>
+                    <span className="text-[10px] text-emerald-700 font-medium flex items-center gap-1">
+                      {isGeneratingThumbnail ? (
+                        "Sedang membuat thumbnail 3D..."
+                      ) : thumbnailPreviewUrl ? (
+                        <>
+                          <Check className="w-3 h-3 text-emerald-600 inline" /> Screenshot 3D siap diupload
+                        </>
+                      ) : (
+                        `${(uploadFile.size / 1024 / 1024).toFixed(2)} MB`
+                      )}
+                    </span>
+                  </div>
+                </div>
+              )}
+
+
               <div className="flex flex-col gap-1.5">
-                <span className="text-zinc-300 font-semibold">Nama Asset</span>
+                <span className="text-slate-700 font-semibold">Nama Asset</span>
                 <input
                   type="text"
                   placeholder="e.g. Bunga Biru Cantik"
                   value={uploadName}
                   onChange={(e) => setUploadName(e.target.value)}
-                  className="bg-[#121215] px-3 py-2 rounded-xl outline-none border border-zinc-800 focus:border-emerald-500 font-medium"
+                  className="bg-slate-50 px-3 py-2 rounded-xl outline-none border border-slate-200 focus:border-emerald-500 font-medium text-slate-900"
                   required
                 />
               </div>
@@ -655,13 +752,13 @@ export function StorageAssetDrawer() {
               {/* Category selection mode switch */}
               <div className="flex flex-col gap-1.5">
                 <div className="flex items-center justify-between">
-                  <span className="text-zinc-300 font-semibold">Kategori</span>
-                  <div className="flex items-center bg-[#121215] p-0.5 rounded-lg border border-zinc-800 text-[10.5px]">
+                  <span className="text-slate-700 font-semibold">Kategori</span>
+                  <div className="flex items-center bg-slate-100 p-0.5 rounded-lg border border-slate-200 text-[10.5px]">
                     <button
                       type="button"
                       onClick={() => setCategoryInputMode("select")}
                       className={`px-2.5 py-0.5 rounded-md transition-all font-semibold ${
-                        categoryInputMode === "select" ? "bg-emerald-500 text-zinc-950 shadow-sm" : "text-zinc-400 hover:text-zinc-200"
+                        categoryInputMode === "select" ? "bg-white text-emerald-800 shadow-xs" : "text-slate-500 hover:text-slate-800"
                       }`}
                     >
                       Pilih (ID)
@@ -670,7 +767,7 @@ export function StorageAssetDrawer() {
                       type="button"
                       onClick={() => setCategoryInputMode("custom")}
                       className={`px-2.5 py-0.5 rounded-md transition-all font-semibold ${
-                        categoryInputMode === "custom" ? "bg-emerald-500 text-zinc-950 shadow-sm" : "text-zinc-400 hover:text-zinc-200"
+                        categoryInputMode === "custom" ? "bg-white text-emerald-800 shadow-xs" : "text-slate-500 hover:text-slate-800"
                       }`}
                     >
                       Kustom Nama
@@ -682,7 +779,7 @@ export function StorageAssetDrawer() {
                   <select
                     value={uploadCategoryId}
                     onChange={(e) => setUploadCategoryId(e.target.value)}
-                    className="bg-[#121215] px-3 py-2 rounded-xl outline-none border border-zinc-800 focus:border-emerald-500 text-white font-medium"
+                    className="bg-slate-50 px-3 py-2 rounded-xl outline-none border border-slate-200 focus:border-emerald-500 text-slate-900 font-medium"
                   >
                     <option value="">-- Pilih Kategori --</option>
                     {categories.filter((c) => c.id !== "all").map((c) => (
@@ -695,31 +792,31 @@ export function StorageAssetDrawer() {
                     placeholder="e.g. Bunga"
                     value={uploadCategoryName}
                     onChange={(e) => setUploadCategoryName(e.target.value)}
-                    className="bg-[#121215] px-3 py-2 rounded-xl outline-none border border-zinc-800 focus:border-emerald-500 text-white font-medium"
+                    className="bg-slate-50 px-3 py-2 rounded-xl outline-none border border-slate-200 focus:border-emerald-500 text-slate-900 font-medium"
                   />
                 )}
               </div>
 
               {/* Public Asset Toggle */}
-              <label className="flex items-center justify-between p-2.5 bg-[#121215] rounded-xl border border-zinc-800 cursor-pointer">
-                <span className="text-zinc-300 font-semibold text-xs">Jadikan Aset Publik</span>
+              <label className="flex items-center justify-between p-2.5 bg-slate-50 rounded-xl border border-slate-200 cursor-pointer">
+                <span className="text-slate-700 font-semibold text-xs">Jadikan Aset Publik</span>
                 <input
                   type="checkbox"
                   checked={uploadIsPublic}
                   onChange={(e) => setUploadIsPublic(e.target.checked)}
-                  className="w-4 h-4 accent-emerald-500 rounded"
+                  className="w-4 h-4 accent-emerald-600 rounded"
                 />
               </label>
 
               {isUploading && (
-                <div className="flex flex-col gap-1.5 bg-[#121215] p-3 rounded-xl">
-                  <div className="flex justify-between text-[11px] font-bold text-emerald-400">
+                <div className="flex flex-col gap-1.5 bg-slate-50 p-3 rounded-xl border border-slate-200">
+                  <div className="flex justify-between text-[11px] font-bold text-emerald-700">
                     <span>Sedang mengunggah...</span>
                     <span>{uploadProgress}%</span>
                   </div>
-                  <div className="w-full h-2 bg-zinc-800 rounded-full overflow-hidden">
+                  <div className="w-full h-2 bg-slate-200 rounded-full overflow-hidden">
                     <div
-                      className="h-full bg-emerald-500 transition-all duration-150"
+                      className="h-full bg-emerald-600 transition-all duration-150"
                       style={{ width: `${uploadProgress}%` }}
                     />
                   </div>
@@ -730,7 +827,7 @@ export function StorageAssetDrawer() {
                 <button
                   type="button"
                   onClick={() => setIsUploadModalOpen(false)}
-                  className="flex-1 py-2 bg-zinc-800 hover:bg-zinc-700 rounded-xl font-semibold transition-colors"
+                  className="flex-1 py-2 bg-slate-100 hover:bg-slate-200 rounded-xl font-semibold text-slate-700 transition-colors"
                   disabled={isUploading}
                 >
                   Batal
@@ -738,7 +835,7 @@ export function StorageAssetDrawer() {
                 <button
                   type="submit"
                   disabled={isUploading || !uploadFile}
-                  className="bouncy-hover flex-1 py-2 bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 text-zinc-950 font-bold rounded-xl flex items-center justify-center gap-1.5 transition-all shadow-sm"
+                  className="bouncy-hover flex-1 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-bold rounded-xl flex items-center justify-center gap-1.5 transition-all shadow-sm cursor-pointer"
                 >
                   {isUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
                   {isUploading ? "Mengunggah..." : "Simpan Aset"}
@@ -751,16 +848,16 @@ export function StorageAssetDrawer() {
 
       {/* ===================== CREATE CATEGORY MODAL ===================== */}
       {isNewCategoryModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4 font-sans">
-          <div className="bg-[#18181c] border border-zinc-700/80 rounded-2xl w-full max-w-xs p-5 text-white shadow-2xl animate-in fade-in zoom-in-95">
-            <div className="flex items-center justify-between pb-3 border-b border-zinc-800 mb-3">
+        <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4 font-sans">
+          <div className="bg-white border border-slate-200 rounded-2xl w-full max-w-xs p-5 text-slate-900 shadow-2xl animate-in fade-in zoom-in-95">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-200 mb-3">
               <div className="flex items-center gap-2">
-                <FolderPlus className="w-4 h-4 text-emerald-400" />
-                <h3 className="text-xs font-bold">Tambah Kategori Baru</h3>
+                <FolderPlus className="w-4 h-4 text-emerald-600" />
+                <h3 className="text-xs font-bold text-slate-900">Tambah Kategori Baru</h3>
               </div>
               <button
                 onClick={() => setIsNewCategoryModalOpen(false)}
-                className="p-1 hover:bg-zinc-800 rounded-lg text-zinc-400 hover:text-white"
+                className="p-1 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-slate-700"
               >
                 <X className="w-3.5 h-3.5" />
               </button>
@@ -768,13 +865,13 @@ export function StorageAssetDrawer() {
 
             <form onSubmit={handleCreateCategory} className="flex flex-col gap-2.5 text-xs">
               <div className="flex flex-col gap-1">
-                <span className="text-zinc-400 font-medium">Category Name</span>
+                <span className="text-slate-600 font-medium">Category Name</span>
                 <input
                   type="text"
                   placeholder="e.g. Sensors"
                   value={newCategoryName}
                   onChange={(e) => setNewCategoryName(e.target.value)}
-                  className="bg-[#111113] px-2.5 py-1.5 rounded outline-none border border-zinc-800 focus:border-zinc-600"
+                  className="bg-slate-50 px-2.5 py-1.5 rounded-lg outline-none border border-slate-200 focus:border-emerald-500 text-slate-900"
                   required
                 />
               </div>
@@ -783,14 +880,14 @@ export function StorageAssetDrawer() {
                 <button
                   type="button"
                   onClick={() => setIsNewCategoryModalOpen(false)}
-                  className="flex-1 py-1.5 bg-zinc-800 hover:bg-zinc-700 rounded font-medium"
+                  className="flex-1 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg font-medium"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isCreatingCategory || !newCategoryName.trim()}
-                  className="flex-1 py-1.5 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white rounded font-medium flex items-center justify-center gap-1"
+                  className="flex-1 py-1.5 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white rounded-lg font-medium flex items-center justify-center gap-1"
                 >
                   {isCreatingCategory ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
                   Create

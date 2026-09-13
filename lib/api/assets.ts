@@ -257,3 +257,17 @@ export function resolveAssetFileUrl(asset: CloudAsset): string {
   }
   return getApiUrl(rawUrl);
 }
+
+/**
+ * Helper to resolve full asset thumbnail URL
+ */
+export function resolveThumbnailUrl(assetOrUrl?: CloudAsset | string | null): string {
+  if (!assetOrUrl) return "";
+  const rawUrl = typeof assetOrUrl === "string" ? assetOrUrl : (assetOrUrl.thumbnail_url || "");
+  if (!rawUrl) return "";
+  if (rawUrl.startsWith("http://") || rawUrl.startsWith("https://") || rawUrl.startsWith("blob:") || rawUrl.startsWith("data:")) {
+    return rawUrl;
+  }
+  return getApiUrl(rawUrl);
+}
+

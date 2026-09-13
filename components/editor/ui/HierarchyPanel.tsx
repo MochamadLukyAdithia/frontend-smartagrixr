@@ -102,14 +102,14 @@ export function HierarchyPanel() {
     }
 
     return (
-      <div key={obj.id} className="select-none text-white">
+      <div key={obj.id} className="select-none text-slate-800">
         <div
           onClick={(e) => handleSelect(obj.id, e)}
           onDoubleClick={(e) => startRename(obj.id, obj.name, e)}
           className={`group flex items-center justify-between px-2.5 py-2 cursor-pointer text-xs transition-all rounded-xl mb-1 border ${
             isSelected 
-              ? "bg-emerald-500/20 border-emerald-500/60 text-emerald-200 shadow-[0_0_12px_rgba(16,185,129,0.2)]" 
-              : "border-transparent hover:bg-[#202026] text-zinc-300 hover:text-white"
+              ? "bg-emerald-50 border-emerald-500/60 text-emerald-950 shadow-xs" 
+              : "border-transparent hover:bg-slate-100 text-slate-700 hover:text-slate-950"
           }`}
           style={{ paddingLeft: `${depth * 12 + 10}px` }}
         >
@@ -118,7 +118,7 @@ export function HierarchyPanel() {
             {hasChildren ? (
               <button 
                 onClick={(e) => toggleExpand(obj.id, e)} 
-                className="hover:bg-white/10 p-0.5 rounded text-zinc-400 hover:text-zinc-200"
+                className="hover:bg-slate-200 p-0.5 rounded text-slate-400 hover:text-slate-700"
               >
                 {isExpanded ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
               </button>
@@ -126,7 +126,7 @@ export function HierarchyPanel() {
               <div className="w-3.5" />
             )}
 
-            <div className="p-1 rounded-lg bg-zinc-800/80 border border-white/5 flex-shrink-0">
+            <div className="p-1 rounded-lg bg-slate-100 border border-slate-200 flex-shrink-0">
               {getIcon(obj.type)}
             </div>
 
@@ -137,12 +137,12 @@ export function HierarchyPanel() {
                 onChange={(e) => setEditName(e.target.value)}
                 onBlur={finishRename}
                 onKeyDown={(e) => e.key === "Enter" && finishRename()}
-                className="bg-[#1e1e23] text-white border border-emerald-500 px-2 py-0.5 rounded-lg w-full outline-none text-xs"
+                className="bg-white text-slate-900 border border-emerald-500 px-2 py-0.5 rounded-lg w-full outline-none text-xs"
                 autoFocus
                 onClick={(e) => e.stopPropagation()}
               />
             ) : (
-              <span className={`truncate text-xs font-semibold ${isSelected ? "text-emerald-300 font-bold" : "text-zinc-200"}`}>
+              <span className={`truncate text-xs font-semibold ${isSelected ? "text-emerald-900 font-bold" : "text-slate-800"}`}>
                 {obj.name}
               </span>
             )}
@@ -152,21 +152,21 @@ export function HierarchyPanel() {
           <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 flex-shrink-0 transition-opacity">
             <button
               onClick={(e) => toggleVisibility(obj.id, e)}
-              className="p-1 hover:bg-white/10 rounded-md text-zinc-400 hover:text-white transition-colors"
+              className="p-1 hover:bg-slate-200 rounded-md text-slate-400 hover:text-slate-800 transition-colors"
               title={obj.visible ? "Sembunyikan" : "Tampilkan"}
             >
-              {obj.visible ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5 text-rose-400" />}
+              {obj.visible ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5 text-rose-500" />}
             </button>
             <button
               onClick={(e) => toggleLock(obj.id, e)}
-              className="p-1 hover:bg-white/10 rounded-md text-zinc-400 hover:text-white transition-colors"
+              className="p-1 hover:bg-slate-200 rounded-md text-slate-400 hover:text-slate-800 transition-colors"
               title={obj.locked ? "Buka Kunci" : "Kunci"}
             >
-              {obj.locked ? <Lock className="w-3.5 h-3.5 text-amber-400" /> : <Unlock className="w-3.5 h-3.5" />}
+              {obj.locked ? <Lock className="w-3.5 h-3.5 text-amber-600" /> : <Unlock className="w-3.5 h-3.5" />}
             </button>
             <button
               onClick={(e) => handleDelete(obj.id, e)}
-              className="p-1 hover:bg-rose-500/20 rounded-md text-zinc-400 hover:text-rose-400 transition-colors"
+              className="p-1 hover:bg-rose-100 rounded-md text-slate-400 hover:text-rose-600 transition-colors"
               title="Hapus"
             >
               <Trash2 className="w-3.5 h-3.5" />
@@ -187,28 +187,28 @@ export function HierarchyPanel() {
   const rootObjects = objects.filter(o => !o.parentId);
 
   return (
-    <div className="w-68 bg-[#161619] border-r border-[#27272a] flex flex-col h-full select-none text-white font-sans shadow-2xl">
+    <div className="w-68 bg-white border-r border-slate-200 flex flex-col h-full select-none text-slate-800 font-sans shadow-sm">
       {/* Header */}
-      <div className="p-3.5 border-b border-[#27272a] flex items-center justify-between bg-[#131316]">
+      <div className="p-3.5 border-b border-slate-200 flex items-center justify-between bg-slate-50">
         <div className="flex items-center gap-2">
-          <Layers className="w-4 h-4 text-emerald-400" />
-          <span className="text-xs font-bold tracking-wide text-zinc-100">Hierarchy</span>
+          <Layers className="w-4 h-4 text-emerald-600" />
+          <span className="text-xs font-bold tracking-wide text-slate-900">Hierarchy</span>
         </div>
-        <span className="text-[10px] bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 px-2 py-0.5 rounded-full font-bold">
+        <span className="text-[10px] bg-emerald-100 text-emerald-800 border border-emerald-300/60 px-2 py-0.5 rounded-full font-bold">
           {objects.length} Objects
         </span>
       </div>
 
       {/* Search box */}
-      <div className="p-3 border-b border-[#27272a]/60 bg-[#161619]">
-        <div className="flex items-center gap-2 bg-[#1e1e23] px-2.5 py-1.5 rounded-xl border border-zinc-700/80 focus-within:border-emerald-500 transition-colors">
-          <Search className="w-3.5 h-3.5 text-zinc-400" />
+      <div className="p-3 border-b border-slate-200 bg-white">
+        <div className="flex items-center gap-2 bg-slate-100 px-2.5 py-1.5 rounded-xl border border-slate-200 focus-within:border-emerald-500 transition-colors">
+          <Search className="w-3.5 h-3.5 text-slate-400" />
           <input
             type="text"
             placeholder="Cari objek..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="bg-transparent text-xs text-white placeholder-zinc-500 w-full outline-none font-medium"
+            className="bg-transparent text-xs text-slate-900 placeholder-slate-400 w-full outline-none font-medium"
           />
         </div>
       </div>
@@ -216,7 +216,7 @@ export function HierarchyPanel() {
       {/* Object List */}
       <div className="flex-1 overflow-y-auto p-2.5">
         {rootObjects.length === 0 ? (
-          <div className="text-xs text-zinc-500 text-center py-8">
+          <div className="text-xs text-slate-400 text-center py-8">
             Scene kosong.
           </div>
         ) : (
