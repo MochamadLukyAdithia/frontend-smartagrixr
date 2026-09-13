@@ -22,7 +22,7 @@ export default function Masuk() {
     try {
       const { token, user } = await login({ email, password });
       setAuth(token, user);
-      router.push("/dashboard/beranda");
+      router.push("/bahan-ajar/topics-library");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Gagal masuk. Coba lagi.");
     } finally {
