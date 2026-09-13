@@ -3,18 +3,17 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { Navbar } from "@/components/layout/navbar";
-import { TAB_CONTENT, TAB_ORDER, type LibraryTab } from "./data";
-import { TopicsLibraryHero } from "./components/topics-library-hero";
-import { SubjectPill } from "./components/subject-pill";
-import { GradeChip } from "./components/grade-chip";
-import { RecommendationCard } from "./components/recommendation-card";
-import { HorizontalScroller } from "./components/horizontal-scroller";
-import { ContentDetailModal } from "./components/content-detail-modal";
+import { TAB_CONTENT, TAB_ORDER, type LibraryTab } from "../data";
+import { TopicsLibraryHero } from "../components/topics-library-hero";
+import { SubjectPill } from "../components/subject-pill";
+import { GradeChip } from "../components/grade-chip";
+import { RecommendationCard } from "../components/recommendation-card";
+import { HorizontalScroller } from "../components/horizontal-scroller";
+import { ContentDetailModal } from "../components/content-detail-modal";
 import Footer from "@/components/layout/footer";
 
 const API_URL = (process.env.NEXT_PUBLIC_API_URL ?? "").replace(/\/$/, "");
 
-// --- TYPES SESUAI RESPONSE /api/learn ---
 type ApiSubject = {
   id: number;
   name: string;
@@ -69,13 +68,19 @@ export default function TopicsLibrary() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const [selectedContentId, setSelectedContentId] = useState<number | null>(null);
+  const [selectedContentId, setSelectedContentId] = useState<number | null>(
+    null,
+  );
 
   // ── State filter: subject & grade yang lagi dipilih ──
   // null = tidak ada filter aktif untuk kategori itu (tampilkan semua).
   // Klik pill/chip yang sama lagi = toggle off (unselect).
-  const [selectedSubjectSlug, setSelectedSubjectSlug] = useState<string | null>(null);
-  const [selectedGradeSlug, setSelectedGradeSlug] = useState<string | null>(null);
+  const [selectedSubjectSlug, setSelectedSubjectSlug] = useState<string | null>(
+    null,
+  );
+  const [selectedGradeSlug, setSelectedGradeSlug] = useState<string | null>(
+    null,
+  );
 
   useEffect(() => {
     const controller = new AbortController();
@@ -103,7 +108,9 @@ export default function TopicsLibrary() {
         setLearnData(json.data as LearnData);
       } catch (err) {
         if ((err as Error).name !== "AbortError") {
-          setError((err as Error).message || "Terjadi kesalahan saat memuat data");
+          setError(
+            (err as Error).message || "Terjadi kesalahan saat memuat data",
+          );
         }
       } finally {
         setIsLoading(false);
@@ -227,7 +234,7 @@ export default function TopicsLibrary() {
             </h2>
 
             <Link
-              href="/bahan-ajar/topics-library/1"
+              href="#"
               className="font-serif text-[14px] font-semibold text-[#21a447] hover:underline"
             >
               Lihat Semua →
@@ -235,33 +242,43 @@ export default function TopicsLibrary() {
           </div>
 
           {/* Info filter aktif + tombol reset */}
-          {!isLoading && !error && (selectedSubjectSlug || selectedGradeSlug) && (
-            <div className="mb-4 flex flex-wrap items-center gap-2">
-              <span className="font-serif text-[13px] text-gray-500">
-                Filter aktif:
-              </span>
-              {selectedSubjectSlug && (
-                <span className="rounded-full bg-[#21a447]/10 px-3 py-1 font-serif text-[12px] font-semibold text-[#21a447]">
-                  {learnData?.subjects.find((s) => s.slug === selectedSubjectSlug)?.name}
+          {!isLoading &&
+            !error &&
+            (selectedSubjectSlug || selectedGradeSlug) && (
+              <div className="mb-4 flex flex-wrap items-center gap-2">
+                <span className="font-serif text-[13px] text-gray-500">
+                  Filter aktif:
                 </span>
-              )}
-              {selectedGradeSlug && (
-                <span className="rounded-full bg-[#1da1f2]/10 px-3 py-1 font-serif text-[12px] font-semibold text-[#1da1f2]">
-                  {learnData?.grade_levels.find((g) => g.slug === selectedGradeSlug)?.name}
-                </span>
-              )}
-              <button
-                type="button"
-                onClick={() => {
-                  setSelectedSubjectSlug(null);
-                  setSelectedGradeSlug(null);
-                }}
-                className="font-serif text-[12px] text-gray-400 underline hover:text-gray-600"
-              >
-                Reset filter
-              </button>
-            </div>
-          )}
+                {selectedSubjectSlug && (
+                  <span className="rounded-full bg-[#21a447]/10 px-3 py-1 font-serif text-[12px] font-semibold text-[#21a447]">
+                    {
+                      learnData?.subjects.find(
+                        (s) => s.slug === selectedSubjectSlug,
+                      )?.name
+                    }
+                  </span>
+                )}
+                {selectedGradeSlug && (
+                  <span className="rounded-full bg-[#1da1f2]/10 px-3 py-1 font-serif text-[12px] font-semibold text-[#1da1f2]">
+                    {
+                      learnData?.grade_levels.find(
+                        (g) => g.slug === selectedGradeSlug,
+                      )?.name
+                    }
+                  </span>
+                )}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedSubjectSlug(null);
+                    setSelectedGradeSlug(null);
+                  }}
+                  className="font-serif text-[12px] text-gray-400 underline hover:text-gray-600"
+                >
+                  Reset filter
+                </button>
+              </div>
+            )}
 
           {isLoading && (
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">

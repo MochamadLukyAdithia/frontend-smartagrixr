@@ -1,8 +1,8 @@
 "use client";
 
+import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import { useState, useEffect, useRef } from "react";
-import { useRouter } from "next/navigation";
 import { navigationItems } from "./navigation-data";
 import { NavigationDropdown } from "./navigation-dropdown";
 import { ChevronDownIcon } from "./navigation-icons";
@@ -34,6 +34,15 @@ export function Navbar() {
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
   const isLoggedIn = !!token;
+  const pathname = usePathname();
+
+  const displayNavItems = navigationItems.filter((item) => {
+    // Sembunyikan "Kelas" jika user belum login
+    if (item.label === "Kelas" && !isLoggedIn) {
+      return false;
+    }
+    return true;
+  });
 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [activeMobileDropdown, setActiveMobileDropdown] = useState<
@@ -132,18 +141,32 @@ export function Navbar() {
 
           <nav className="hidden flex-1 items-center lg:flex">
             <div className="ml-[70px] flex items-center gap-[38px] xl:ml-[92px] xl:gap-[43px]">
-              {navigationItems.map((item) => (
-                <div key={item.label} className="group relative">
-                  <Link
-                    href={item.href}
-                    className="flex h-[70px] items-center gap-2 font-serif text-[18px] text-[#1b1b1b] transition-colors hover:text-[#21a447] xl:text-[20px]"
-                  >
-                    <span>{item.label}</span>
-                    {item.dropdown && <ChevronDownIcon />}
-                  </Link>
-                  {item.dropdown && <NavigationDropdown menu={item.dropdown} />}
-                </div>
-              ))}
+              {displayNavItems.map((item) => {
+                // Jika menu "/", harus sama persis. Jika menu lain, cukup berawalan sama (misal /bahan-ajar/topics-library tetap mengaktifkan menu /bahan-ajar)
+                const isActive =
+                  item.href === "/"
+                    ? pathname === "/"
+                    : pathname.startsWith(item.href);
+
+                return (
+                  <div key={item.label} className="group relative">
+                    <Link
+                      href={item.href}
+                      className={`flex h-[70px] items-center gap-2 font-serif text-[18px] transition-colors xl:text-[20px] ${
+                        isActive
+                          ? "text-[#21a447] font-semibold" // Warna Hijau jika aktif
+                          : "text-[#1b1b1b] hover:text-[#21a447]" // Warna Hitam jika tidak aktif
+                      }`}
+                    >
+                      <span>{item.label}</span>
+                      {item.dropdown && <ChevronDownIcon />}
+                    </Link>
+                    {item.dropdown && (
+                      <NavigationDropdown menu={item.dropdown} />
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </nav>
 
@@ -336,9 +359,8 @@ export function Navbar() {
         }`}
       >
         <nav className="max-h-[calc(100vh-98px)] overflow-y-auto px-6 pb-7 pt-3">
-          {navigationItems.map((item) => {
+          {displayNavItems.map((item) => {
             const isDropdownOpen = activeMobileDropdown === item.label;
-
             if (!item.dropdown) {
               return (
                 <Link

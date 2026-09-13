@@ -105,10 +105,15 @@ export async function login(
   return { token, user };
 }
 
-export async function fetchAssets(token: string): Promise<AssetsResponse> {
-  const res = await fetch(`${API_URL}/api/assets`, {
-    headers: { Accept: "application/json", Authorization: `Bearer ${token}` },
-  });
+export async function fetchAssets(
+  token: string | null
+): Promise<AssetsResponse> {
+  const url = token
+    ? `${API_URL}/api/assets`
+    : `${API_URL}/api/assets/public`;
+  const headers: Record<string, string> = { Accept: "application/json" };
+  if (token) headers.Authorization = `Bearer ${token}`;
+  const res = await fetch(url, { headers });
 
   const data = res.status !== 204 ? await res.json().catch(() => null) : null;
 
@@ -357,6 +362,61 @@ export async function fetchClassroom(
   const detail = (data as { data?: ClassroomDetail } | null)?.data;
   if (!detail) throw new Error("Response detail kelas tidak valid.");
   return detail;
+}
+
+export interface UpdateClassroomParams {
+  name: string;
+  description: string;
+  subject: string;
+  is_active: boolean;
+}
+
+export async function updateClassroom(
+  token: string,
+  id: number | string,
+  params: UpdateClassroomParams
+): Promise<Classroom> {
+  const res = await fetch(`${API_URL}/api/classrooms/${id}`, {
+    method: "PUT",
+    headers: {
+      Accept: "application/json",
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(params),
+  });
+
+  const data = res.status !== 204 ? await res.json().catch(() => null) : null;
+
+  if (!res.ok) {
+    throw new Error(
+      (data as { message?: string } | null)?.message ||
+        "Gagal memperbarui kelas."
+    );
+  }
+
+  const updated = (data as { data?: Classroom } | null)?.data;
+  if (!updated) throw new Error("Response update kelas tidak valid.");
+  return updated;
+}
+
+export async function deleteClassroom(
+  token: string,
+  id: number | string
+): Promise<void> {
+  const res = await fetch(`${API_URL}/api/classrooms/${id}`, {
+    method: "DELETE",
+    headers: { Accept: "application/json", Authorization: `Bearer ${token}` },
+  });
+
+  const data = res.status !== 204 ? await res.json().catch(() => null) : null;
+
+  if (!res.ok) {
+    throw new Error(
+      (data as { message?: string } | null)?.message ||
+        "Gagal menghapus kelas."
+    );
+  }
 }
 
 export async function uploadAsset(

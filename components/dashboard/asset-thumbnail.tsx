@@ -19,7 +19,7 @@ export function AssetThumbnail({
   asset,
   autoRotate = true,
 }: {
-  token: string;
+  token: string | null;
   asset: ApiAsset;
   autoRotate?: boolean;
 }) {
@@ -68,7 +68,9 @@ export function AssetThumbnail({
       scene
     );
 
-    const url = `/api/assets/${asset.id}/asset?access_token=${encodeURIComponent(token)}`;
+    const url = token
+      ? `/api/assets/${asset.id}/asset?access_token=${encodeURIComponent(token)}`
+      : `/api/assets/${asset.id}/asset`;
 
     const resizeObserver = new ResizeObserver(() => engine.resize());
     if (canvas.parentElement) resizeObserver.observe(canvas.parentElement);

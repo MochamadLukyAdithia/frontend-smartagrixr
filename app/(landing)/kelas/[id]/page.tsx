@@ -2,11 +2,11 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { Navbar } from "@/components/layout/navbar";
 import Footer from "@/components/layout/footer";
 import { useAuthStore } from "@/stores/useAuthStore";
-import { fetchClassroom } from "@/lib/api";
+import { fetchClassroom, updateClassroom, deleteClassroom } from "@/lib/api";
 import type { ClassroomDetail, ClassroomStudent } from "@/lib/api";
 import {
   ArrowLeft,
@@ -15,6 +15,9 @@ import {
   Link as LinkIcon,
   Box,
   Star,
+  Pencil,
+  Trash2,
+  X,
 } from "lucide-react";
 
 interface MateriItem {
@@ -27,6 +30,7 @@ interface MateriItem {
 
 export const DetailKelas = () => {
   const { id } = useParams<{ id: string }>();
+  const router = useRouter();
   const token = useAuthStore((s) => s.token);
   const [activeTab, setActiveTab] = useState<"beranda" | "materi" | "anggota">(
     "beranda",
@@ -36,6 +40,17 @@ export const DetailKelas = () => {
   const [classroom, setClassroom] = useState<ClassroomDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [editForm, setEditForm] = useState({
+    name: "",
+    description: "",
+    subject: "",
+    is_active: false,
+  });
+  const [saving, setSaving] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!token || !id) return;
@@ -61,6 +76,52 @@ export const DetailKelas = () => {
 
   const students: ClassroomStudent[] = classroom?.students ?? [];
   const teacher = classroom?.teacher ?? null;
+
+  const openEdit = () => {
+    if (!classroom) return;
+    setEditForm({
+      name: classroom.name ?? "",
+      description: classroom.description ?? "",
+      subject: classroom.subject ?? "",
+      is_active: classroom.is_active,
+    });
+    setActionError(null);
+    setMenuOpen(false);
+    setEditOpen(true);
+  };
+
+  const handleSave = async () => {
+    if (!token || !id) return;
+    setSaving(true);
+    setActionError(null);
+    try {
+      const updated = await updateClassroom(token, id, editForm);
+      setClassroom((prev) => (prev ? { ...prev, ...updated } : prev));
+      setEditOpen(false);
+    } catch (err) {
+      setActionError(
+        err instanceof Error ? err.message : "Gagal memperbarui kelas.",
+      );
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!token || !id) return;
+    setSaving(true);
+    setActionError(null);
+    try {
+      await deleteClassroom(token, id);
+      router.push("/dashboard/kelas/all");
+      router.refresh();
+    } catch (err) {
+      setActionError(
+        err instanceof Error ? err.message : "Gagal menghapus kelas.",
+      );
+      setSaving(false);
+    }
+  };
 
   const materiList: MateriItem[] = [
     {
@@ -129,20 +190,52 @@ export const DetailKelas = () => {
           <div className="absolute inset-0 bg-black/20" />
 
           <Link
-            href="/dashboard/kelas"
-            className="absolute left-4 top-4 flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-gray-700 shadow transition hover:bg-white cursor-pointer"
+            href="/dashboard/beranda"
+            className="absolute z-[999] left-4 top-4 flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-gray-700 shadow transition hover:bg-white cursor-pointer"
           >
             <ArrowLeft className="h-5 w-5" />
           </Link>
 
           <button
             type="button"
-            className="absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-gray-700 shadow transition hover:bg-white cursor-pointer"
+            onClick={() => setMenuOpen((v) => !v)}
+            className="absolute right-4 top-4 z-20 flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-gray-700 shadow transition hover:bg-white cursor-pointer"
           >
             <MoreHorizontal className="h-5 w-5" />
           </button>
 
-          <div className="absolute inset-0 flex items-center justify-center">
+          {menuOpen && (
+            <>
+              <div
+                className="fixed inset-0 z-20"
+                onClick={() => setMenuOpen(false)}
+              />
+              <div className="absolute right-4 top-14 z-30 w-44 overflow-hidden rounded-xl border border-gray-100 bg-white shadow-lg">
+                <button
+                  type="button"
+                  onClick={openEdit}
+                  className="flex w-full items-center gap-2 px-4 py-2.5 text-left font-serif text-xs font-semibold text-gray-800 transition hover:bg-gray-50 cursor-pointer"
+                >
+                  <Pencil className="h-4 w-4" />
+                  Edit Kelas
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActionError(null);
+                    setMenuOpen(false);
+                    setDeleteOpen(true);
+                  }}
+                  className="flex w-full items-center gap-2 border-t border-gray-100 px-4 py-2.5 text-left font-serif text-xs font-semibold text-red-600 transition hover:bg-red-50 cursor-pointer"
+                >
+                  <Trash2 className="h-4 w-4" />
+                  Hapus Kelas
+                </button>
+              </div>
+            </>
+          )}
+
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
             {loading ? (
               <p className="font-serif text-2xl sm:text-3xl font-bold text-white drop-shadow-md animate-pulse">
                 Memuat kelas...
@@ -153,7 +246,9 @@ export const DetailKelas = () => {
                   Kelas Tidak Ditemukan
                 </h1>
                 {error && (
-                  <p className="mt-2 font-serif text-sm text-red-200">{error}</p>
+                  <p className="mt-2 font-serif text-sm text-red-200">
+                    {error}
+                  </p>
                 )}
               </div>
             ) : (
@@ -469,6 +564,135 @@ export const DetailKelas = () => {
               <p className="font-serif text-xs text-gray-600 leading-relaxed text-justify">
                 {selectedMateri.resume}
               </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {editOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4">
+          <div className="relative w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl">
+            <button
+              onClick={() => setEditOpen(false)}
+              className="absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 transition cursor-pointer"
+            >
+              <X className="h-4 w-4 text-gray-700" />
+            </button>
+            <h2 className="font-serif text-base font-bold text-gray-900">
+              Edit Kelas
+            </h2>
+
+            <div className="mt-4 space-y-3">
+              <div>
+                <label className="font-serif text-xs font-semibold text-gray-700">
+                  Nama Kelas
+                </label>
+                <input
+                  value={editForm.name}
+                  onChange={(e) =>
+                    setEditForm((f) => ({ ...f, name: e.target.value }))
+                  }
+                  className="mt-1 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 font-serif text-sm text-gray-800 outline-none focus:border-[#21a447]"
+                />
+              </div>
+              <div>
+                <label className="font-serif text-xs font-semibold text-gray-700">
+                  Mata Pelajaran
+                </label>
+                <input
+                  value={editForm.subject}
+                  onChange={(e) =>
+                    setEditForm((f) => ({ ...f, subject: e.target.value }))
+                  }
+                  className="mt-1 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 font-serif text-sm text-gray-800 outline-none focus:border-[#21a447]"
+                />
+              </div>
+              <div>
+                <label className="font-serif text-xs font-semibold text-gray-700">
+                  Deskripsi
+                </label>
+                <textarea
+                  value={editForm.description}
+                  onChange={(e) =>
+                    setEditForm((f) => ({
+                      ...f,
+                      description: e.target.value,
+                    }))
+                  }
+                  className="mt-1 w-full resize-none rounded-lg border border-gray-200 bg-white px-3 py-2 font-serif text-sm text-gray-800 outline-none focus:border-[#21a447] min-h-[90px]"
+                />
+              </div>
+              <label className="flex cursor-pointer items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={editForm.is_active}
+                  onChange={(e) =>
+                    setEditForm((f) => ({ ...f, is_active: e.target.checked }))
+                  }
+                  className="h-4 w-4 accent-[#21a447]"
+                />
+                <span className="font-serif text-xs font-semibold text-gray-700">
+                  Kelas aktif
+                </span>
+              </label>
+            </div>
+
+            {actionError && (
+              <p className="mt-3 font-serif text-xs text-red-600">
+                {actionError}
+              </p>
+            )}
+
+            <div className="mt-5 flex justify-end gap-2">
+              <button
+                onClick={() => setEditOpen(false)}
+                className="rounded-lg border border-gray-200 px-4 py-2 font-serif text-xs font-semibold text-gray-700 transition hover:bg-gray-50 cursor-pointer"
+              >
+                Batal
+              </button>
+              <button
+                onClick={handleSave}
+                disabled={saving}
+                className="rounded-lg bg-[#21a447] px-4 py-2 font-serif text-xs font-semibold text-white transition hover:bg-[#145a2b] disabled:opacity-60 cursor-pointer"
+              >
+                {saving ? "Menyimpan..." : "Simpan"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {deleteOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4">
+          <div className="relative w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl">
+            <h2 className="font-serif text-base font-bold text-gray-900">
+              Hapus Kelas?
+            </h2>
+            <p className="mt-2 font-serif text-xs text-gray-600 leading-relaxed">
+              Kelas "{classroom?.name}" akan dihapus permanen. Tindakan ini
+              tidak dapat dibatalkan.
+            </p>
+
+            {actionError && (
+              <p className="mt-3 font-serif text-xs text-red-600">
+                {actionError}
+              </p>
+            )}
+
+            <div className="mt-5 flex justify-end gap-2">
+              <button
+                onClick={() => setDeleteOpen(false)}
+                className="rounded-lg border border-gray-200 px-4 py-2 font-serif text-xs font-semibold text-gray-700 transition hover:bg-gray-50 cursor-pointer"
+              >
+                Batal
+              </button>
+              <button
+                onClick={handleDelete}
+                disabled={saving}
+                className="rounded-lg bg-red-600 px-4 py-2 font-serif text-xs font-semibold text-white transition hover:bg-red-700 disabled:opacity-60 cursor-pointer"
+              >
+                {saving ? "Menghapus..." : "Hapus"}
+              </button>
             </div>
           </div>
         </div>

@@ -32,7 +32,7 @@ export function AssetDetailModal({
   asset,
   onClose,
 }: {
-  token: string;
+  token: string | null;
   asset: ApiAsset;
   onClose: () => void;
 }) {
@@ -91,9 +91,11 @@ export function AssetDetailModal({
     camera.minZ = 0.1;
     camera.attachControl(canvas, true);
 
-    const url = `/api/assets/${asset.id}/asset?access_token=${encodeURIComponent(
-      token,
-    )}`;
+    const url = token
+      ? `/api/assets/${asset.id}/asset?access_token=${encodeURIComponent(
+          token,
+        )}`
+      : `/api/assets/${asset.id}/asset`;
 
     const resizeObserver = new ResizeObserver(() => engine.resize());
     if (canvas.parentElement) resizeObserver.observe(canvas.parentElement);

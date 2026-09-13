@@ -36,22 +36,22 @@ export const navigationItems: NavigationItem[] = [
   },
   {
     label: "Bahan Ajar",
-    href: "#bahan-ajar",
+    href: "/bahan-ajar",
     dropdown: {
       hasPreview: true,
       align: "left",
       items: [
         {
-          label: "Topik",
+          label: "Aset Belajar",
+          description: "Buat aset belajar 3d dan Ar kamu sendiri",
+          href: "/bahan-ajar",
+          icon: "book",
+        },
+        {
+          label: "Slide Interaktif",
           description: "Belajar lebih menarik dengan slide interaktif",
           href: "/bahan-ajar/topics-library",
           icon: "cloud",
-        },
-        {
-          label: "Aset Belajar",
-          description: "Buat aset belajar 3d dan Ar kamu sendiri",
-          href: "#materi-saya",
-          icon: "book",
         },
       ],
     },
@@ -86,26 +86,27 @@ export const navigationItems: NavigationItem[] = [
   },
   {
     label: "Kelas",
-    href: "kelas",
+    href: "/kelas",
     dropdown: {
       align: "left",
       items: [
         {
           label: "Kelas Saya",
           description: "Lihat dan kelola daftar kelas",
-          href: "kelas",
+          href: "/kelas",
           icon: "class",
         },
         {
           label: "Buat Kelas Baru",
-          description: "Buka ruang kelas baru dan undang siswa untuk belajar bersama",
-          href: "#buat-kelas",
+          description:
+            "Buka ruang kelas baru dan undang siswa untuk belajar bersama",
+          href: "/kelas",
           icon: "new-class",
         },
         {
           label: "Gabung ke Kelas",
           description: "Gabung ke kelas yang sudah ada",
-          href: "#gabung-kelas",
+          href: "/kelas",
           icon: "join",
         },
       ],
@@ -113,7 +114,6 @@ export const navigationItems: NavigationItem[] = [
   },
   {
     label: "Tutorial",
-    href: "#inspirasi",
-   
+    href: "/tutorial",
   },
 ];

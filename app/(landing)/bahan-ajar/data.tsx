@@ -1,4 +1,4 @@
-export type LibraryTab = "alat-peraga" | "slide";
+export type LibraryTab = "asset-belajar" | "slide";
 
 export type Subject = {
   name: string;
@@ -47,11 +47,10 @@ export const GRADES = [
   "Kelas 12",
 ];
 
-// Urutan tab di hero (kiri ke kanan)
-export const TAB_ORDER: LibraryTab[] = ["alat-peraga", "slide"];
+export const TAB_ORDER: LibraryTab[] = ["asset-belajar", "slide"];
 
 export const TAB_CONTENT: Record<LibraryTab, TabContent> = {
-  "alat-peraga": {
+  "asset-belajar": {
     tagLabel: "Aset Belajar",
     heroBg: "from-[#bfe9fb] to-[#eaf7fd]",
     heroHeadline: {
@@ -59,7 +58,6 @@ export const TAB_CONTENT: Record<LibraryTab, TabContent> = {
       highlight: "Aset Belajar 3D",
       suffix: " dan Augmented Reality",
     },
-    // TODO: ganti dengan gambar asli di /public/images/topics/hero-alat-peraga.png
     heroIllustration: "https://picsum.photos/seed/alat-peraga/960/600",
     subjects: [
       { name: "Literasi", icon: "📖" },
@@ -80,7 +78,6 @@ export const TAB_CONTENT: Record<LibraryTab, TabContent> = {
       highlight: "Slide Learning",
       suffix: " Interaktif siap pakai",
     },
-    // TODO: ganti dengan gambar asli di /public/images/topics/hero-slide.png
     heroIllustration: "https://picsum.photos/seed/slide-learning/960/600",
     subjects: [
       { name: "Literasi", icon: "📖" },

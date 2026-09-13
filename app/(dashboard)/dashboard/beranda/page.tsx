@@ -19,6 +19,7 @@ import { AssetDetailModal } from "@/components/dashboard/asset-detail-modal";
 import { UploadAssetModal } from "@/components/dashboard/upload-asset-modal";
 import { CreateClassModal } from "@/components/dashboard/create-class-modal";
 import { JoinClassModal } from "@/components/dashboard/join-class-modal";
+import { BookOpenText, Plus, Sparkles } from "lucide-react";
 
 const LEARNING_MODULES = [
   {
@@ -263,9 +264,14 @@ export default function DashboardBeranda() {
 
         {isDosen && (
           <div className="mb-12 grid grid-cols-1 gap-6 sm:grid-cols-3">
-            <div className="group flex items-center gap-4 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm transition-all hover:shadow-md cursor-pointer">
+            <Link
+              href="/editor"
+              className="group flex items-center gap-4 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm transition-all hover:shadow-md cursor-pointer"
+            >
               <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-[#21a447] text-white">
-                <span className="text-2xl font-bold">+</span>
+                <span className="text-2xl font-bold">
+                  <Plus />
+                </span>
               </div>
               <div>
                 <h3 className="font-serif text-[16px] font-bold text-black">
@@ -275,11 +281,13 @@ export default function DashboardBeranda() {
                   Buat konten Augmented Reality interaktif
                 </p>
               </div>
-            </div>
+            </Link>
 
             <div className="group flex items-center gap-4 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm transition-all hover:shadow-md cursor-pointer">
               <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-[#21a447] text-white">
-                <span className="text-xl">✨</span>
+                <span className="text-xl">
+                  <Sparkles />
+                </span>
               </div>
               <div>
                 <h3 className="font-serif text-[16px] font-bold text-black">
@@ -293,7 +301,9 @@ export default function DashboardBeranda() {
 
             <div className="group flex items-center gap-4 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm transition-all hover:shadow-md cursor-pointer">
               <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-[#21a447] text-white">
-                <span className="text-xl">📚</span>
+                <span className="text-xl">
+                  <BookOpenText />
+                </span>
               </div>
               <div>
                 <h3 className="font-serif text-[16px] font-bold text-black">
@@ -317,7 +327,7 @@ export default function DashboardBeranda() {
 
             {isDosen ? (
               <Link
-                href="#"
+                href="/dashboard/materi"
                 className="font-serif text-[14px] font-medium text-[#21a447] hover:underline"
               >
                 Lihat Semua Materi
@@ -413,77 +423,87 @@ export default function DashboardBeranda() {
               Kelas Anda
             </h2>
             <Link
-              href="#"
+              href="/kelas"
               className="font-serif text-[14px] font-medium text-[#21a447] hover:underline"
             >
               Lihat Semua Kelas
             </Link>
           </div>
 
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5">
-            {loadingClasses &&
-              Array.from({ length: 2 }).map((_, index) => (
-                <div
-                  key={`skeleton-${index}`}
-                  className="h-[180px] w-full animate-pulse rounded-2xl bg-gray-200"
-                />
-              ))}
-
-            {!loadingClasses &&
-              classrooms.map((cls) => (
-                <Link
-                  key={cls.id}
-                  href={`/dashboard/kelas/${cls.id}`}
-                  className="group relative h-[180px] w-full cursor-pointer overflow-hidden rounded-2xl bg-gray-200 shadow-sm transition-all hover:shadow-md"
-                >
-                  <Image
-                    src="/images/dashboard/beranda/1.png"
-                    alt={cls.name}
-                    fill
-                    className="object-cover transition-transform duration-500 group-hover:scale-105"
+          {!token ? (
+            <p className="mt-4 rounded-lg bg-yellow-50 px-4 py-2 font-serif text-[13px] text-yellow-700">
+              Silakan masuk terlebih dahulu untuk melihat aset.
+            </p>
+          ) : (
+            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5">
+              {/* SKELETON LOADING */}
+              {loadingClasses &&
+                Array.from({ length: 2 }).map((_, index) => (
+                  <div
+                    key={`skeleton-${index}`}
+                    className="h-[180px] w-full animate-pulse rounded-2xl bg-gray-200"
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-transparent flex items-end p-5">
-                    <div className="w-full">
-                      <h3 className="font-serif text-[16px] font-bold text-white leading-snug">
-                        {cls.name}
-                      </h3>
-                      {cls.subject && (
-                        <p className="mt-1 truncate font-serif text-[12px] text-white/80">
-                          {cls.subject}
-                        </p>
-                      )}
+                ))}
+
+              {/* LIST KELAS */}
+              {!loadingClasses &&
+                classrooms.map((cls) => (
+                  <Link
+                    key={cls.id}
+                    href={`/dashboard/kelas/${cls.id}`}
+                    className="group relative h-[180px] w-full cursor-pointer overflow-hidden rounded-2xl bg-gray-200 shadow-sm transition-all hover:shadow-md"
+                  >
+                    <Image
+                      src="/images/dashboard/beranda/1.png"
+                      alt={cls.name}
+                      fill
+                      className="object-cover transition-transform duration-500 group-hover:scale-105"
+                    />
+                    <div className="absolute inset-0 flex items-end bg-gradient-to-t from-black/85 via-black/20 to-transparent p-5">
+                      <div className="w-full">
+                        <h3 className="font-serif text-[16px] font-bold leading-snug text-white">
+                          {cls.name}
+                        </h3>
+                        {cls.subject && (
+                          <p className="mt-1 truncate font-serif text-[12px] text-white/80">
+                            {cls.subject}
+                          </p>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                </Link>
-              ))}
+                  </Link>
+                ))}
 
-            {!loadingClasses && classrooms.length === 0 && (
-              <div className="h-[180px] w-full rounded-2xl border-2 border-dashed border-gray-300 bg-gray-50/50 flex items-center justify-center">
-                <span className="font-serif text-[14px] text-gray-500">
-                  Belum ada kelas
-                </span>
-              </div>
-            )}
+              {/* JIKA KELAS KOSONG */}
+              {!loadingClasses && classrooms.length === 0 && (
+                <div className="flex h-[180px] w-full items-center justify-center rounded-2xl border-2 border-dashed border-gray-300 bg-gray-50/50">
+                  <span className="font-serif text-[14px] text-gray-500">
+                    Belum ada kelas
+                  </span>
+                </div>
+              )}
 
-            <button
-              type="button"
-              onClick={() =>
-                isStudent
-                  ? setShowJoinClassModal(true)
-                  : setShowCreateClassModal(true)
-              }
-              className="flex h-[180px] w-full cursor-pointer items-center justify-center rounded-2xl border-2 border-dashed border-gray-300 bg-gray-50/50 transition-colors hover:bg-gray-100 hover:border-gray-400"
-            >
-              <div className="flex flex-col items-center justify-center rounded-xl bg-[#21a447] px-6 py-4 text-white shadow-sm transition-transform hover:scale-105">
-                <span className="text-2xl leading-none">
-                  {isStudent ? "🔑" : "+"}
-                </span>
-                <span className="mt-2 font-serif text-[12px] font-medium tracking-wide">
-                  {isStudent ? "Gabung ke Kelas" : "Buat Kelas Baru"}
-                </span>
-              </div>
-            </button>
-          </div>
+              {/* TOMBOL TAMBAH/GABUNG KELAS */}
+              <button
+                type="button"
+                onClick={() =>
+                  isStudent
+                    ? setShowJoinClassModal(true)
+                    : setShowCreateClassModal(true)
+                }
+                className="flex h-[180px] w-full cursor-pointer items-center justify-center rounded-2xl border-2 border-dashed border-gray-300 bg-gray-50/50 transition-colors hover:border-gray-400 hover:bg-gray-100"
+              >
+                <div className="flex flex-col items-center justify-center rounded-xl bg-[#21a447] px-6 py-4 text-white shadow-sm transition-transform hover:scale-105">
+                  <span className="text-2xl leading-none">
+                    {isStudent ? "🔑" : "+"}
+                  </span>
+                  <span className="mt-2 font-serif text-[12px] font-medium tracking-wide">
+                    {isStudent ? "Gabung ke Kelas" : "Buat Kelas Baru"}
+                  </span>
+                </div>
+              </button>
+            </div>
+          )}
         </section>
         <section className="mt-12">
           <div className="mb-4">

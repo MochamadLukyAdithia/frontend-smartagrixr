@@ -1,8 +1,13 @@
 "use client";
 
 import Image from "next/image";
-import type { LibraryTab, TabContent } from "../data";
+import Link from "next/link";
+import type { LibraryTab, TabContent } from "./data";
 
+const TAB_LINKS: Record<string, string> = {
+  "asset-belajar": "/bahan-ajar",
+  slide: "/bahan-ajar/topics-library",
+};
 type Props = {
   activeTab: LibraryTab;
   onTabChange: (tab: LibraryTab) => void;
@@ -26,23 +31,26 @@ export function TopicsLibraryHero({
         >
           <div className="flex flex-col lg:flex-row items-center justify-between gap-8">
             <div className="flex-1 max-w-xl">
-              {/* Tab pills — di dalam kotak hero, di atas heading */}
+              {/* Tab pills */}
               <div className="flex items-center gap-2 mb-5">
                 {order.map((tabKey) => {
                   const isActive = tabKey === activeTab;
+
+                  const tabHref = TAB_LINKS[tabKey as string] || "#";
+
                   return (
-                    <button
+                    <Link
                       key={tabKey}
-                      type="button"
+                      href={tabHref}
                       onClick={() => onTabChange(tabKey)}
-                      className={`rounded-full px-4 py-1.5 font-serif text-[14px] font-semibold transition-all cursor-pointer ${
+                      className={`relative z-10 inline-block rounded-full px-4 py-1.5 font-serif text-[14px] font-semibold transition-all cursor-pointer ${
                         isActive
                           ? "bg-white text-[#21a447] shadow-sm"
                           : "bg-white/50 text-[#171717]/70 hover:bg-white/70"
                       }`}
                     >
                       {tabs[tabKey].tagLabel}
-                    </button>
+                    </Link>
                   );
                 })}
               </div>
@@ -55,8 +63,8 @@ export function TopicsLibraryHero({
                 {content.heroHeadline.suffix}
               </h1>
               <p className="mt-4 font-serif text-[15px] sm:text-[16px] text-[#171717]/80">
-                Jelajahi berbagai materi pembelajaran interaktif untuk
-                mendalami teknologi pertanian cerdas secara praktis.
+                Jelajahi berbagai materi pembelajaran interaktif untuk mendalami
+                teknologi pertanian cerdas secara praktis.
               </p>
             </div>
 
