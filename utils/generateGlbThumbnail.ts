@@ -27,7 +27,7 @@ export async function generateGlbThumbnail(file: File): Promise<Blob> {
   const dirLight = new DirectionalLight(
     "thumbDir",
     new Vector3(0.4, -1, 0.6),
-    scene
+    scene,
   );
   dirLight.intensity = 1.2;
 
@@ -37,7 +37,7 @@ export async function generateGlbThumbnail(file: File): Promise<Blob> {
     Math.PI / 2.6,
     3,
     Vector3.Zero(),
-    scene
+    scene,
   );
   scene.activeCamera = camera;
 
@@ -53,7 +53,7 @@ export async function generateGlbThumbnail(file: File): Promise<Blob> {
       objectUrl,
       scene,
       undefined,
-      extension
+      extension,
     );
   } catch (err) {
     URL.revokeObjectURL(objectUrl);

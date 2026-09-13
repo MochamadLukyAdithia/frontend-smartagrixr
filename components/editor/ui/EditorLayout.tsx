@@ -15,7 +15,7 @@ export function EditorLayout() {
   const isPreviewMode = useEditorStore((state) => state.isPreviewMode);
 
   return (
-    <div className="flex flex-col w-screen h-screen bg-[#121212] font-sans text-white select-none overflow-hidden">
+    <div className="flex flex-col w-screen h-screen bg-slate-100 font-sans text-slate-900 select-none overflow-hidden">
       {/* Keyboard shortcuts listener */}
       <KeyboardShortcutManager />
 

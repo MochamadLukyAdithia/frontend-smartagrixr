@@ -1,7 +1,7 @@
 "use client";
 
 import { useEditorStore } from "../store/useEditorStore";
-import { Info, X, Sparkles } from "lucide-react";
+import { Info, X } from "lucide-react";
 
 export function AnnotationOverlay() {
   const { activeInfoDialog, setActiveInfoDialog } = useEditorStore();
@@ -9,45 +9,47 @@ export function AnnotationOverlay() {
   if (!activeInfoDialog) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 select-none animate-in fade-in zoom-in-95 duration-150">
-      <div className="relative w-full max-w-md bg-[#1c1c20] border border-[#22a447]/30 rounded-2xl shadow-2xl overflow-hidden text-white p-6">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4 select-none animate-in fade-in duration-150 font-sans">
+      <div className="relative w-full max-w-sm bg-white border border-slate-200 rounded-2xl shadow-2xl overflow-hidden text-slate-800 p-5">
         
         {/* Close Button */}
         <button
           onClick={() => setActiveInfoDialog(null)}
-          className="absolute top-4 right-4 p-1.5 text-gray-400 hover:text-white rounded-full hover:bg-white/10 transition-colors"
+          className="bouncy-hover absolute top-3.5 right-3.5 p-1.5 text-slate-400 hover:text-slate-700 rounded-xl hover:bg-slate-100 transition-colors cursor-pointer"
         >
-          <X className="w-5 h-5" />
+          <X className="w-4 h-4" />
         </button>
 
         {/* Icon & Title */}
-        <div className="flex items-center gap-3 mb-4">
-          <div className="w-10 h-10 rounded-xl bg-[#22a447]/20 border border-[#22a447]/40 flex items-center justify-center text-[#22a447]">
-            <Sparkles className="w-5 h-5" />
+        <div className="flex items-center gap-3 mb-3.5">
+          <div className="w-9 h-9 rounded-xl bg-emerald-100 border border-emerald-300/60 flex items-center justify-center text-emerald-700 shadow-xs">
+            <Info className="w-5 h-5" />
           </div>
           <div>
-            <h3 className="text-base font-bold text-white tracking-tight">
+            <h3 className="text-sm font-bold text-slate-900 tracking-tight">
               {activeInfoDialog.title}
             </h3>
-            <span className="text-[10px] text-[#22a447] font-semibold uppercase tracking-wider">
-              Smart Agriculture Node
+            <span className="text-[10px] text-emerald-800 font-bold bg-emerald-100 px-2 py-0.5 rounded-full border border-emerald-300/60">
+              Informasi Agrikultur
             </span>
           </div>
         </div>
 
         {/* Content */}
-        <div className="bg-[#141416] p-4 rounded-xl border border-white/5 text-xs text-gray-300 leading-relaxed max-h-60 overflow-y-auto">
+        <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200 text-xs text-slate-700 leading-relaxed max-h-56 overflow-y-auto font-medium">
           {activeInfoDialog.content}
         </div>
 
         {/* Action button */}
         <button
           onClick={() => setActiveInfoDialog(null)}
-          className="mt-4 w-full py-2.5 bg-[#22a447] hover:bg-[#198b3a] text-white text-xs font-bold rounded-xl transition-all shadow-md"
+          className="bouncy-hover mt-4 w-full py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl transition-all shadow-sm cursor-pointer"
         >
-          Got it
+          Tutup
         </button>
       </div>
     </div>
   );
 }
+
+

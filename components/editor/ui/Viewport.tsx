@@ -11,8 +11,43 @@ export function Viewport() {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const isPreviewMode = useEditorStore((state) => state.isPreviewMode);
   const selectedIds = useEditorStore((state) => state.selectedIds);
+  const addAsset = useEditorStore((state) => state.addAsset);
   const [menuPos, setMenuPos] = useState<{ x: number; y: number } | null>(null);
   const [showMore, setShowMore] = useState(false);
+  const [isDragOver, setIsDragOver] = useState(false);
+
+  const handleCanvasDrop = async (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(false);
+
+    const files = e.dataTransfer.files;
+    const editor = getEditorInstance();
+    if (!files || files.length === 0 || !editor) return;
+
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      const ext = file.name.split(".").pop()?.toLowerCase() || "";
+      const objectUrl = URL.createObjectURL(file);
+
+      try {
+        if (ext === "glb" || ext === "gltf") {
+          await editor.importManager.importFile(file);
+        } else if (["png", "jpg", "jpeg", "webp", "gif", "svg"].includes(ext)) {
+          editor.objectManager.createImage(file);
+          addAsset({ id: "img_" + Math.random().toString(36).substring(2, 9), name: file.name, url: objectUrl, type: "image" });
+        } else if (["mp4", "webm", "ogv", "mov"].includes(ext)) {
+          editor.objectManager.createVideo(file);
+          addAsset({ id: "vid_" + Math.random().toString(36).substring(2, 9), name: file.name, url: objectUrl, type: "video" });
+        } else if (["mp3", "wav", "ogg", "aac"].includes(ext)) {
+          editor.objectManager.createAudio(file);
+          addAsset({ id: "aud_" + Math.random().toString(36).substring(2, 9), name: file.name, url: objectUrl, type: "audio" });
+        }
+      } catch (err) {
+        console.error("Drop import failed:", err);
+      }
+    }
+  };
 
   useEffect(() => {
     if (!canvasRef.current) return;
@@ -38,7 +73,37 @@ export function Viewport() {
       const camera = engine.scene.activeCamera;
       if (!camera) return;
 
-      const pos = node.absolutePosition || node.position || Vector3.Zero();
+      let topY = node.absolutePosition ? node.absolutePosition.y : (node.position ? node.position.y : 0);
+      let posX = node.absolutePosition ? node.absolutePosition.x : (node.position ? node.position.x : 0);
+      let posZ = node.absolutePosition ? node.absolutePosition.z : (node.position ? node.position.z : 0);
+
+      const childMeshes = node.getChildMeshes ? node.getChildMeshes() : (node.getBoundingInfo ? [node] : []);
+      if (childMeshes.length > 0) {
+        let maxWorldY = -Number.MAX_VALUE;
+        let sumX = 0;
+        let sumZ = 0;
+        let validCount = 0;
+
+        childMeshes.forEach((m: any) => {
+          if (m.getBoundingInfo) {
+            const b = m.getBoundingInfo().boundingBox;
+            maxWorldY = Math.max(maxWorldY, b.maximumWorld.y);
+            sumX += b.centerWorld.x;
+            sumZ += b.centerWorld.z;
+            validCount++;
+          }
+        });
+
+        if (maxWorldY !== -Number.MAX_VALUE) {
+          topY = maxWorldY;
+        }
+        if (validCount > 0) {
+          posX = sumX / validCount;
+          posZ = sumZ / validCount;
+        }
+      }
+
+      const topPos = new Vector3(posX, topY, posZ);
       const transformMatrix = engine.scene.getTransformMatrix();
       const viewport = camera.viewport.toGlobal(
         engine.engine.getRenderWidth(),
@@ -46,7 +111,7 @@ export function Viewport() {
       );
 
       const projected = Vector3.Project(
-        pos,
+        topPos,
         Matrix.IdentityReadOnly || Matrix.Identity(),
         transformMatrix,
         viewport
@@ -55,9 +120,10 @@ export function Viewport() {
       // Offset position slightly above the object
       setMenuPos({
         x: projected.x,
-        y: projected.y - 60,
+        y: projected.y - 40,
       });
     });
+
 
     // Auto-resize Babylon engine on any container or canvas dimensions change
     const resizeEngine = () => {
@@ -96,14 +162,19 @@ export function Viewport() {
   }, [isPreviewMode]);
 
   const activeSceneId = useEditorStore((state) => state.activeSceneId);
+  const prevSceneIdRef = useRef(activeSceneId);
 
   // Reload scene when activeSceneId changes
   useEffect(() => {
-    const editor = getEditorInstance();
-    if (editor) {
-      editor.objectManager.loadActiveScene();
+    if (prevSceneIdRef.current !== activeSceneId) {
+      prevSceneIdRef.current = activeSceneId;
+      const editor = getEditorInstance();
+      if (editor) {
+        editor.objectManager.loadActiveScene();
+      }
     }
   }, [activeSceneId]);
+
 
   const activeSelectedId = selectedIds.length === 1 ? selectedIds[0] : null;
 
@@ -140,11 +211,37 @@ export function Viewport() {
   };
 
   return (
-    <div className="relative w-full h-full bg-[#e8e8e8] overflow-hidden flex-1">
+    <div 
+      className="relative w-full h-full bg-[#e8e8e8] overflow-hidden flex-1"
+      onDragOver={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (!isDragOver) setIsDragOver(true);
+      }}
+      onDragLeave={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsDragOver(false);
+      }}
+      onDrop={handleCanvasDrop}
+    >
       <canvas
         ref={canvasRef}
         className="w-full h-full outline-none block touch-none"
       />
+
+      {/* Drag & Drop Visual Dropzone Overlay */}
+      {isDragOver && (
+        <div className="absolute inset-0 bg-emerald-600/15 backdrop-blur-[2px] border-4 border-dashed border-emerald-500 rounded-2xl m-4 flex flex-col items-center justify-center gap-3 z-50 pointer-events-none animate-in fade-in duration-150">
+          <div className="w-16 h-16 rounded-2xl bg-white shadow-xl flex items-center justify-center text-emerald-600">
+            <Move className="w-8 h-8 animate-bounce" />
+          </div>
+          <div className="bg-white/90 px-4 py-2 rounded-xl shadow-md flex flex-col items-center">
+            <span className="text-sm font-bold text-slate-800">Lepaskan File di Sini</span>
+            <span className="text-xs text-slate-500">Otomatis langsung dimuat & tampil di Canvas 3D</span>
+          </div>
+        </div>
+      )}
 
       {/* Floating Contextual Object Menu */}
       {menuPos && !isPreviewMode && (
