@@ -28,6 +28,9 @@ export interface ApiAsset {
   file_extension?: string | null;
   extension?: string | null;
   asset_type?: string | null;
+  type?: string | null;
+  file_url?: string | null;
+  locked?: boolean;
 }
 
 export function assetExtensionCandidates(
@@ -59,6 +62,45 @@ interface LoginCredentials {
 
 export function getGoogleLoginUrl(): string {
   return `${API_URL}/auth/google/redirect`;
+}
+
+export interface RegisterParams {
+  name: string;
+  username: string;
+  email: string;
+  password: string;
+  password_confirmation: string;
+}
+
+export async function register(
+  params: RegisterParams
+): Promise<Record<string, unknown>> {
+  const res = await fetch(`${API_URL}/api/register`, {
+    method: "POST",
+    headers: {
+      Accept: "application/json",
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(params),
+  });
+
+  let data: Record<string, unknown> | null = null;
+  if (res.status !== 204) {
+    data = await res.json().catch(() => null);
+  }
+
+  if (!res.ok) {
+    const errors = (data as { errors?: Record<string, string[]> } | null)
+      ?.errors;
+    const firstError = errors ? Object.values(errors)[0]?.[0] : null;
+    throw new Error(
+      firstError ||
+        (data as { message?: string } | null)?.message ||
+        "Gagal membuat akun."
+    );
+  }
+
+  return data ?? {};
 }
 
 export async function login(
@@ -124,10 +166,37 @@ export async function fetchAssets(
     );
   }
 
-  return (data as { data?: AssetsResponse } | null)?.data ?? data ?? {
-    my_assets: [],
-    public_assets: [],
-  };
+  const body = (data as { data?: unknown } | null)?.data ?? data;
+
+  // Bentuk normal: { my_assets: [], public_assets: [] }
+  if (
+    body &&
+    typeof body === "object" &&
+    "my_assets" in body &&
+    "public_assets" in body
+  ) {
+    return body as AssetsResponse;
+  }
+
+  // Bentuk paginator publik: { data: [...] }
+  if (
+    body &&
+    typeof body === "object" &&
+    "data" in body &&
+    Array.isArray((body as { data: unknown }).data)
+  ) {
+    return {
+      my_assets: [],
+      public_assets: (body as { data: ApiAsset[] }).data,
+    };
+  }
+
+  // Bentuk array langsung jika ada
+  if (Array.isArray(body)) {
+    return { my_assets: [], public_assets: body as ApiAsset[] };
+  }
+
+  return { my_assets: [], public_assets: [] };
 }
 
 export async function fetchAssetUrl(

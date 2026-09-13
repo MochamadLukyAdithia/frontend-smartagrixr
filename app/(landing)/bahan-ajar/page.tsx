@@ -447,34 +447,34 @@ export default function TopicsLibrary() {
               ))}
 
               {token && (
-              <div
-                onClick={() => setShowUploadModal(true)}
-                className="flex cursor-pointer flex-col items-center justify-center overflow-hidden rounded-md border-2 border-dashed border-[#21a447]/60 bg-white transition-all duration-300 hover:-translate-y-1 hover:shadow-md hover:border-[#21a447]"
-              >
-                <div className="relative aspect-[3/4] w-full flex flex-col items-center justify-center bg-gray-50 p-4">
-                  <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-[#21a447]/10">
-                    <svg
-                      width="24"
-                      height="24"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      xmlns="http://www.w3.org/2000/svg"
-                    >
-                      <path
-                        d="M12 5V19M5 12H19"
-                        stroke="#21a447"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                    </svg>
+                <div
+                  onClick={() => setShowUploadModal(true)}
+                  className="flex cursor-pointer flex-col items-center justify-center overflow-hidden rounded-md border-2 border-dashed border-[#21a447]/60 bg-white transition-all duration-300 hover:-translate-y-1 hover:shadow-md hover:border-[#21a447]"
+                >
+                  <div className="relative aspect-[3/4] w-full flex flex-col items-center justify-center bg-gray-50 p-4">
+                    <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-[#21a447]/10">
+                      <svg
+                        width="24"
+                        height="24"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        xmlns="http://www.w3.org/2000/svg"
+                      >
+                        <path
+                          d="M12 5V19M5 12H19"
+                          stroke="#21a447"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
+                    </div>
+                    <p className="font-serif text-[13px] font-semibold text-[#21a447]">
+                      Tambah Aset
+                    </p>
                   </div>
-                  <p className="font-serif text-[13px] font-semibold text-[#21a447]">
-                    Tambah Aset
-                  </p>
                 </div>
-              </div>
-            )}
+              )}
             </div>
           )}
         </section>

@@ -1,24 +1,12 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import Link from "next/link";
+import { Box } from "lucide-react";
 import { normalizeEmbedHtml } from "@/lib/canva";
+import { useAuthStore } from "@/stores/useAuthStore";
 
 const API_URL = (process.env.NEXT_PUBLIC_API_URL ?? "").replace(/\/$/, "");
-
-// ⚠️ SESUAIKAN dengan mekanisme auth kamu yang sebenarnya (Zustand persist,
-// cookie, dll). Ini cuma fallback tebakan umum — token dicoba dibaca dari
-// localStorage dulu, baru cookie.
-function getAuthToken(): string | null {
-  if (typeof window === "undefined") return null;
-  return (
-    localStorage.getItem("token") ??
-    document.cookie
-      .split("; ")
-      .find((row) => row.startsWith("token="))
-      ?.split("=")[1] ??
-    null
-  );
-}
 
 type ContentAuthor = {
   id: number;
@@ -67,6 +55,7 @@ type Props = {
 const RELATED_PER_PAGE = 4;
 
 export function ContentDetailModal({ contentId, onClose }: Props) {
+  const token = useAuthStore((s) => s.token);
   const [activeId, setActiveId] = useState<number | null>(contentId);
   const [detail, setDetail] = useState<ContentDetail | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -83,8 +72,6 @@ export function ContentDetailModal({ contentId, onClose }: Props) {
       try {
         setIsLoading(true);
         setError(null);
-
-        const token = getAuthToken();
 
         const res = await fetch(
           `${API_URL}/api/learn/contents/${id}?related_page=${page}&related_per_page=${RELATED_PER_PAGE}`,
@@ -119,7 +106,7 @@ export function ContentDetailModal({ contentId, onClose }: Props) {
         setIsLoading(false);
       }
     },
-    []
+    [token]
   );
 
   // Fetch setiap kali activeId atau relatedPage berubah
@@ -190,7 +177,7 @@ export function ContentDetailModal({ contentId, onClose }: Props) {
           {!isLoading && !error && detail && (
             <>
               {/* Embed Canva / video */}
-              <div className="mx-auto w-full max-w-[700px]">
+              <div className="relative mx-auto w-full max-w-[700px]">
                 {detail.content_type === "canva" && detail.embed_url ? (
                   <div
                     className="canva-embed-wrapper overflow-hidden rounded-2xl shadow-inner"
@@ -209,6 +196,25 @@ export function ContentDetailModal({ contentId, onClose }: Props) {
                 ) : (
                   <div className="flex aspect-[16/9] w-full items-center justify-center rounded-2xl bg-gray-100 text-gray-400">
                     Pratinjau tidak tersedia
+                  </div>
+                )}
+
+                {!token && (
+                  <div className="absolute inset-0 z-40 flex flex-col items-center justify-center rounded-2xl bg-white/85 p-6 text-center backdrop-blur-sm">
+                    <Box className="mb-4 h-12 w-12 text-[#21a447]" />
+                    <h3 className="font-serif text-[18px] font-bold text-[#171717] sm:text-[20px]">
+                      Masuk untuk mengakses konten ini
+                    </h3>
+                    <p className="mt-2 max-w-[280px] font-serif text-[13px] text-gray-600">
+                      Silakan masuk terlebih dahulu untuk melihat dan mengunduh
+                      materi ini.
+                    </p>
+                    <Link
+                      href="/masuk"
+                      className="mt-6 inline-flex h-[44px] items-center justify-center rounded-full bg-[#21a447] px-8 font-serif text-[14px] font-bold text-white transition-colors hover:bg-[#198b3a]"
+                    >
+                      Masuk
+                    </Link>
                   </div>
                 )}
               </div>

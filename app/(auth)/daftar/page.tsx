@@ -3,11 +3,13 @@
 import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { getGoogleLoginUrl } from "@/lib/api";
+import { getGoogleLoginUrl, register } from "@/lib/api";
 
 export default function Daftar() {
   const [step, setStep] = useState<number>(1);
   const [isEmailReg, setIsEmailReg] = useState(false);
+  const [registerError, setRegisterError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -140,6 +142,43 @@ export default function Daftar() {
       setStep(step + 1);
     } else {
       window.location.href = "/dashboard/beranda";
+    }
+  };
+
+  const handleEmailRegister = async (e?: React.FormEvent) => {
+    e?.preventDefault();
+    setRegisterError(null);
+
+    if (
+      !formData.name ||
+      !formData.username ||
+      !formData.email ||
+      !formData.password
+    ) {
+      setRegisterError("Lengkapi semua field untuk mendaftar.");
+      return;
+    }
+    if (formData.password !== formData.confirmPassword) {
+      setRegisterError("Konfirmasi kata sandi tidak cocok.");
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      await register({
+        name: formData.name,
+        username: formData.username,
+        email: formData.email,
+        password: formData.password,
+        password_confirmation: formData.confirmPassword,
+      });
+      window.location.href = "/masuk";
+    } catch (err) {
+      setRegisterError(
+        err instanceof Error ? err.message : "Gagal membuat akun.",
+      );
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -418,11 +457,18 @@ export default function Daftar() {
                   </p>
                 </div>
 
+                {registerError && (
+                  <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 font-serif text-[13px] text-red-600">
+                    {registerError}
+                  </p>
+                )}
+
                 <button
-                  onClick={() => handleNext()}
-                  className="mt-4 w-full rounded-full bg-[#1b7339] py-3.5 font-serif text-[16px] font-bold text-white shadow-md transition-all hover:bg-[#145a2b]"
+                  onClick={handleEmailRegister}
+                  disabled={isSubmitting}
+                  className="mt-4 w-full rounded-full bg-[#1b7339] py-3.5 font-serif text-[16px] font-bold text-white shadow-md transition-all hover:bg-[#145a2b] disabled:opacity-60"
                 >
-                  Daftar
+                  {isSubmitting ? "Memproses..." : "Daftar"}
                 </button>
               </div>
             </div>

@@ -13,30 +13,42 @@ export async function GET(
   const queryToken = searchParams.get("access_token");
   const authHeader = request.headers.get("authorization") || "";
   const token = queryToken || authHeader.replace("Bearer ", "").trim();
+  const directUrl = searchParams.get("url");
 
-  const res = await fetch(`${API_URL}/api/assets/${id}/url`, {
-    headers: {
-      Accept: "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    },
-    cache: "no-store",
-  });
+  let modelUrl = "";
 
-  if (!res.ok) {
-    return new Response(
-      JSON.stringify({ message: "Gagal mengambil URL aset." }),
-      { status: res.status, headers: { "Content-Type": "application/json" } }
-    );
+  if (directUrl) {
+    modelUrl = directUrl;
+  } else {
+    const res = await fetch(`${API_URL}/api/assets/${id}/url`, {
+      headers: {
+        Accept: "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      cache: "no-store",
+    });
+
+    if (!res.ok) {
+      return new Response(
+        JSON.stringify({ message: "Gagal mengambil URL aset." }),
+        { status: res.status, headers: { "Content-Type": "application/json" } }
+      );
+    }
+
+    const json = (await res.json()) as { data?: { url?: string } };
+    const url = json.data?.url;
+
+    if (!url) {
+      return Response.json(
+        { message: "URL aset tidak tersedia." },
+        { status: 404 }
+      );
+    }
+
+    modelUrl = url;
   }
 
-  const json = (await res.json()) as { data?: { url?: string } };
-  const url = json.data?.url;
-
-  if (!url) {
-    return Response.json({ message: "URL aset tidak tersedia." }, { status: 404 });
-  }
-
-  const upstream = await fetch(url, {
+  const upstream = await fetch(modelUrl, {
     headers: {
       Accept:
         "model/gltf-binary,model/gltf+json,application/octet-stream,*/*",

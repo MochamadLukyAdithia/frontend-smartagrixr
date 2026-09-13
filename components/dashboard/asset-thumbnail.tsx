@@ -31,7 +31,7 @@ export function AssetThumbnail({
       assetExtensionCandidates(
         asset.file_extension,
         asset.extension,
-        asset.asset_type,
+        asset.asset_type ?? asset.type,
         asset.name,
         asset.thumbnail_url
       ),
@@ -39,6 +39,7 @@ export function AssetThumbnail({
       asset.file_extension,
       asset.extension,
       asset.asset_type,
+      asset.type,
       asset.name,
       asset.thumbnail_url,
     ]
@@ -68,9 +69,11 @@ export function AssetThumbnail({
       scene
     );
 
-    const url = token
-      ? `/api/assets/${asset.id}/asset?access_token=${encodeURIComponent(token)}`
-      : `/api/assets/${asset.id}/asset`;
+    const url = asset.file_url
+      ? `/api/assets/${asset.id}/asset?url=${encodeURIComponent(asset.file_url)}`
+      : token
+        ? `/api/assets/${asset.id}/asset?access_token=${encodeURIComponent(token)}`
+        : `/api/assets/${asset.id}/asset`;
 
     const resizeObserver = new ResizeObserver(() => engine.resize());
     if (canvas.parentElement) resizeObserver.observe(canvas.parentElement);

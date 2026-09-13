@@ -25,6 +25,7 @@ import {
   Check,
   Edit3,
 } from "lucide-react";
+import Link from "next/link";
 import { assetExtensionCandidates, type ApiAsset } from "@/lib/api";
 
 export function AssetDetailModal({
@@ -49,7 +50,7 @@ export function AssetDetailModal({
       assetExtensionCandidates(
         asset.file_extension,
         asset.extension,
-        asset.asset_type,
+        asset.asset_type ?? asset.type,
         asset.name,
         asset.thumbnail_url,
       ),
@@ -57,6 +58,7 @@ export function AssetDetailModal({
       asset.file_extension,
       asset.extension,
       asset.asset_type,
+      asset.type,
       asset.name,
       asset.thumbnail_url,
     ],
@@ -91,11 +93,13 @@ export function AssetDetailModal({
     camera.minZ = 0.1;
     camera.attachControl(canvas, true);
 
-    const url = token
-      ? `/api/assets/${asset.id}/asset?access_token=${encodeURIComponent(
-          token,
-        )}`
-      : `/api/assets/${asset.id}/asset`;
+    const url = asset.file_url
+      ? `/api/assets/${asset.id}/asset?url=${encodeURIComponent(asset.file_url)}`
+      : token
+        ? `/api/assets/${asset.id}/asset?access_token=${encodeURIComponent(
+            token,
+          )}`
+        : `/api/assets/${asset.id}/asset`;
 
     const resizeObserver = new ResizeObserver(() => engine.resize());
     if (canvas.parentElement) resizeObserver.observe(canvas.parentElement);
@@ -199,7 +203,10 @@ export function AssetDetailModal({
             </div>
 
             <div className="mt-auto flex flex-col gap-3 md:mt-0">
-              <button className="flex w-full items-center justify-between rounded-xl bg-[#ff7a3d] px-4 py-3.5 text-white transition hover:bg-[#ff6822]">
+              <button
+                disabled={!token}
+                className="flex w-full items-center justify-between rounded-xl bg-[#ff7a3d] px-4 py-3.5 text-white transition hover:bg-[#ff6822] disabled:cursor-not-allowed disabled:opacity-40"
+              >
                 <div className="flex items-center gap-2 font-serif text-[14px] font-bold">
                   Duplikat <Copy className="h-4 w-4" />
                 </div>
@@ -210,7 +217,8 @@ export function AssetDetailModal({
 
               <button
                 onClick={() => setIsMarkerMode(true)}
-                className="flex w-full items-center justify-between rounded-xl bg-[#2563eb] px-4 py-3.5 text-white transition hover:bg-[#1d4ed8]"
+                disabled={!token}
+                className="flex w-full items-center justify-between rounded-xl bg-[#2563eb] px-4 py-3.5 text-white transition hover:bg-[#1d4ed8] disabled:cursor-not-allowed disabled:opacity-40"
               >
                 <span className="font-serif text-[14px] font-bold">
                   Atur Marker
@@ -218,7 +226,10 @@ export function AssetDetailModal({
                 <QrCode className="h-5 w-5" />
               </button>
 
-              <button className="flex w-full items-center justify-between rounded-xl border-2 border-[#2563eb] bg-white px-4 py-3 text-[#2563eb] transition hover:bg-gray-50">
+              <button
+                disabled={!token}
+                className="flex w-full items-center justify-between rounded-xl border-2 border-[#2563eb] bg-white px-4 py-3 text-[#2563eb] transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
+              >
                 <span className="font-serif text-[14px] font-bold">
                   Embed di Canva
                 </span>
@@ -522,6 +533,25 @@ export function AssetDetailModal({
               isMarkerMode && markerStep === 3 ? "hidden" : "block"
             }`}
           />
+
+          {!token && (
+            <div className="absolute inset-0 z-40 flex flex-col items-center justify-center bg-white/85 p-6 text-center backdrop-blur-sm">
+              <Box className="mb-4 h-12 w-12 text-[#21a447]" />
+              <h3 className="font-serif text-[18px] font-bold text-[#171717] sm:text-[20px]">
+                Masuk untuk mengakses konten ini
+              </h3>
+              <p className="mt-2 max-w-[280px] font-serif text-[13px] text-gray-600">
+                Silakan masuk terlebih dahulu untuk melihat dan mengelola
+                objek 3D.
+              </p>
+              <Link
+                href="/masuk"
+                className="mt-6 inline-flex h-[44px] items-center justify-center rounded-full bg-[#21a447] px-8 font-serif text-[14px] font-bold text-white transition-colors hover:bg-[#198b3a]"
+              >
+                Masuk
+              </Link>
+            </div>
+          )}
 
           {/* OVERLAY DEFAULT (Hanya muncul jika bukan Marker Mode) */}
           {!isMarkerMode && (
