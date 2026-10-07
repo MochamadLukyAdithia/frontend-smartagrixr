@@ -6,11 +6,26 @@ import { useParams, useRouter } from "next/navigation";
 import { Navbar } from "@/components/layout/navbar";
 import Footer from "@/components/layout/footer";
 import { useAuthStore } from "@/stores/useAuthStore";
-import { fetchClassroom, updateClassroom, deleteClassroom, fetchClassroomFeed } from "@/lib/api";
-import type { ClassroomDetail, ClassroomStudent, FeedPost } from "@/lib/api";
-import { PostCard } from "./components/post-card";
+import {
+  fetchClassroom,
+  updateClassroom,
+  deleteClassroom,
+  fetchClassroomFeed,
+  deleteClassroomPost,
+  classroomFileUrl,
+} from "@/lib/api";
+import type {
+  ClassroomDetail,
+  ClassroomStudent,
+  FeedFile,
+  FeedPost,
+} from "@/lib/api";
+import { FileViewer, PostCard } from "./components/post-card";
+import { CreatePostComposer } from "./components/create-post-composer";
 import {
   ArrowLeft,
+  Eye,
+  FileText,
   MoreHorizontal,
   Share2,
   Pencil,
@@ -24,6 +39,32 @@ interface MateriItem {
   badge: string;
   image: string;
   resume: string;
+  files: FeedFile[];
+}
+
+const FALLBACK_MATERI_IMAGE =
+  "https://images.unsplash.com/photo-1586771107445-d3ca888129ff?q=80&w=800&auto=format&fit=crop";
+
+function isImageUrl(url: string | null): boolean {
+  if (!url) return false;
+  return /\.(png|jpe?g|gif|webp|svg|avif|bmp)(\?.*)?$/i.test(url);
+}
+
+function postToMateriItem(
+  post: FeedPost,
+  token: string | null,
+): MateriItem {
+  const imageFile = post.files.find((f) => isImageUrl(f.url));
+  return {
+    id: String(post.id),
+    title: post.title ?? post.body,
+    badge: post.category ?? post.user.name,
+    image: imageFile
+      ? (classroomFileUrl(imageFile, token) ?? FALLBACK_MATERI_IMAGE)
+      : FALLBACK_MATERI_IMAGE,
+    resume: post.body,
+    files: post.files,
+  };
 }
 
 export const DetailKelas = () => {
@@ -31,10 +72,13 @@ export const DetailKelas = () => {
   const router = useRouter();
   const token = useAuthStore((s) => s.token);
   const user = useAuthStore((s) => s.user);
-  const [activeTab, setActiveTab] = useState<"beranda" | "materi" | "anggota">(
-    "beranda",
-  );
+  const [activeTab, setActiveTab] = useState<
+    "beranda" | "materi" | "tugas" | "anggota"
+  >("beranda");
   const [selectedMateri, setSelectedMateri] = useState<MateriItem | null>(null);
+  const [viewerMateriFile, setViewerMateriFile] = useState<FeedFile | null>(
+    null,
+  );
   const [feedPosts, setFeedPosts] = useState<FeedPost[]>([]);
   const [feedLoading, setFeedLoading] = useState(true);
   const [feedError, setFeedError] = useState<string | null>(null);
@@ -86,7 +130,9 @@ export const DetailKelas = () => {
       })
       .catch((err) => {
         if (!cancelled)
-          setFeedError(err instanceof Error ? err.message : "Gagal memuat feed.");
+          setFeedError(
+            err instanceof Error ? err.message : "Gagal memuat feed.",
+          );
       })
       .finally(() => {
         if (!cancelled) setFeedLoading(false);
@@ -146,38 +192,38 @@ export const DetailKelas = () => {
     }
   };
 
-  const materiList: MateriItem[] = [
-    {
-      id: "1",
-      title: "Pengenalan Mekanisasi Pertanian",
-      badge: "Guru",
-      image:
-        "https://images.unsplash.com/photo-1586771107445-d3ca888129ff?q=80&w=800&auto=format&fit=crop",
-      resume:
-        "Materi ini membahas prinsip dasar mekanisasi pertanian, penggunaan alat dan mesin modern untuk meningkatkan efisiensi serta produktivitas lahan.",
-    },
-    {
-      id: "2",
-      title: "Pelaku dan Alur dalam Rantai Pasok",
-      badge: "Guru",
-      image:
-        "https://images.unsplash.com/photo-1595974482597-4b8da8879bc5?q=80&w=800&auto=format&fit=crop",
-      resume:
-        "Memahami ekosistem rantai pasok agribisnis dari petani, distributor, hingga konsumen akhir serta tantangan logistik pertanian.",
-    },
-    {
-      id: "3",
-      title: "Pengenalan Budidaya Tanaman Modern",
-      badge: "Guru",
-      image:
-        "https://images.unsplash.com/photo-1530836369250-ef72a3f5cda8?q=80&w=800&auto=format&fit=crop",
-      resume:
-        "Materi ini mengajak mahasiswa mengenal konsep budidaya tanaman modern serta perbedaannya dengan metode budidaya konvensional. Mahasiswa akan mempelajari bagaimana teknologi, pengelolaan lingkungan, dan penggunaan sumber daya yang efisien dapat mendukung proses produksi tanaman. Melalui materi ini, mahasiswa diharapkan memahami dasar penerapan budidaya modern untuk meningkatkan produktivitas sekaligus mendukung pertanian berkelanjutan.",
-    },
-  ];
+  const announcementPosts = feedPosts.filter(
+    (post) => post.type === "announcement",
+  );
+  const materiPosts = feedPosts.filter((post) => post.type === "material");
+  const assignmentPosts = feedPosts.filter(
+    (post) => post.type === "assignment",
+  );
+
+  const materiList: MateriItem[] = materiPosts.map((p) =>
+    postToMateriItem(p, token),
+  );
 
   const isFeedOwner = (userId: number): boolean =>
     Boolean(user && userId && Number(user.id) === Number(userId));
+
+  const isTeacher = Boolean(
+    classroom && user && Number(user.id) === Number(classroom.teacher_id),
+  );
+
+  const handlePostCreated = (post: FeedPost) => {
+    setFeedPosts((prev) => [post, ...prev]);
+  };
+
+  const handlePostDeleted = async (post: FeedPost) => {
+    if (!token || !id) return;
+    try {
+      await deleteClassroomPost(token, id, post.id);
+      setFeedPosts((prev) => prev.filter((p) => p.id !== post.id));
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Gagal menghapus post.");
+    }
+  };
 
   return (
     <div className="relative min-h-screen flex flex-col bg-[url('/bg.svg')] text-[#171717] overflow-hidden">
@@ -304,6 +350,19 @@ export const DetailKelas = () => {
               )}
             </button>
             <button
+              onClick={() => setActiveTab("tugas")}
+              className={`pb-3 font-serif text-base font-semibold transition-colors relative cursor-pointer ${
+                activeTab === "tugas"
+                  ? "text-[#145a2b]"
+                  : "text-gray-600 hover:text-gray-900"
+              }`}
+            >
+              Tugas
+              {activeTab === "tugas" && (
+                <span className="absolute bottom-0 left-0 h-[2px] w-full bg-[#145a2b]" />
+              )}
+            </button>
+            <button
               onClick={() => setActiveTab("anggota")}
               className={`pb-3 font-serif text-base font-semibold transition-colors relative cursor-pointer ${
                 activeTab === "anggota"
@@ -322,6 +381,14 @@ export const DetailKelas = () => {
         {activeTab === "beranda" && (
           <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-3">
             <div className="lg:col-span-2 space-y-6">
+              {isTeacher && (
+                <CreatePostComposer
+                  token={token}
+                  classroomId={id}
+                  onCreated={handlePostCreated}
+                />
+              )}
+
               {feedLoading && (
                 <div className="space-y-3">
                   {Array.from({ length: 2 }).map((_, i) => (
@@ -339,21 +406,23 @@ export const DetailKelas = () => {
                 </div>
               )}
 
-              {!feedLoading && !feedError && feedPosts.length === 0 && (
+              {!feedLoading && !feedError && announcementPosts.length === 0 && (
                 <div className="rounded-xl border border-gray-200 bg-white p-6 text-center">
                   <p className="font-serif text-sm text-gray-500">
-                    Belum ada post di kelas ini.
+                    Belum ada pengumuman di kelas ini.
                   </p>
                 </div>
               )}
 
-              {feedPosts.map((post) => (
+              {announcementPosts.map((post) => (
                 <PostCard
                   key={post.id}
                   token={token}
                   classroomId={id}
                   post={post}
                   isOwner={isFeedOwner}
+                  canDelete={isTeacher}
+                  onDelete={handlePostDeleted}
                 />
               ))}
             </div>
@@ -363,27 +432,33 @@ export const DetailKelas = () => {
                 <h3 className="font-serif text-sm font-bold text-gray-900 mb-3">
                   Materi Kelas
                 </h3>
-                <div
-                  onClick={() => setSelectedMateri(materiList[0])}
-                  className="cursor-pointer group overflow-hidden rounded-lg border border-gray-100 bg-white transition hover:shadow-md"
-                >
-                  <div className="relative h-28 w-full">
-                    <img
-                      src={materiList[0].image}
-                      alt={materiList[0].title}
-                      className="h-full w-full object-cover"
-                    />
-                    <span className="absolute top-2 right-2 rounded-full bg-[#21a447] px-2 py-0.5 text-[10px] font-semibold text-white">
-                      {materiList[0].badge}
-                    </span>
+                {materiList.length === 0 ? (
+                  <p className="font-serif text-xs text-gray-400">
+                    Belum ada materi di kelas ini.
+                  </p>
+                ) : (
+                  <div
+                    onClick={() => setSelectedMateri(materiList[0])}
+                    className="cursor-pointer group overflow-hidden rounded-lg border border-gray-100 bg-white transition hover:shadow-md"
+                  >
+                    <div className="relative h-28 w-full">
+                      <img
+                        src={materiList[0].image}
+                        alt={materiList[0].title}
+                        className="h-full w-full object-cover"
+                      />
+                      <span className="absolute top-2 right-2 rounded-full bg-[#21a447] px-2 py-0.5 text-[10px] font-semibold text-white">
+                        {materiList[0].badge}
+                      </span>
+                    </div>
+                    <div className="p-3 flex items-center justify-between">
+                      <span className="font-serif text-xs font-medium text-gray-800 line-clamp-1">
+                        {materiList[0].title}
+                      </span>
+                      <span className="h-2.5 w-2.5 rounded-full bg-[#21a447] shrink-0 ml-2" />
+                    </div>
                   </div>
-                  <div className="p-3 flex items-center justify-between">
-                    <span className="font-serif text-xs font-medium text-gray-800 line-clamp-1">
-                      {materiList[0].title}
-                    </span>
-                    <span className="h-2.5 w-2.5 rounded-full bg-[#21a447] shrink-0 ml-2" />
-                  </div>
-                </div>
+                )}
               </div>
 
               <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
@@ -420,6 +495,28 @@ export const DetailKelas = () => {
 
         {activeTab === "materi" && (
           <div className="mt-6 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {feedLoading &&
+              Array.from({ length: 3 }).map((_, i) => (
+                <div
+                  key={i}
+                  className="h-52 animate-pulse rounded-xl border border-gray-200 bg-white"
+                />
+              ))}
+
+            {!feedLoading && feedError && (
+              <div className="col-span-full rounded-xl border border-red-200 bg-red-50 p-4">
+                <p className="font-serif text-xs text-red-600">{feedError}</p>
+              </div>
+            )}
+
+            {!feedLoading && !feedError && materiList.length === 0 && (
+              <div className="col-span-full rounded-xl border border-gray-200 bg-white p-6 text-center">
+                <p className="font-serif text-sm text-gray-500">
+                  Belum ada materi di kelas ini.
+                </p>
+              </div>
+            )}
+
             {materiList.map((item) => (
               <div
                 key={item.id}
@@ -436,13 +533,89 @@ export const DetailKelas = () => {
                     {item.badge}
                   </span>
                 </div>
-                <div className="p-4 flex items-center justify-between">
-                  <span className="font-serif text-xs font-bold text-gray-800 line-clamp-2">
-                    {item.title}
-                  </span>
-                  <span className="h-3 w-3 rounded-full bg-[#21a447] shrink-0 ml-2" />
+                <div className="p-4">
+                  <div className="flex items-center justify-between">
+                    <span className="font-serif text-xs font-bold text-gray-800 line-clamp-2">
+                      {item.title}
+                    </span>
+                    <span className="h-3 w-3 rounded-full bg-[#21a447] shrink-0 ml-2" />
+                  </div>
+                  {item.files.length > 0 && (
+                    <div className="mt-3 space-y-1.5 border-t border-gray-100 pt-2">
+                      {item.files.map((f) => (
+                        <button
+                          key={`${f.id}-${f.name}`}
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setViewerMateriFile(f);
+                          }}
+                          className="flex w-full cursor-pointer items-center gap-2 rounded-lg border border-gray-100 bg-gray-50 px-2.5 py-1.5 text-left font-serif text-xs text-gray-700 transition hover:border-[#21a447] hover:bg-[#f4faf5]"
+                        >
+                          <FileText className="h-3.5 w-3.5 shrink-0 text-[#21a447]" />
+                          <span className="min-w-0 flex-1 truncate">
+                            {f.name}
+                          </span>
+                          <span className="flex shrink-0 items-center gap-1 rounded-full bg-[#eef6f0] px-2 py-0.5 text-[10px] font-semibold text-[#145a2b]">
+                            <Eye className="h-3 w-3" />
+                            Lihat
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
+            ))}
+          </div>
+        )}
+
+        {activeTab === "tugas" && (
+          <div className="mt-6 space-y-6">
+            <div className="flex items-center justify-between">
+              <h3 className="font-serif text-sm font-bold text-gray-900">
+                Tugas Kelas
+              </h3>
+              <span className="font-serif text-xs font-semibold text-gray-500">
+                Total : {assignmentPosts.length}
+              </span>
+            </div>
+
+            {feedLoading && (
+              <div className="space-y-3">
+                {Array.from({ length: 2 }).map((_, i) => (
+                  <div
+                    key={i}
+                    className="h-32 animate-pulse rounded-xl border border-gray-200 bg-white"
+                  />
+                ))}
+              </div>
+            )}
+
+            {!feedLoading && feedError && (
+              <div className="rounded-xl border border-red-200 bg-red-50 p-4">
+                <p className="font-serif text-xs text-red-600">{feedError}</p>
+              </div>
+            )}
+
+            {!feedLoading && !feedError && assignmentPosts.length === 0 && (
+              <div className="rounded-xl border border-gray-200 bg-white p-6 text-center">
+                <p className="font-serif text-sm text-gray-500">
+                  Belum ada tugas di kelas ini.
+                </p>
+              </div>
+            )}
+
+            {assignmentPosts.map((post) => (
+              <PostCard
+                key={post.id}
+                token={token}
+                classroomId={id}
+                post={post}
+                isOwner={isFeedOwner}
+                canDelete={isTeacher}
+                onDelete={handlePostDeleted}
+              />
             ))}
           </div>
         )}
@@ -512,6 +685,14 @@ export const DetailKelas = () => {
         <Footer />
       </div>
 
+      {viewerMateriFile && (
+        <FileViewer
+          file={viewerMateriFile}
+          token={token}
+          onClose={() => setViewerMateriFile(null)}
+        />
+      )}
+
       {selectedMateri && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4">
           <div className="relative w-full max-w-[850px] overflow-hidden rounded-2xl bg-white p-6 shadow-2xl">
@@ -524,7 +705,7 @@ export const DetailKelas = () => {
                   <ArrowLeft className="h-4 w-4 text-gray-700" />
                 </button>
                 <h2 className="font-serif text-sm sm:text-base font-bold text-gray-900">
-                  {selectedMateri.id}. {selectedMateri.title}
+                  {selectedMateri.title}
                 </h2>
               </div>
               <button className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 transition cursor-pointer">
@@ -548,6 +729,31 @@ export const DetailKelas = () => {
                 {selectedMateri.resume}
               </p>
             </div>
+
+            {selectedMateri.files.length > 0 && (
+              <div className="mt-4 border-t border-gray-100 pt-4">
+                <h4 className="font-serif text-xs font-bold text-gray-800 mb-3">
+                  Lampiran ({selectedMateri.files.length}) :
+                </h4>
+                <div className="space-y-1.5">
+                  {selectedMateri.files.map((f) => (
+                    <button
+                      key={`${f.id}-${f.name}`}
+                      type="button"
+                      onClick={() => setViewerMateriFile(f)}
+                      className="flex w-full cursor-pointer items-center gap-2 rounded-lg border border-gray-100 bg-gray-50 px-3 py-2 text-left font-serif text-xs text-gray-700 transition hover:border-[#21a447] hover:bg-[#f4faf5]"
+                    >
+                      <FileText className="h-4 w-4 shrink-0 text-[#21a447]" />
+                      <span className="min-w-0 flex-1 truncate">{f.name}</span>
+                      <span className="flex shrink-0 items-center gap-1 rounded-full bg-[#eef6f0] px-2 py-0.5 text-[10px] font-semibold text-[#145a2b]">
+                        <Eye className="h-3 w-3" />
+                        Lihat
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}

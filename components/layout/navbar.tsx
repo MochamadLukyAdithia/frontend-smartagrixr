@@ -131,9 +131,9 @@ export function Navbar() {
             >
               <Image
                 src="/logo-fixed.png"
-                width={160}
-                height={40}
-                className="w-40"
+                width={548}
+                height={220}
+                className="h-auto w-40"
                 alt="Logo"
               />
             </Link>

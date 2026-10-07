@@ -9,9 +9,22 @@ import {
   likeComment,
   replyComment,
   deleteComment,
+  classroomFileUrl,
 } from "@/lib/api";
-import type { FeedPost, SocialComment } from "@/lib/api";
-import { Heart, MessageCircle, Reply, Send, Trash2 } from "lucide-react";
+import type { FeedFile, FeedPost, SocialComment } from "@/lib/api";
+import {
+  Calendar,
+  Clock,
+  Download,
+  Eye,
+  FileText,
+  Heart,
+  MessageCircle,
+  Reply,
+  Send,
+  Trash2,
+  X,
+} from "lucide-react";
 
 function Avatar({
   name,
@@ -54,16 +67,65 @@ function timeAgo(value: string): string {
   });
 }
 
+function formatDate(value: string): string {
+  if (!value) return "";
+  const t = new Date(value);
+  if (!Number.isFinite(t.getTime())) return "";
+  return t.toLocaleDateString("id-ID", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+}
+
+function formatFileSize(bytes: number): string {
+  if (!bytes || bytes <= 0) return "";
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+const POST_TYPE_LABELS: Record<string, string> = {
+  announcement: "Pengumuman",
+  material: "Materi",
+  assignment: "Tugas",
+};
+
+function isPdfFile(file: FeedFile): boolean {
+  const ref = file.url ?? file.path ?? "";
+  if (!ref) return false;
+  return (
+    file.extension?.toLowerCase() === "pdf" ||
+    file.mimeType?.toLowerCase().includes("pdf") ||
+    file.name.toLowerCase().endsWith(".pdf") ||
+    ref.toLowerCase().endsWith(".pdf")
+  );
+}
+
+function isImageFile(file: FeedFile): boolean {
+  const ref = file.url ?? file.path ?? "";
+  if (!ref) return false;
+  if (file.mimeType?.toLowerCase().startsWith("image/")) return true;
+  return (
+    /\.(png|jpe?g|gif|webp|svg|avif|bmp)$/i.test(file.name) ||
+    /\.(png|jpe?g|gif|webp|svg|avif|bmp)$/i.test(ref)
+  );
+}
+
 export function PostCard({
   token,
   classroomId,
   post,
   isOwner,
+  canDelete,
+  onDelete,
 }: {
   token: string | null;
   classroomId: string;
   post: FeedPost;
   isOwner: (userId: number) => boolean;
+  canDelete?: boolean;
+  onDelete?: (post: FeedPost) => void;
 }) {
   const router = useRouter();
   const [postLiked, setPostLiked] = useState(post.is_liked);
@@ -73,6 +135,7 @@ export function PostCard({
   const [comments, setComments] = useState<SocialComment[]>([]);
   const [commentsLoading, setCommentsLoading] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [viewerFile, setViewerFile] = useState<FeedFile | null>(null);
 
   const requireLogin = useCallback((): boolean => {
     if (token) return true;
@@ -186,7 +249,7 @@ export function PostCard({
       {/* header */}
       <div className="flex items-center gap-3">
         <Avatar name={post.user.name} avatar={post.user.avatar} />
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <p className="truncate font-serif text-sm font-bold text-gray-900">
             {post.user.name}
           </p>
@@ -194,11 +257,85 @@ export function PostCard({
             {timeAgo(post.created_at)}
           </p>
         </div>
+        {canDelete && (
+          <button
+            type="button"
+            onClick={() => {
+              if (!confirm("Hapus post ini?")) return;
+              onDelete?.(post);
+            }}
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-gray-400 transition hover:bg-red-50 hover:text-red-500 cursor-pointer"
+            aria-label="Hapus post"
+          >
+            <Trash2 className="h-4 w-4" />
+          </button>
+        )}
       </div>
 
-      <p className="mt-3 font-serif text-sm leading-relaxed text-gray-700">
+      {post.type && (
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <span className="rounded-full bg-[#eef6f0] px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[#145a2b]">
+            {POST_TYPE_LABELS[post.type] ?? post.type}
+          </span>
+          {post.due_at && (
+            <span className="flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-0.5 text-[10px] font-semibold text-amber-700">
+              <Calendar className="h-3 w-3" />
+              Tenggat {formatDate(post.due_at)}
+            </span>
+          )}
+          {post.max_score != null && (
+            <span className="rounded-full bg-sky-50 px-2.5 py-0.5 text-[10px] font-semibold text-sky-700">
+              Nilai Maks: {post.max_score}
+            </span>
+          )}
+          {post.allow_late === true && (
+            <span className="flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-0.5 text-[10px] font-semibold text-emerald-700">
+              <Clock className="h-3 w-3" />
+              Boleh telat
+            </span>
+          )}
+        </div>
+      )}
+
+      {post.title && (
+        <h3 className="mt-3 font-serif text-sm font-bold text-gray-900">
+          {post.title}
+        </h3>
+      )}
+
+      <p
+        className={`font-serif text-sm leading-relaxed text-gray-700 ${
+          post.title ? "mt-1" : "mt-3"
+        }`}
+      >
         {post.body}
       </p>
+
+      {/* attachments */}
+      {post.files.length > 0 && (
+        <div className="mt-3 space-y-1.5">
+          {post.files.map((f) => (
+            <button
+              key={`${f.id}-${f.name}`}
+              type="button"
+              onClick={() => setViewerFile(f)}
+              className="flex w-full cursor-pointer items-center gap-2 rounded-lg border border-gray-100 bg-gray-50 px-3 py-2 text-left font-serif text-xs text-gray-700 transition hover:border-[#21a447] hover:bg-[#f4faf5]"
+            >
+              <FileText className="h-4 w-4 shrink-0 text-[#21a447]" />
+              <span className="min-w-0 flex-1 truncate">{f.name}</span>
+              {f.size > 0 && (
+                <span className="shrink-0 text-[10px] text-gray-400">
+                  {formatFileSize(f.size)}
+                </span>
+              )}
+              <span className="flex shrink-0 items-center gap-1 rounded-full bg-[#eef6f0] px-2 py-0.5 text-[10px] font-semibold text-[#145a2b]">
+                <Eye className="h-3 w-3" />
+                Lihat
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* actions */}
       <div className="mt-3 flex items-center gap-5 border-t border-gray-100 pt-3">
@@ -259,6 +396,114 @@ export function PostCard({
           />
         </div>
       )}
+
+      {viewerFile && (
+        <FileViewer
+          file={viewerFile}
+          token={token}
+          onClose={() => setViewerFile(null)}
+        />
+      )}
+    </div>
+  );
+}
+
+export function FileViewer({
+  file,
+  token,
+  onClose,
+}: {
+  file: FeedFile;
+  token: string | null;
+  onClose: () => void;
+}) {
+  const url = classroomFileUrl(file, token);
+  const isPdf = isPdfFile(file);
+  const isImage = !isPdf && isImageFile(file);
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4"
+      onClick={onClose}
+    >
+      <div
+        className="flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3">
+          <div className="min-w-0 flex-1">
+            <p className="truncate font-serif text-xs font-bold text-gray-900">
+              {file.name}
+            </p>
+            {file.size > 0 && (
+              <p className="font-serif text-[10px] text-gray-400">
+                {formatFileSize(file.size)}
+              </p>
+            )}
+          </div>
+          <div className="flex items-center gap-2 shrink-0 ml-3">
+            {url && (
+              <a
+                href={url}
+                target="_blank"
+                rel="noreferrer"
+                className="flex items-center gap-1.5 rounded-full bg-[#eef6f0] px-3 py-1.5 font-serif text-[11px] font-semibold text-[#145a2b] transition hover:bg-[#dbeade]"
+              >
+                <Download className="h-3.5 w-3.5" />
+                Unduh
+              </a>
+            )}
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 text-gray-500 transition hover:bg-gray-200 cursor-pointer"
+              aria-label="Tutup"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+
+        <div className="flex-1 overflow-auto bg-gray-100">
+          {isPdf && url ? (
+            <iframe
+              src={url}
+              title={file.name}
+              className="h-[70vh] w-full"
+            />
+          ) : isImage && url ? (
+            <div className="flex items-center justify-center p-4">
+              <img
+                src={url}
+                alt={file.name}
+                className="max-h-[70vh] w-auto rounded-lg object-contain"
+              />
+            </div>
+          ) : url ? (
+            <div className="flex h-[70vh] flex-col items-center justify-center gap-3 p-6 text-center">
+              <FileText className="h-12 w-12 text-gray-300" />
+              <p className="font-serif text-xs text-gray-500">
+                File ini tidak bisa dipratinjau di dalam halaman.
+              </p>
+              <a
+                href={url}
+                target="_blank"
+                rel="noreferrer"
+                className="flex items-center gap-1.5 rounded-full bg-[#21a447] px-4 py-2 font-serif text-xs font-semibold text-white transition hover:bg-[#145a2b]"
+              >
+                <Download className="h-3.5 w-3.5" />
+                Buka / Unduh File
+              </a>
+            </div>
+          ) : (
+            <div className="flex h-[70vh] items-center justify-center p-6 text-center">
+              <p className="font-serif text-xs text-gray-500">
+                File tidak tersedia.
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

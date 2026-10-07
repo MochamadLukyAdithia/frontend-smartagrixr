@@ -542,9 +542,28 @@ export interface SocialComment {
   replies: SocialComment[];
 }
 
+export interface FeedFile {
+  id: number;
+  name: string;
+  url: string | null;
+  /** Path relatif file di backend (jika `url` berasal dari `path`). */
+  path?: string | null;
+  size: number;
+  mimeType?: string | null;
+  extension?: string | null;
+}
+
 export interface FeedPost {
   id: number;
+  type: string | null;
+  title: string | null;
   body: string;
+  due_at: string | null;
+  max_score: number | null;
+  allow_late: boolean | null;
+  category: string | null;
+  is_pinned: boolean;
+  files: FeedFile[];
   user: SocialAuthor;
   likes_count: number;
   is_liked: boolean;
@@ -620,37 +639,145 @@ export function normalizeComment(raw: unknown): SocialComment {
   };
 }
 
+function normalizeFeedFile(raw: unknown): FeedFile {
+  const f = (raw ?? {}) as Record<string, unknown>;
+  const anyF = raw as {
+    id?: unknown;
+    name?: string | null;
+    original_name?: string | null;
+    file_name?: string | null;
+    original?: string | null;
+    path?: string | null;
+    url?: string | null;
+    file_url?: string | null;
+    size?: unknown;
+    file_size?: unknown;
+    mime_type?: string | null;
+    mimeType?: string | null;
+    extension?: string | null;
+  } | null;
+  let url = anyF?.url ?? anyF?.file_url ?? null;
+  if (!url && anyF?.path) {
+    url = /^https?:\/\//.test(anyF.path)
+      ? anyF.path
+      : `${API_URL}/${String(anyF.path).replace(/^\/+/, "")}`;
+  }
+  return {
+    id: Number(anyF?.id ?? 0),
+    name: String(
+      anyF?.name ??
+        anyF?.original_name ??
+        anyF?.original ??
+        anyF?.file_name ??
+        (f.file as string) ??
+        "File"
+    ),
+    url,
+    path: anyF?.path != null ? String(anyF.path) : null,
+    size: Number(anyF?.size ?? anyF?.file_size ?? (f.size as number) ?? 0),
+    mimeType: anyF?.mime_type ?? anyF?.mimeType ?? null,
+    extension: anyF?.extension ?? null,
+  };
+}
+
+/**
+ * Membuat URL file kelas yang melewati proxy autentikasi di frontend.
+ * File yang disimpan backend (punya `path`) hanya bisa diakses dengan token,
+ * sehingga diproksi lewat `/api/classrooms/files` agar bisa tampil
+ * di `<iframe>` / `<img>` / tautan unduh tanpa header Authorization.
+ */
+export function classroomFileUrl(
+  file: FeedFile,
+  token: string | null
+): string | null {
+  if (!file.path && !file.url) return null;
+  const origin =
+    typeof window !== "undefined" && window.location ? window.location.origin : "";
+  const params = new URLSearchParams();
+  if (file.path) params.set("path", file.path);
+  else if (file.url) params.set("url", file.url);
+  if (token) params.set("access_token", token);
+  return `${origin}/api/classrooms/files?${params.toString()}`;
+}
+
 function normalizePost(raw: unknown): FeedPost {
   const anyP = raw as {
     id?: unknown;
+    type?: string;
+    title?: string;
     body?: string;
     content?: string;
     text?: string;
     caption?: string;
+    due_at?: string;
+    max_score?: unknown;
+    allow_late?: unknown;
+    category?: string;
+    is_pinned?: unknown;
+    media?: unknown[];
+    files?: unknown[];
+    attachments?: unknown[];
     user?: unknown;
     author?: unknown;
     creator?: unknown;
+    assignment?: {
+      due_at?: string;
+      max_score?: unknown;
+      allow_late?: unknown;
+    } | null;
     likes_count?: unknown;
     likes?: unknown;
     is_liked?: unknown;
     liked?: unknown;
     comments_count?: unknown;
     created_at?: string;
+    published_at?: string;
   } | null;
   const r = (raw ?? {}) as Record<string, unknown>;
   return {
     id: Number(anyP?.id ?? 0),
+    type: anyP?.type != null ? String(anyP.type) : null,
+    title: anyP?.title != null ? String(anyP.title) : null,
     body: String(
       anyP?.body ?? anyP?.content ?? anyP?.text ?? anyP?.caption ?? r.value ?? ""
     ),
+    due_at: normalizeNullableField(
+      anyP?.due_at ?? anyP?.assignment?.due_at
+    ),
+    max_score:
+      anyP?.max_score != null &&
+      anyP?.max_score !== "" &&
+      anyP?.max_score !== null
+        ? Number(anyP.max_score)
+        : anyP?.assignment?.max_score != null
+          ? Number(anyP.assignment.max_score)
+          : null,
+    allow_late: anyP?.allow_late != null
+      ? Boolean(anyP.allow_late)
+      : anyP?.assignment?.allow_late != null
+        ? Boolean(anyP.assignment.allow_late)
+        : null,
+    category: anyP?.category != null ? String(anyP.category) : null,
+    is_pinned: Boolean(anyP?.is_pinned ?? false),
+    files: Array.isArray(anyP?.media)
+      ? anyP.media.map(normalizeFeedFile)
+      : Array.isArray(anyP?.files)
+        ? anyP.files.map(normalizeFeedFile)
+        : Array.isArray(anyP?.attachments)
+          ? anyP.attachments.map(normalizeFeedFile)
+          : [],
     user: normalizeAuthor(anyP?.user ?? anyP?.author ?? anyP?.creator),
     likes_count: Number(anyP?.likes_count ?? anyP?.likes ?? 0),
     is_liked: Boolean(anyP?.is_liked ?? anyP?.liked ?? false),
     comments_count: Number(
       anyP?.comments_count ?? (r.comment_count as unknown) ?? 0
     ),
-    created_at: String(anyP?.created_at ?? ""),
+    created_at: String(anyP?.created_at ?? anyP?.published_at ?? ""),
   };
+}
+
+function normalizeNullableField(value: unknown): string | null {
+  return value != null && value !== "" ? String(value) : null;
 }
 
 function unwrapList<T>(json: unknown, normalize: (raw: unknown) => T): T[] {
@@ -705,6 +832,91 @@ export async function fetchClassroomFeed(
 ): Promise<FeedPost[]> {
   const { data } = await socialRequest(`/api/classrooms/${classroomId}/feed`, token);
   return unwrapList<FeedPost>(data ?? {}, normalizePost);
+}
+
+export interface CreateClassroomPostParams {
+  type: string;
+  title?: string;
+  body: string;
+  due_at?: string | null;
+  max_score?: number | null;
+  allow_late?: boolean | null;
+  category?: string | null;
+  files?: File[];
+}
+
+export async function createClassroomPost(
+  token: string,
+  classroomId: number | string,
+  params: CreateClassroomPostParams
+): Promise<FeedPost> {
+  const formData = new FormData();
+  formData.append("type", params.type);
+  if (params.title) formData.append("title", params.title);
+  formData.append("body", params.body);
+  if (params.due_at) formData.append("due_at", params.due_at);
+  if (params.max_score != null) {
+    formData.append("max_score", String(params.max_score));
+  }
+  if (params.allow_late != null) {
+    formData.append("allow_late", params.allow_late ? "1" : "0");
+  }
+  if (params.category) formData.append("category", params.category);
+  if (params.files) {
+    params.files.forEach((file) => {
+      formData.append("files[]", file);
+    });
+  }
+
+  const res = await fetch(`${API_URL}/api/classrooms/${classroomId}/posts`, {
+    method: "POST",
+    headers: {
+      Accept: "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: formData,
+  });
+
+  let data: Record<string, unknown> | null = null;
+  if (res.status !== 204) {
+    data = await res.json().catch(() => null);
+  }
+
+  if (!res.ok) {
+    throw new Error(
+      (data as { message?: string } | null)?.message || "Gagal membuat post."
+    );
+  }
+
+  const created = (data as { data?: unknown } | null)?.data ?? data;
+  return normalizePost(created);
+}
+
+export async function deleteClassroomPost(
+  token: string,
+  classroomId: number | string,
+  postId: number | string
+): Promise<void> {
+  const res = await fetch(`${API_URL}/api/classrooms/${classroomId}/posts`, {
+    method: "DELETE",
+    headers: {
+      Accept: "application/json",
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify({ id: postId }),
+  });
+
+  let data: Record<string, unknown> | null = null;
+  if (res.status !== 204) {
+    data = await res.json().catch(() => null);
+  }
+
+  if (!res.ok) {
+    throw new Error(
+      (data as { message?: string } | null)?.message || "Gagal menghapus post."
+    );
+  }
 }
 
 export async function likePost(

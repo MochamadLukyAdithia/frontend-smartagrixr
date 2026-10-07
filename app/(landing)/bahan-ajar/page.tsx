@@ -17,6 +17,23 @@ import type { ApiAsset } from "@/lib/api";
 import { AssetThumbnail } from "@/components/dashboard/asset-thumbnail";
 import { AssetDetailModal } from "@/components/dashboard/asset-detail-modal";
 import { UploadAssetModal } from "@/components/dashboard/upload-asset-modal";
+import {
+  Book,
+  BookOpen,
+  FlaskConical,
+  Landmark,
+  LayoutGrid,
+  Leaf,
+  Microscope,
+  Package,
+  PawPrint,
+  Radio,
+  Sigma,
+  Sprout,
+  Tractor,
+  Wrench,
+} from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 
 const API_URL = (process.env.NEXT_PUBLIC_API_URL ?? "").replace(/\/$/, "");
 
@@ -54,35 +71,35 @@ type LearnData = {
   latest: ApiLatestContent[];
 };
 
-const SUBJECT_ICON_MAP: Record<string, string> = {
-  literasi: "📖",
-  sains: "🧬",
-  matematika: "√",
-  "pendidikan-pancasila": "🦅",
-  umum: "⊞",
-  agroteknologi: "🌾",
-  biologi: "🧫",
+const SUBJECT_ICON_MAP: Record<string, LucideIcon> = {
+  literasi: BookOpen,
+  sains: FlaskConical,
+  matematika: Sigma,
+  "pendidikan-pancasila": Landmark,
+  umum: LayoutGrid,
+  agroteknologi: Sprout,
+  biologi: Microscope,
 };
 
-function getSubjectIcon(slug: string): string {
-  return SUBJECT_ICON_MAP[slug] ?? "📘";
+function getSubjectIcon(slug: string): LucideIcon {
+  return SUBJECT_ICON_MAP[slug] ?? Book;
 }
 
-const CATEGORY_ICONS: Record<string, string> = {
-  hewan: "🐄",
-  tanaman: "🌱",
-  alat: "🛠️",
-  mesin: "🚜",
-  pascapanen: "📦",
-  sensor: "📡",
+const CATEGORY_ICONS: Record<string, LucideIcon> = {
+  hewan: PawPrint,
+  tanaman: Leaf,
+  alat: Wrench,
+  mesin: Tractor,
+  pascapanen: Package,
+  sensor: Radio,
 };
 
-function categoryIcon(category: string | null): string {
-  if (!category) return "🌱";
+function categoryIcon(category: string | null): LucideIcon {
+  if (!category) return Leaf;
   const key = Object.keys(CATEGORY_ICONS).find(
     (k) => k.toLowerCase() === category.toLowerCase(),
   );
-  return (key && CATEGORY_ICONS[key]) || "🌱";
+  return (key && CATEGORY_ICONS[key]) || Leaf;
 }
 
 export default function TopicsLibrary() {
@@ -350,6 +367,7 @@ export default function TopicsLibrary() {
           <div className="flex gap-2.5 overflow-x-auto pb-4 [&::-webkit-scrollbar]:hidden">
             {categories.map((category) => {
               const isActive = activeCategory === category;
+              const Icon = categoryIcon(category);
               return (
                 <button
                   key={category}
@@ -363,7 +381,7 @@ export default function TopicsLibrary() {
                   <span
                     className={`flex items-center justify-center ${isActive ? "text-white" : "text-[#21a447]"}`}
                   >
-                    {categoryIcon(category)}
+                    <Icon className="h-4 w-4" strokeWidth={2.2} />
                   </span>
                   {category}
                 </button>
@@ -400,7 +418,9 @@ export default function TopicsLibrary() {
                   Tidak ada aset yang cocok.
                 </p>
               )}
-              {filteredAssets.map((asset) => (
+              {filteredAssets.map((asset) => {
+              const AssetIcon = categoryIcon(asset.category);
+              return (
                 <div
                   key={asset.id}
                   onClick={() => setSelectedAsset(asset)}
@@ -436,15 +456,16 @@ export default function TopicsLibrary() {
                   </div>
 
                   <div className="border-t border-[#21a447]/60 p-2 flex items-center justify-center gap-1.5 bg-white">
-                    <span className="text-[12px] text-[#21a447] flex items-center justify-center">
-                      {categoryIcon(asset.category)}
+                    <span className="text-[#21a447] flex items-center justify-center">
+                      <AssetIcon className="h-4 w-4 shrink-0" strokeWidth={2.2} />
                     </span>
                     <span className="font-serif text-[10px] font-medium text-[#21a447] truncate">
                       {asset.name}
                     </span>
                   </div>
                 </div>
-              ))}
+              );
+            })}
 
               {token && (
                 <div

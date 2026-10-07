@@ -11,6 +11,17 @@ import { RecommendationCard } from "../components/recommendation-card";
 import { HorizontalScroller } from "../components/horizontal-scroller";
 import { ContentDetailModal } from "../components/content-detail-modal";
 import Footer from "@/components/layout/footer";
+import {
+  Book,
+  BookOpen,
+  FlaskConical,
+  Landmark,
+  LayoutGrid,
+  Microscope,
+  Sigma,
+  Sprout,
+} from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 
 const API_URL = (process.env.NEXT_PUBLIC_API_URL ?? "").replace(/\/$/, "");
 
@@ -47,18 +58,18 @@ type LearnData = {
   latest: ApiLatestContent[];
 };
 
-const SUBJECT_ICON_MAP: Record<string, string> = {
-  literasi: "📖",
-  sains: "🧬",
-  matematika: "√",
-  "pendidikan-pancasila": "🦅",
-  umum: "⊞",
-  agroteknologi: "🌾",
-  biologi: "🧫",
+const SUBJECT_ICON_MAP: Record<string, LucideIcon> = {
+  literasi: BookOpen,
+  sains: FlaskConical,
+  matematika: Sigma,
+  "pendidikan-pancasila": Landmark,
+  umum: LayoutGrid,
+  agroteknologi: Sprout,
+  biologi: Microscope,
 };
 
-function getSubjectIcon(slug: string): string {
-  return SUBJECT_ICON_MAP[slug] ?? "📘";
+function getSubjectIcon(slug: string): LucideIcon {
+  return SUBJECT_ICON_MAP[slug] ?? Book;
 }
 
 export default function TopicsLibrary() {
