@@ -981,3 +981,340 @@ export async function deleteComment(
     method: "DELETE",
   });
 }
+
+export interface LearnCategory {
+  id: number;
+  title: string;
+  slug: string;
+  description: string | null;
+  image_url: string | null;
+  is_active: boolean;
+  sort_order: number;
+  modules_count: number;
+}
+
+export interface LearnModuleCategory {
+  id: number;
+  title: string;
+  slug: string;
+  image_url: string | null;
+}
+
+export interface LearnModule {
+  id: number;
+  title: string;
+  slug: string;
+  description: string | null;
+  thumbnail_url: string | null;
+  is_pro: boolean;
+  access_type: string | null;
+  sort_order: number;
+  embed_ready_url: string | null;
+  category: LearnModuleCategory | null;
+}
+
+export interface LearnModuleAuthor {
+  id: number;
+  name: string;
+  avatar: string | null;
+}
+
+export interface LearnModuleDetail extends LearnModule {
+  embed_canva_url: string | null;
+  author: LearnModuleAuthor | null;
+  created_at: string | null;
+  related: LearnModule[];
+}
+
+async function learnGet<T>(path: string): Promise<T> {
+  const res = await fetch(`${API_URL}${path}`, {
+    headers: { Accept: "application/json" },
+  });
+  const body = await res.json().catch(() => null);
+  if (!res.ok) {
+    throw new Error(
+      (body as { message?: string } | null)?.message ||
+        `Gagal memuat data (status ${res.status}).`
+    );
+  }
+  return (body as { data?: T })?.data as T;
+}
+
+function normalizeLearnModule(raw: unknown): LearnModule {
+  const m = (raw ?? {}) as {
+    id?: unknown;
+    title?: string;
+    slug?: string;
+    description?: string | null;
+    thumbnail_url?: string | null;
+    is_pro?: unknown;
+    access_type?: string | null;
+    sort_order?: unknown;
+    embed_ready_url?: string | null;
+    category?: {
+      id?: unknown;
+      title?: string;
+      slug?: string;
+      image_url?: string | null;
+    } | null;
+  } | null;
+
+  return {
+    id: Number(m?.id ?? 0),
+    title: String(m?.title ?? ""),
+    slug: String(m?.slug ?? ""),
+    description: m?.description ?? null,
+    thumbnail_url: m?.thumbnail_url ?? null,
+    is_pro: Boolean(m?.is_pro),
+    access_type: m?.access_type ?? null,
+    sort_order: Number(m?.sort_order ?? 0),
+    embed_ready_url: m?.embed_ready_url ?? null,
+    category: m?.category
+      ? {
+          id: Number(m.category.id ?? 0),
+          title: String(m.category.title ?? ""),
+          slug: String(m.category.slug ?? ""),
+          image_url: m.category.image_url ?? null,
+        }
+      : null,
+  };
+}
+
+export async function fetchLearnCategories(): Promise<LearnCategory[]> {
+  const data = await learnGet<unknown>("/api/learn/categories");
+  const list = Array.isArray(data) ? data : [];
+  return list.map((raw) => {
+    const c = (raw ?? {}) as {
+      id?: unknown;
+      title?: string;
+      slug?: string;
+      description?: string | null;
+      image_url?: string | null;
+      is_active?: unknown;
+      sort_order?: unknown;
+      modules_count?: unknown;
+    } | null;
+
+    return {
+      id: Number(c?.id ?? 0),
+      title: String(c?.title ?? ""),
+      slug: String(c?.slug ?? ""),
+      description: c?.description ?? null,
+      image_url: c?.image_url ?? null,
+      is_active: Boolean(c?.is_active),
+      sort_order: Number(c?.sort_order ?? 0),
+      modules_count: Number(c?.modules_count ?? 0),
+    };
+  });
+}
+
+export async function fetchLearnModules(): Promise<LearnModule[]> {
+  const data = await learnGet<unknown>("/api/learn/modules?per_page=100");
+  const list = Array.isArray(data)
+    ? data
+    : ((data as { data?: unknown[] } | null)?.data ?? []);
+  return list.map(normalizeLearnModule);
+}
+
+export async function fetchLearnModule(
+  id: number | string
+): Promise<LearnModuleDetail> {
+  const data =
+    (await learnGet<Record<string, unknown>>(`/api/learn/modules/${id}`)) ?? {};
+  const base = normalizeLearnModule(data);
+  const author = data.author as {
+    id?: unknown;
+    name?: string;
+    avatar?: string | null;
+  } | null;
+  const relatedRaw = (data.related as { data?: unknown[] } | undefined)?.data;
+  const related = Array.isArray(relatedRaw)
+    ? relatedRaw.map(normalizeLearnModule)
+    : [];
+
+  return {
+    ...base,
+    embed_canva_url: (data.embed_canva_url as string | null) ?? null,
+    author: author
+      ? {
+          id: Number(author.id ?? 0),
+          name: String(author.name ?? ""),
+          avatar: author.avatar ?? null,
+        }
+      : null,
+    created_at: (data.created_at as string | null) ?? null,
+    related,
+  };
+}
+
+export interface Plan {
+  id: number;
+  name: string;
+  slug: string;
+  description: string | null;
+  price: number;
+  price_formatted: string;
+  billing_cycle: string;
+  max_assets: number;
+  max_storage_mb: number;
+  max_classes: number;
+  features: string[];
+}
+
+export interface PaymentInitiation {
+  order_id: string | null;
+  amount: number | null;
+  status: string | null;
+  plan: string | null;
+  payment_url: string | null;
+  snap_token: string | null;
+  expires_at: string | null;
+  raw: Record<string, unknown>;
+}
+
+export interface PaymentHistoryItem {
+  id: number;
+  order_id: string;
+  plan: { id: number; name: string } | null;
+  amount: number;
+  status: string;
+  payment_type: string | null;
+  created_at: string | null;
+  paid_at: string | null;
+}
+
+function normalizePlan(raw: unknown): Plan {
+  const p = (raw ?? {}) as {
+    id?: unknown;
+    name?: string;
+    slug?: string;
+    description?: string | null;
+    price?: unknown;
+    price_formatted?: string;
+    billing_cycle?: string;
+    max_assets?: unknown;
+    max_storage_mb?: unknown;
+    max_classes?: unknown;
+    features?: unknown;
+  } | null;
+
+  return {
+    id: Number(p?.id ?? 0),
+    name: String(p?.name ?? ""),
+    slug: String(p?.slug ?? ""),
+    description: p?.description ?? null,
+    price: Number(p?.price ?? 0),
+    price_formatted: String(p?.price_formatted ?? ""),
+    billing_cycle: String(p?.billing_cycle ?? ""),
+    max_assets: Number(p?.max_assets ?? 0),
+    max_storage_mb: Number(p?.max_storage_mb ?? 0),
+    max_classes: Number(p?.max_classes ?? 0),
+    features: Array.isArray(p?.features) ? (p?.features as string[]) : [],
+  };
+}
+
+export async function fetchPlans(): Promise<Plan[]> {
+  const data = await learnGet<unknown>("/api/plans");
+  const list = Array.isArray(data)
+    ? data
+    : ((data as { data?: unknown[] } | null)?.data ?? []);
+  return list.map(normalizePlan);
+}
+
+export async function fetchPlan(slug: string): Promise<Plan> {
+  const data = await learnGet<unknown>(`/api/plans/${slug}`);
+  return normalizePlan(data);
+}
+
+function normalizePaymentHistory(raw: unknown): PaymentHistoryItem {
+  const h = (raw ?? {}) as {
+    id?: unknown;
+    order_id?: string;
+    plan?: { id?: unknown; name?: string } | null;
+    amount?: unknown;
+    gross_amount?: unknown;
+    status?: string;
+    transaction_status?: string;
+    payment_type?: string | null;
+    created_at?: string | null;
+    paid_at?: string | null;
+    settlement_time?: string | null;
+  } | null;
+
+  return {
+    id: Number(h?.id ?? 0),
+    order_id: String(h?.order_id ?? ""),
+    plan: h?.plan
+      ? { id: Number(h.plan.id ?? 0), name: String(h.plan.name ?? "") }
+      : null,
+    amount: Number(h?.amount ?? h?.gross_amount ?? 0),
+    status: String(h?.status ?? h?.transaction_status ?? ""),
+    payment_type: h?.payment_type ?? null,
+    created_at: h?.created_at ?? null,
+    paid_at: h?.paid_at ?? h?.settlement_time ?? null,
+  };
+}
+
+export async function fetchPaymentHistory(
+  token: string
+): Promise<PaymentHistoryItem[]> {
+  const { data } = await socialRequest<unknown>("/api/payment/history", token);
+  const list = Array.isArray(data)
+    ? data
+    : ((data as { data?: unknown[] } | null)?.data ?? []);
+  return list.map(normalizePaymentHistory);
+}
+
+export async function initiatePayment(
+  token: string,
+  planId: number
+): Promise<PaymentInitiation> {
+  const { data } = await socialRequest<Record<string, unknown>>(
+    "/api/payment/initiate",
+    token,
+    {
+      method: "POST",
+      body: JSON.stringify({ plan_id: planId }),
+    }
+  );
+
+  const rawBody = (data?.data as Record<string, unknown>) ?? data ?? {};
+  const candidates: Record<string, unknown>[] = [rawBody];
+  for (const key of ["transaction", "payment", "data", "detail"]) {
+    const nested = rawBody[key];
+    if (nested && typeof nested === "object") {
+      candidates.push(nested as Record<string, unknown>);
+    }
+  }
+  const d: Record<string, unknown> = Object.assign({}, ...candidates);
+
+  const pickString = (...keys: string[]): string | null => {
+    for (const key of keys) {
+      const value = d[key];
+      if (typeof value === "string" && value) return value;
+    }
+    return null;
+  };
+
+  const amountRaw = d.amount ?? d.gross_amount ?? d.total;
+  const amount =
+    amountRaw === undefined || amountRaw === null
+      ? null
+      : Number(amountRaw);
+
+  return {
+    order_id: pickString("order_id", "orderId", "reference_id"),
+    amount: Number.isFinite(amount) ? amount : null,
+    status: pickString("status", "transaction_status"),
+    plan: pickString("plan", "plan_name", "plan_slug"),
+    payment_url: pickString(
+      "payment_url",
+      "redirect_url",
+      "snap_redirect_url",
+      "url"
+    ),
+    snap_token: pickString("snap_token", "token"),
+    expires_at: pickString("expires_at", "expiry_time", "expired_at"),
+    raw: d,
+  };
+}

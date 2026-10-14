@@ -172,15 +172,19 @@ export function Navbar() {
 
           {isLoggedIn ? (
             <div className="hidden shrink-0 items-center gap-6 lg:flex pr-4">
-              <button
-                type="button"
-                className="flex h-[42px] w-[42px] items-center justify-center rounded-full bg-[#dca82a] shadow-sm transition hover:bg-[#c99723] hover:scale-105 cursor-pointer"
-                title="Pencapaian Anda"
+              <Link
+                href="/dashboard/pembayaran"
+                className="relative flex h-[42px] w-[42px] items-center justify-center rounded-full bg-[#dca82a] shadow-sm transition hover:bg-[#c99723] hover:scale-105 cursor-pointer"
+                title="Langganan Premium"
+                aria-label="Langganan Premium"
               >
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="white">
                   <path d="M12 15.25l-4.5 2.75.75-5.25-3.75-3.5 5.25-.5L12 4l2.25 4.75 5.25.5-3.75 3.5.75 5.25z" />
                 </svg>
-              </button>
+                <span className="absolute -right-1 -top-1 rounded-full bg-[#21a447] px-1.5 py-[1px] font-serif text-[9px] font-bold uppercase tracking-wide text-white shadow-sm">
+                  Pro
+                </span>
+              </Link>
 
               <div className="relative" ref={notifRef}>
                 <button
@@ -445,6 +449,16 @@ export function Navbar() {
                   {user?.name || "Profil Anda"}
                 </span>
               </div>
+              <Link
+                href="/dashboard/pembayaran"
+                onClick={handleMobileMenuClose}
+                className="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-[#dca82a] font-serif text-[16px] font-semibold text-white transition-colors hover:bg-[#c99723]"
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="white">
+                  <path d="M12 15.25l-4.5 2.75.75-5.25-3.75-3.5 5.25-.5L12 4l2.25 4.75 5.25.5-3.75 3.5.75 5.25z" />
+                </svg>
+                Langganan Premium
+              </Link>
               <button
                 onClick={() => {
                   handleMobileMenuClose();

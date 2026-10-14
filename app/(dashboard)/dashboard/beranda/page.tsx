@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, createElement } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Navbar } from "@/components/layout/navbar";
@@ -12,62 +12,63 @@ import {
   fetchClassrooms,
   createClassroom,
   joinClassroom,
+  fetchLearnCategories,
+  fetchLearnModules,
 } from "@/lib/api";
-import type { ApiAsset, Classroom } from "@/lib/api";
+import type {
+  ApiAsset,
+  Classroom,
+  LearnCategory,
+  LearnModule,
+} from "@/lib/api";
 import { AssetThumbnail } from "@/components/dashboard/asset-thumbnail";
 import { AssetDetailModal } from "@/components/dashboard/asset-detail-modal";
 import { UploadAssetModal } from "@/components/dashboard/upload-asset-modal";
 import { CreateClassModal } from "@/components/dashboard/create-class-modal";
 import { JoinClassModal } from "@/components/dashboard/join-class-modal";
-import { BookOpenText, Plus, Sparkles } from "lucide-react";
+import { LearnModuleDetailModal } from "@/components/dashboard/learn-module-detail-modal";
+import {
+  BookOpenText,
+  Plus,
+  Sparkles,
+  Lock,
+  LayoutGrid,
+  Flower2,
+  Sprout,
+  Target,
+  Home,
+  Droplets,
+  Drone,
+  Tractor,
+  Package,
+  Radio,
+  KeyRound,
+} from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 
-const LEARNING_MODULES = [
-  {
-    id: 1,
-    title: "Budidaya Tanaman Modern",
-    image: "/images/dashboard/beranda/1.png",
-  },
-  {
-    id: 2,
-    title: "Smart Farming (IoT)",
-    image: "/images/dashboard/beranda/2.png",
-  },
-  {
-    id: 3,
-    title: "Rantai Pasok Agroindustri",
-    image: "/images/dashboard/beranda/3.png",
-  },
-  {
-    id: 4,
-    title: "Perencanaan dan Pengelolaan",
-    image: "/images/dashboard/beranda/4.png",
-  },
-  {
-    id: 5,
-    title: "Mekanisasi Pertanian",
-    image: "/images/dashboard/beranda/1.png",
-  },
-];
-
-const CATEGORY_ICONS: Record<string, string> = {
-  Semua: "🗂️",
-  Bunga: "🌸",
-  tanaman: "🌱",
-  panah: "🎯",
-  greenhouse: "🏠",
-  irigasi: "💧",
-  drone: "🚁",
-  mesin: "🚜",
-  pascapanen: "📦",
-  sensor: "📡",
+const CATEGORY_ICONS: Record<string, LucideIcon> = {
+  Semua: LayoutGrid,
+  Bunga: Flower2,
+  tanaman: Sprout,
+  panah: Target,
+  greenhouse: Home,
+  irigasi: Droplets,
+  drone: Drone,
+  mesin: Tractor,
+  pascapanen: Package,
+  sensor: Radio,
 };
 
-function categoryIcon(category: string | null): string {
-  if (!category) return "🌱";
+function categoryIcon(category: string | null): LucideIcon {
+  if (!category) return Sprout;
   const key = Object.keys(CATEGORY_ICONS).find(
     (k) => k.toLowerCase() === category.toLowerCase(),
   );
-  return (key && CATEGORY_ICONS[key]) || "🌱";
+  return (key && CATEGORY_ICONS[key]) || Sprout;
+}
+
+function categoryGlyph(category: string | null, className?: string) {
+  return createElement(categoryIcon(category), { className });
 }
 
 export default function DashboardBeranda() {
@@ -84,6 +85,42 @@ export default function DashboardBeranda() {
   const [loadingClasses, setLoadingClasses] = useState(true);
   const [showCreateClassModal, setShowCreateClassModal] = useState(false);
   const [showJoinClassModal, setShowJoinClassModal] = useState(false);
+  const [learningCategories, setLearningCategories] = useState<LearnCategory[]>(
+    [],
+  );
+  const [learningModules, setLearningModules] = useState<LearnModule[]>([]);
+  const [loadingModules, setLoadingModules] = useState(true);
+  const [modulesError, setModulesError] = useState<string | null>(null);
+  const [activeModuleCategory, setActiveModuleCategory] = useState<
+    number | "Semua"
+  >("Semua");
+  const [moduleQuery, setModuleQuery] = useState("");
+  const [selectedModuleId, setSelectedModuleId] = useState<number | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    Promise.all([fetchLearnCategories(), fetchLearnModules()])
+      .then(([cats, mods]) => {
+        if (cancelled) return;
+        setLearningCategories(cats);
+        setLearningModules(mods);
+      })
+      .catch((err) => {
+        if (!cancelled)
+          setModulesError(
+            err instanceof Error
+              ? err.message
+              : "Gagal memuat modul pembelajaran.",
+          );
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingModules(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     if (!token) return;
@@ -184,6 +221,24 @@ export default function DashboardBeranda() {
     if (
       searchQuery &&
       !asset.name.toLowerCase().includes(searchQuery.toLowerCase())
+    )
+      return false;
+    return true;
+  });
+
+  const moduleCategories = learningCategories.filter(
+    (category) => category.modules_count > 0,
+  );
+
+  const filteredModules = learningModules.filter((modul) => {
+    if (
+      activeModuleCategory !== "Semua" &&
+      modul.category?.id !== activeModuleCategory
+    )
+      return false;
+    if (
+      moduleQuery &&
+      !modul.title.toLowerCase().includes(moduleQuery.toLowerCase())
     )
       return false;
     return true;
@@ -318,7 +373,7 @@ export default function DashboardBeranda() {
         )}
 
         <section className="rounded-2xl border border-gray-200 bg-white p-6 sm:p-8 shadow-sm">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between mb-8">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between mb-6">
             <h2 className="font-serif text-[20px] font-bold text-black sm:text-[22px]">
               {isDosen
                 ? "Materi Pembelajaran"
@@ -352,70 +407,155 @@ export default function DashboardBeranda() {
                 <input
                   type="text"
                   placeholder="Cari modul pembelajaran yang ingin dipelajari..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
+                  value={moduleQuery}
+                  onChange={(e) => setModuleQuery(e.target.value)}
                   className="w-full rounded-full border border-gray-300 bg-white py-2.5 pl-11 pr-4 font-serif text-[14px] outline-none transition-all focus:border-[#21a447] focus:ring-1 focus:ring-[#21a447]"
                 />
               </div>
             )}
           </div>
 
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-5">
-            {LEARNING_MODULES.slice(0, isDosen ? 4 : 5).map((modul) => (
-              <Link
-                key={modul.id}
-                href={`/bahan-ajar/topics-library/${modul.id}`}
-                className="group flex flex-col overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md hover:border-[#21a447]/50"
+          {!loadingModules && !modulesError && moduleCategories.length > 0 && (
+            <div className="mb-6 flex gap-2.5 overflow-x-auto pb-1 [&::-webkit-scrollbar]:hidden">
+              <button
+                type="button"
+                onClick={() => setActiveModuleCategory("Semua")}
+                className={`flex items-center gap-2 whitespace-nowrap rounded-full px-4 py-1.5 font-serif text-[13px] font-medium transition-all border ${
+                  activeModuleCategory === "Semua"
+                    ? "border-[#21a447] bg-[#21a447] text-white"
+                    : "border-[#21a447]/50 bg-white text-gray-600 hover:border-[#21a447] hover:bg-[#21a447]/5"
+                }`}
               >
-                <div className="relative h-[150px] w-full overflow-hidden bg-gray-100">
-                  <Image
-                    src={modul.image}
-                    alt={modul.title}
-                    fill
-                    className="object-cover"
-                  />
-                </div>
-                <div className="border-b border-gray-100 p-4 pb-5">
-                  <h3 className="font-serif text-[15px] font-bold text-[#171717] leading-snug">
-                    {modul.title}
-                  </h3>
-                </div>
-                <div className="flex items-center justify-between p-4 bg-white">
-                  <span className="font-serif text-[13px] font-medium text-[#21a447]">
-                    Jelajahi Materi
-                  </span>
-                  <div className="flex h-6 w-6 items-center justify-center rounded-full bg-[#21a447] transition-transform group-hover:translate-x-1">
-                    <svg
-                      width="12"
-                      height="12"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      xmlns="http://www.w3.org/2000/svg"
-                    >
-                      <path
-                        d="M5 12H19M19 12L12 5M19 12L12 19"
-                        stroke="white"
-                        strokeWidth="3"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                    </svg>
+                <LayoutGrid className="h-4 w-4" />
+                Semua
+              </button>
+              {moduleCategories.map((category) => {
+                const isActive = activeModuleCategory === category.id;
+                return (
+                  <button
+                    key={category.id}
+                    type="button"
+                    onClick={() => setActiveModuleCategory(category.id)}
+                    className={`whitespace-nowrap rounded-full px-4 py-1.5 font-serif text-[13px] font-medium transition-all border ${
+                      isActive
+                        ? "border-[#21a447] bg-[#21a447] text-white"
+                        : "border-[#21a447]/50 bg-white text-gray-600 hover:border-[#21a447] hover:bg-[#21a447]/5"
+                    }`}
+                  >
+                    {category.title}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
+          {modulesError && (
+            <p className="mb-4 rounded-lg bg-red-50 px-4 py-2 font-serif text-[13px] text-red-600">
+              {modulesError}
+            </p>
+          )}
+
+          {loadingModules ? (
+            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-5">
+              {Array.from({ length: isDosen ? 4 : 5 }).map((_, index) => (
+                <div
+                  key={`module-skeleton-${index}`}
+                  className="flex flex-col overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm"
+                >
+                  <div className="h-[150px] w-full animate-pulse bg-gray-200" />
+                  <div className="border-b border-gray-100 p-4 pb-5">
+                    <div className="h-4 w-3/4 animate-pulse rounded bg-gray-200" />
+                  </div>
+                  <div className="p-4">
+                    <div className="h-3 w-1/2 animate-pulse rounded bg-gray-200" />
                   </div>
                 </div>
-              </Link>
-            ))}
+              ))}
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-5">
+              {filteredModules.length === 0 && (
+                <p className="col-span-full py-8 text-center font-serif text-[14px] text-gray-500">
+                  Tidak ada modul pembelajaran yang cocok.
+                </p>
+              )}
 
-            {isDosen && (
-              <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-gray-300 bg-gray-50/50 p-6 text-center cursor-pointer hover:bg-gray-100 transition-colors min-h-[260px]">
-                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#21a447] text-white shadow-md mb-3">
-                  <span className="text-2xl leading-none">+</span>
+              {filteredModules
+                .slice(0, isDosen ? 4 : 5)
+                .map((modul) => (
+                  <button
+                    key={modul.id}
+                    type="button"
+                    onClick={() => setSelectedModuleId(modul.id)}
+                    className="group flex flex-col overflow-hidden rounded-xl border border-gray-200 bg-white text-left shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md hover:border-[#21a447]/50"
+                  >
+                    <div className="relative h-[150px] w-full overflow-hidden bg-gray-100">
+                      {modul.thumbnail_url ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={modul.thumbnail_url}
+                          alt={modul.title}
+                          className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                        />
+                      ) : (
+                        <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-[#21a447] to-[#0f5f28] text-white">
+                          <BookOpenText className="h-8 w-8" />
+                        </div>
+                      )}
+                      {modul.category && (
+                        <span className="absolute left-3 top-3 max-w-[70%] truncate rounded-full bg-black/55 px-2.5 py-0.5 font-serif text-[10px] font-semibold text-white backdrop-blur-sm">
+                          {modul.category.title}
+                        </span>
+                      )}
+                      {modul.is_pro && (
+                        <span className="absolute right-3 top-3 inline-flex items-center gap-1 rounded-full bg-amber-400 px-2 py-0.5 font-serif text-[10px] font-bold text-amber-950">
+                          <Lock className="h-2.5 w-2.5" />
+                          Pro
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex-1 border-b border-gray-100 p-4 pb-5">
+                      <h3 className="line-clamp-2 font-serif text-[15px] font-bold text-[#171717] leading-snug">
+                        {modul.title}
+                      </h3>
+                    </div>
+                    <div className="flex items-center justify-between p-4 bg-white">
+                      <span className="font-serif text-[13px] font-medium text-[#21a447]">
+                        Jelajahi Materi
+                      </span>
+                      <div className="flex h-6 w-6 items-center justify-center rounded-full bg-[#21a447] transition-transform group-hover:translate-x-1">
+                        <svg
+                          width="12"
+                          height="12"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          xmlns="http://www.w3.org/2000/svg"
+                        >
+                          <path
+                            d="M5 12H19M19 12L12 5M19 12L12 19"
+                            stroke="white"
+                            strokeWidth="3"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                        </svg>
+                      </div>
+                    </div>
+                  </button>
+                ))}
+
+              {isDosen && (
+                <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-gray-300 bg-gray-50/50 p-6 text-center cursor-pointer hover:bg-gray-100 transition-colors min-h-[260px]">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#21a447] text-white shadow-md mb-3">
+                    <span className="text-2xl leading-none">+</span>
+                  </div>
+                  <span className="font-serif text-[14px] font-bold text-gray-700">
+                    Buat Materi Baru
+                  </span>
                 </div>
-                <span className="font-serif text-[14px] font-bold text-gray-700">
-                  Buat Materi Baru
-                </span>
-              </div>
-            )}
-          </div>
+              )}
+            </div>
+          )}
         </section>
         <section className="mb-12 mt-10">
           <div className="mb-6 flex items-center justify-between">
@@ -494,8 +634,12 @@ export default function DashboardBeranda() {
                 className="flex h-[180px] w-full cursor-pointer items-center justify-center rounded-2xl border-2 border-dashed border-gray-300 bg-gray-50/50 transition-colors hover:border-gray-400 hover:bg-gray-100"
               >
                 <div className="flex flex-col items-center justify-center rounded-xl bg-[#21a447] px-6 py-4 text-white shadow-sm transition-transform hover:scale-105">
-                  <span className="text-2xl leading-none">
-                    {isStudent ? "🔑" : "+"}
+                  <span className="flex h-8 w-8 items-center justify-center">
+                    {isStudent ? (
+                      <KeyRound className="h-6 w-6" />
+                    ) : (
+                      <Plus className="h-6 w-6" />
+                    )}
                   </span>
                   <span className="mt-2 font-serif text-[12px] font-medium tracking-wide">
                     {isStudent ? "Gabung ke Kelas" : "Buat Kelas Baru"}
@@ -528,7 +672,7 @@ export default function DashboardBeranda() {
                   <span
                     className={`flex items-center justify-center ${isActive ? "text-white" : "text-[#21a447]"}`}
                   >
-                    {categoryIcon(category)}
+                    {categoryGlyph(category, "h-4 w-4")}
                   </span>
                   {category}
                 </button>
@@ -605,8 +749,8 @@ export default function DashboardBeranda() {
                   </div>
 
                   <div className="border-t border-[#21a447]/60 p-2 flex items-center justify-center gap-1.5 bg-white">
-                    <span className="text-[12px] text-[#21a447] flex items-center justify-center">
-                      {categoryIcon(asset.category)}
+                    <span className="text-[#21a447] flex items-center justify-center">
+                      {categoryGlyph(asset.category, "h-3.5 w-3.5")}
                     </span>
                     <span className="font-serif text-[10px] font-medium text-[#21a447] truncate">
                       {asset.name}
@@ -648,6 +792,15 @@ export default function DashboardBeranda() {
         </section>
       </main>
       <Footer />
+
+      {selectedModuleId !== null && (
+        <LearnModuleDetailModal
+          key={selectedModuleId}
+          moduleId={selectedModuleId}
+          onClose={() => setSelectedModuleId(null)}
+          onSelect={(id) => setSelectedModuleId(id)}
+        />
+      )}
 
       {selectedAsset && token && (
         <AssetDetailModal
