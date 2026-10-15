@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { Eye, EyeOff } from "lucide-react";
 import { getGoogleLoginUrl, login } from "@/lib/api";
 import { useAuthStore } from "@/stores/useAuthStore";
 
@@ -12,6 +13,7 @@ export default function Masuk() {
   const setAuth = useAuthStore((s) => s.setAuth);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -112,21 +114,39 @@ export default function Masuk() {
               <label className="font-serif text-[15px] text-black">
                 Kata Sandi
               </label>
-              <Link
+              {/* <Link
                 href="#"
                 className="font-serif text-[13px] text-[#2589f4] hover:underline"
               >
                 Lupa Password?
-              </Link>
+              </Link> */}
             </div>
-            <input
-              type="password"
-              placeholder="Masukkan kata sandi"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              className="w-full rounded-xl border border-gray-300 px-4 py-3.5 font-serif text-[15px] outline-none transition-all focus:border-[#21a447] focus:ring-1 focus:ring-[#21a447]"
-            />
+            <div className="relative">
+              <input
+                type={showPassword ? "text" : "password"}
+                placeholder="Masukkan kata sandi"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                className="w-full rounded-xl border border-gray-300 px-4 py-3.5 pr-12 font-serif text-[15px] outline-none transition-all focus:border-[#21a447] focus:ring-1 focus:ring-[#21a447]"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((v) => !v)}
+                aria-label={
+                  showPassword
+                    ? "Sembunyikan kata sandi"
+                    : "Tampilkan kata sandi"
+                }
+                className="absolute right-3 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-lg text-gray-400 transition-colors hover:text-[#21a447]"
+              >
+                {showPassword ? (
+                  <EyeOff className="h-5 w-5" />
+                ) : (
+                  <Eye className="h-5 w-5" />
+                )}
+              </button>
+            </div>
           </div>
 
           <button

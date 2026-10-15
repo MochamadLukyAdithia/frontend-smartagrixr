@@ -3,8 +3,18 @@ import Link from "next/link";
 import React from "react";
 
 const footer = () => {
-  const FOOTER_LINKS = ["Beranda", "Bahan Ajar", "Editor", "Kelas", "Tutorial"];
-  const FOOTER_SUPPORT = ["Help Center", "Community", "FAQ"];
+  const FOOTER_LINKS = [
+    { label: "Beranda", href: "/" },
+    { label: "Bahan Ajar", href: "/bahan-ajar" },
+    { label: "Editor", href: "/editor" },
+    { label: "Kelas", href: "/kelas" },
+    { label: "Tutorial", href: "/tutorial" },
+  ];
+  const FOOTER_SUPPORT = [
+    { label: "Help Center", href: "#" },
+    { label: "Community", href: "#" },
+    { label: "FAQ", href: "#" },
+  ];
   return (
     <footer className="border-t border-gray-100 px-5 pb-10 pt-14 sm:px-8">
       <div className="flex w-full container flex-col gap-12 lg:flex-row lg:justify-between lg:gap-10">
@@ -39,10 +49,10 @@ const footer = () => {
               Link
             </h4>
             <ul className="mt-4 flex flex-col gap-2 font-serif text-[14px] text-gray-500">
-              {FOOTER_LINKS.map((label) => (
-                <li key={label}>
-                  <Link href="#" className="hover:text-[#21a447]">
-                    {label}
+              {FOOTER_LINKS.map((item) => (
+                <li key={item.label}>
+                  <Link href={item.href} className="hover:text-[#21a447]">
+                    {item.label}
                   </Link>
                 </li>
               ))}
@@ -54,10 +64,10 @@ const footer = () => {
               Support
             </h4>
             <ul className="mt-4 flex flex-col gap-2 font-serif text-[14px] text-gray-500">
-              {FOOTER_SUPPORT.map((label) => (
-                <li key={label}>
-                  <Link href="#" className="hover:text-[#21a447]">
-                    {label}
+              {FOOTER_SUPPORT.map((item) => (
+                <li key={item.label}>
+                  <Link href={item.href} className="hover:text-[#21a447]">
+                    {item.label}
                   </Link>
                 </li>
               ))}

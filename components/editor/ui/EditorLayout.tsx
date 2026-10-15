@@ -25,33 +25,39 @@ export function EditorLayout() {
       {/* Interactive 3D Hotspot & Info Dialog Overlay */}
       <AnnotationOverlay />
 
-      {/* Top Navbar Toolbar */}
-      <Toolbar />
+      {/* Pannable workspace: on small screens the editor pans horizontally
+          instead of collapsing the viewport to zero width. */}
+      <div className="flex-1 flex flex-col overflow-x-auto overflow-y-hidden lg:overflow-x-hidden">
+        <div className="flex flex-col h-full min-w-[1080px] lg:min-w-0">
+          {/* Top Navbar Toolbar */}
+          <Toolbar />
 
-      {/* Main Workspace Area */}
-      <div className="flex-1 flex overflow-hidden relative">
-        {/* Left Side Toolbars: Hidden in Preview Mode */}
-        {!isPreviewMode && (
-          <div className="flex h-full flex-shrink-0 z-10">
-            <LeftToolbar />
-            <MediaDrawer />
+          {/* Main Workspace Area */}
+          <div className="flex-1 flex overflow-hidden relative">
+            {/* Left Side Toolbars: Hidden in Preview Mode */}
+            {!isPreviewMode && (
+              <div className="flex h-full flex-shrink-0 z-10">
+                <LeftToolbar />
+                <MediaDrawer />
+              </div>
+            )}
+
+            {/* Center Canvas Viewport & Bottom Timeline */}
+            <div className="flex-1 flex flex-col h-full overflow-hidden relative min-w-[360px]">
+              <Viewport />
+
+              {/* Bottom Area: Hidden in Preview Mode */}
+              {!isPreviewMode && <TimelinePanel />}
+            </div>
+
+            {/* Right Side: Object Inspector - Hidden in Preview Mode */}
+            {!isPreviewMode && (
+              <div className="flex-shrink-0 h-full z-10">
+                <InspectorPanel />
+              </div>
+            )}
           </div>
-        )}
-
-        {/* Center Canvas Viewport & Bottom Timeline */}
-        <div className="flex-1 flex flex-col h-full overflow-hidden relative">
-          <Viewport />
-          
-          {/* Bottom Area: Hidden in Preview Mode */}
-          {!isPreviewMode && <TimelinePanel />}
         </div>
-
-        {/* Right Side: Object Inspector - Hidden in Preview Mode */}
-        {!isPreviewMode && (
-          <div className="flex-shrink-0 h-full z-10">
-            <InspectorPanel />
-          </div>
-        )}
       </div>
     </div>
   );

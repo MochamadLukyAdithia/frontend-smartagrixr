@@ -117,7 +117,7 @@ export default function Home() {
             </p>
 
             <Link
-              href="#daftar"
+              href="/masuk"
               className="mt-11 rounded-full inline-flex h-[54px] min-w-[300px] items-center justify-center bg-[#22a447] px-10 font-serif text-[20px] font-semibold text-white transition-all hover:bg-[#198b3a] focus:outline-none focus:ring-2 focus:ring-[#22a447] focus:ring-offset-2 sm:min-w-[320px] sm:text-[22px]"
             >
               Coba Sekarang
@@ -390,7 +390,7 @@ export default function Home() {
               mudah dipahami. Tidak perlu coding, cukup desain dan publikasikan.
             </p>
             <Link
-              href="#daftar"
+              href="/masuk"
               className="mt-9 inline-flex h-[54px] items-center justify-center rounded-full bg-white px-9 font-serif text-[16px] font-semibold text-[#1f7a37] transition-all hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-[#1f7a37] sm:text-[18px]"
             >
               Buat Modul XR Mu Sekarang
