@@ -1265,6 +1265,208 @@ export async function fetchPaymentHistory(
   return list.map(normalizePaymentHistory);
 }
 
+export interface TutorialTeaching {
+  id: number;
+  category_id: number;
+  title: string;
+  slug: string;
+  badge: string | null;
+  grade_level: string | null;
+  subject: string | null;
+  image: string | null;
+  persiapan: string[];
+  apa_yang_dipelajari: string | null;
+  action_button_text: string | null;
+  action_button_url: string | null;
+  sort_order: number;
+}
+
+export interface TutorialCreation {
+  id: number;
+  category_id: number;
+  title: string;
+  slug: string;
+  youtube_url: string | null;
+  youtube_video_id: string | null;
+  embed_youtube_url: string | null;
+  thumbnail_url: string | null;
+  duration: string | null;
+  tags: string | null;
+  description: string | null;
+  sort_order: number;
+}
+
+export interface TutorialCategory {
+  id: number;
+  type: string;
+  tab: string | null;
+  title: string;
+  slug: string;
+  description: string | null;
+  sort_order: number;
+  teachings: TutorialTeaching[];
+  creations: TutorialCreation[];
+}
+
+export interface TutorialGroup {
+  header_title: string;
+  tabs: string[];
+  current_tab: string | null;
+  categories: TutorialCategory[];
+}
+
+export interface TutorialsData {
+  ajar: TutorialGroup;
+  buat: TutorialGroup;
+}
+
+function toStringArray(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((item) => (item === null || item === undefined ? "" : String(item)))
+    .filter((item) => item.length > 0);
+}
+
+function normalizeTutorialTeaching(raw: unknown): TutorialTeaching {
+  const t = (raw ?? {}) as {
+    id?: unknown;
+    tutorial_category_id?: unknown;
+    title?: string;
+    slug?: string;
+    badge?: string | null;
+    grade_level?: string | null;
+    subject?: string | null;
+    image?: string | null;
+    persiapan?: unknown;
+    apa_yang_dipelajari?: string | null;
+    action_button_text?: string | null;
+    action_button_url?: string | null;
+    sort_order?: unknown;
+  } | null;
+
+  return {
+    id: Number(t?.id ?? 0),
+    category_id: Number(t?.tutorial_category_id ?? 0),
+    title: String(t?.title ?? ""),
+    slug: String(t?.slug ?? ""),
+    badge: t?.badge ?? null,
+    grade_level: t?.grade_level ?? null,
+    subject: t?.subject ?? null,
+    image: t?.image ?? null,
+    persiapan: toStringArray(t?.persiapan),
+    apa_yang_dipelajari: t?.apa_yang_dipelajari ?? null,
+    action_button_text: t?.action_button_text ?? null,
+    action_button_url: t?.action_button_url ?? null,
+    sort_order: Number(t?.sort_order ?? 0),
+  };
+}
+
+function normalizeTutorialCreation(raw: unknown): TutorialCreation {
+  const c = (raw ?? {}) as {
+    id?: unknown;
+    tutorial_category_id?: unknown;
+    title?: string;
+    slug?: string;
+    youtube_url?: string | null;
+    youtube_video_id?: string | null;
+    embed_youtube_url?: string | null;
+    thumbnail_url?: string | null;
+    duration?: string | null;
+    tags?: string | null;
+    description?: string | null;
+    sort_order?: unknown;
+  } | null;
+
+  return {
+    id: Number(c?.id ?? 0),
+    category_id: Number(c?.tutorial_category_id ?? 0),
+    title: String(c?.title ?? ""),
+    slug: String(c?.slug ?? ""),
+    youtube_url: c?.youtube_url ?? null,
+    youtube_video_id: c?.youtube_video_id ?? null,
+    embed_youtube_url: c?.embed_youtube_url ?? null,
+    thumbnail_url: c?.thumbnail_url ?? null,
+    duration: c?.duration ?? null,
+    tags: c?.tags ?? null,
+    description: c?.description ?? null,
+    sort_order: Number(c?.sort_order ?? 0),
+  };
+}
+
+function normalizeTutorialCategory(raw: unknown): TutorialCategory {
+  const c = (raw ?? {}) as {
+    id?: unknown;
+    type?: string;
+    tab?: string | null;
+    title?: string;
+    slug?: string;
+    description?: string | null;
+    sort_order?: unknown;
+    published_teachings?: unknown;
+    published_creations?: unknown;
+  } | null;
+
+  const teachings = Array.isArray(c?.published_teachings)
+    ? (c?.published_teachings as unknown[]).map(normalizeTutorialTeaching)
+    : [];
+  const creations = Array.isArray(c?.published_creations)
+    ? (c?.published_creations as unknown[]).map(normalizeTutorialCreation)
+    : [];
+
+  teachings.sort((a, b) => a.sort_order - b.sort_order);
+  creations.sort((a, b) => a.sort_order - b.sort_order);
+
+  return {
+    id: Number(c?.id ?? 0),
+    type: String(c?.type ?? ""),
+    tab: c?.tab ?? null,
+    title: String(c?.title ?? ""),
+    slug: String(c?.slug ?? ""),
+    description: c?.description ?? null,
+    sort_order: Number(c?.sort_order ?? 0),
+    teachings,
+    creations,
+  };
+}
+
+function normalizeTutorialGroup(raw: unknown): TutorialGroup {
+  const g = (raw ?? {}) as {
+    header_title?: string;
+    tabs?: unknown;
+    current_tab?: string | null;
+    categories?: unknown;
+  } | null;
+
+  const categories = Array.isArray(g?.categories)
+    ? (g?.categories as unknown[]).map(normalizeTutorialCategory)
+    : [];
+  categories.sort((a, b) => a.sort_order - b.sort_order);
+
+  return {
+    header_title: String(g?.header_title ?? ""),
+    tabs: toStringArray(g?.tabs),
+    current_tab: g?.current_tab ?? null,
+    categories,
+  };
+}
+
+export async function fetchTutorials(): Promise<TutorialsData> {
+  const data =
+    (await learnGet<Record<string, unknown>>("/api/tutorials")) ?? {};
+  return {
+    ajar: normalizeTutorialGroup(data.ajar),
+    buat: normalizeTutorialGroup(data.buat),
+  };
+}
+
+export async function fetchTutorialsByType(
+  type: "ajar" | "buat"
+): Promise<TutorialGroup> {
+  const data =
+    (await learnGet<Record<string, unknown>>(`/api/tutorials/${type}`)) ?? {};
+  return normalizeTutorialGroup(data);
+}
+
 export async function initiatePayment(
   token: string,
   planId: number
