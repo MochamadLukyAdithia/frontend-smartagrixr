@@ -11,7 +11,6 @@ import { RecommendationCard } from "../components/recommendation-card";
 import { HorizontalScroller } from "../components/horizontal-scroller";
 import { ContentDetailModal } from "../components/content-detail-modal";
 import Footer from "@/components/layout/footer";
-import { AuthGate } from "@/components/auth/auth-gate";
 import {
   Book,
   BookOpen,
@@ -156,7 +155,6 @@ export default function TopicsLibrary() {
   }
 
   return (
-    <AuthGate>
     <div className="min-h-screen  bg-[url('/bg.svg')] bg-[center_100px] bg-no-repeat bg-[length:100%_auto] text-[#171717]">
       <Navbar />
 
@@ -341,6 +339,5 @@ export default function TopicsLibrary() {
         onClose={() => setSelectedContentId(null)}
       />
     </div>
-    </AuthGate>
   );
 }

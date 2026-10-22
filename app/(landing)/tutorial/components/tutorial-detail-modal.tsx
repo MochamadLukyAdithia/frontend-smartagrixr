@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect } from "react";
-import { X, ExternalLink, Clock, Tag } from "lucide-react";
+import Link from "next/link";
+import { X, ExternalLink, Clock, Tag, Plus } from "lucide-react";
 import type { TutorialCreation, TutorialTeaching } from "@/lib/api";
 
 export type TutorialSelection =
@@ -64,13 +65,25 @@ export function TutorialDetailModal({
           )}
         </div>
 
-        <div className="flex items-center justify-end gap-3 border-t border-gray-100 px-6 py-4">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-gray-100 px-6 py-4">
+          {selection.kind === "ajar" ? (
+            <Link
+              href="/bahan-ajar"
+              className="inline-flex items-center gap-2 rounded-full bg-[#21a447] px-5 py-2 font-serif text-sm font-semibold text-white transition hover:bg-[#1b8b3b]"
+            >
+              <Plus className="h-4 w-4" />
+              Tambahkan Bahan Ajar
+            </Link>
+          ) : (
+            <span />
+          )}
+
           {selection.kind === "ajar" && selection.teaching.action_button_url ? (
             <a
               href={selection.teaching.action_button_url}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 rounded-full bg-[#21a447] px-5 py-2 font-serif text-sm font-semibold text-white transition hover:bg-[#1b8b3b]"
+              className="inline-flex items-center gap-2 rounded-full border border-[#21a447] px-5 py-2 font-serif text-sm font-semibold text-[#21a447] transition hover:bg-[#e8f5ec]"
             >
               {selection.teaching.action_button_text ?? "Buka"}
               <ExternalLink className="h-4 w-4" />
