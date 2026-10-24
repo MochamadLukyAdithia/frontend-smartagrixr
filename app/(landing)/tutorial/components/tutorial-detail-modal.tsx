@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import Link from "next/link";
-import { X, ExternalLink, Clock, Tag, Plus } from "lucide-react";
+import { X, ExternalLink, Clock, Tag, MoveRight } from "lucide-react";
 import type { TutorialCreation, TutorialTeaching } from "@/lib/api";
 
 export type TutorialSelection =
@@ -68,11 +68,11 @@ export function TutorialDetailModal({
         <div className="flex flex-wrap items-center justify-between gap-3 border-t border-gray-100 px-6 py-4">
           {selection.kind === "ajar" ? (
             <Link
-              href="/bahan-ajar"
+              href={`/bahan-ajar/id/${selection.teaching.id}`}
               className="inline-flex items-center gap-2 rounded-full bg-[#21a447] px-5 py-2 font-serif text-sm font-semibold text-white transition hover:bg-[#1b8b3b]"
             >
-              <Plus className="h-4 w-4" />
-              Tambahkan Bahan Ajar
+              <MoveRight className="h-4 w-4" />
+              Peragakan Bahan Ajar
             </Link>
           ) : (
             <span />

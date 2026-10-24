@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { Navbar } from "@/components/layout/navbar";
 import { TAB_CONTENT, TAB_ORDER, type LibraryTab } from "./data";
@@ -10,6 +10,7 @@ import { GradeChip } from "./components/grade-chip";
 import { RecommendationCard } from "./components/recommendation-card";
 import { HorizontalScroller } from "./components/horizontal-scroller";
 import { ContentDetailModal } from "./components/content-detail-modal";
+import { AssetDeepLink } from "./components/asset-deep-link";
 import Footer from "@/components/layout/footer";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { fetchAssets, deleteAsset } from "@/lib/api";
@@ -360,7 +361,7 @@ export default function TopicsLibrary() {
         <section className="container pb-20">
           <div className="mb-4">
             <h2 className="font-serif text-[22px] font-bold text-[#21a447]">
-              Rekomendasi Untuk Anda
+              Rekomendasi Untuk Andaa
             </h2>
           </div>
 
@@ -389,7 +390,7 @@ export default function TopicsLibrary() {
             })}
           </div>
 
-          {loadingAssets && (
+          {/* {loadingAssets && (
             <div className="mt-2 grid grid-cols-2 gap-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-7 xl:grid-cols-9">
               {Array.from({ length: 9 }).map((_, index) => (
                 <div
@@ -403,7 +404,7 @@ export default function TopicsLibrary() {
                 </div>
               ))}
             </div>
-          )}
+          )} */}
 
           {assetsError && (
             <p className="mt-4 rounded-lg bg-red-50 px-4 py-2 font-serif text-[13px] text-red-600">
@@ -419,53 +420,56 @@ export default function TopicsLibrary() {
                 </p>
               )}
               {filteredAssets.map((asset) => {
-              const AssetIcon = categoryIcon(asset.category);
-              return (
-                <div
-                  key={asset.id}
-                  onClick={() => setSelectedAsset(asset)}
-                  className="group relative flex flex-col overflow-hidden rounded-md border border-[#21a447]/60 bg-white transition-all duration-300 hover:-translate-y-1 hover:shadow-md cursor-pointer"
-                >
-                  {token && (
-                    <button
-                      type="button"
-                      onClick={(e) => handleDeleteAsset(e, asset.id)}
-                      className="absolute right-2 top-2 z-10 flex h-7 w-7 items-center justify-center rounded-full bg-red-500 text-white opacity-0 shadow-md transition-all hover:bg-red-600 group-hover:opacity-100"
-                      title="Hapus aset"
-                    >
-                      <svg
-                        width="14"
-                        height="14"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        xmlns="http://www.w3.org/2000/svg"
+                const AssetIcon = categoryIcon(asset.category);
+                return (
+                  <Link
+                    key={asset.id}
+                    href={`/bahan-ajar/id/${asset.id}`}
+                    className="group relative flex flex-col overflow-hidden rounded-md border border-[#21a447]/60 bg-white transition-all duration-300 hover:-translate-y-1 hover:shadow-md cursor-pointer"
+                  >
+                    {token && (
+                      <button
+                        type="button"
+                        onClick={(e) => handleDeleteAsset(e, asset.id)}
+                        className="absolute right-2 top-2 z-10 flex h-7 w-7 items-center justify-center rounded-full bg-red-500 text-white opacity-0 shadow-md transition-all hover:bg-red-600 group-hover:opacity-100"
+                        title="Hapus aset"
                       >
-                        <path
-                          d="M3 6H21M8 6V4C8 3.44772 8.44772 3 9 3H15C15.5523 3 16 3.44772 16 4V6M19 6V20C19 21.1046 18.1046 22 17 22H7C5.89543 22 5 21.1046 5 20V6"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
+                        <svg
+                          width="14"
+                          height="14"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          xmlns="http://www.w3.org/2000/svg"
+                        >
+                          <path
+                            d="M3 6H21M8 6V4C8 3.44772 8.44772 3 9 3H15C15.5523 3 16 3.44772 16 4V6M19 6V20C19 21.1046 18.1046 22 17 22H7C5.89543 22 5 21.1046 5 20V6"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                        </svg>
+                      </button>
+                    )}
+
+                    <div className="relative aspect-[3/4] w-full bg-gray-100 overflow-hidden">
+                      <AssetThumbnail token={token} asset={asset} />
+                    </div>
+
+                    <div className="border-t border-[#21a447]/60 p-2 flex items-center justify-center gap-1.5 bg-white">
+                      <span className="text-[#21a447] flex items-center justify-center">
+                        <AssetIcon
+                          className="h-4 w-4 shrink-0"
+                          strokeWidth={2.2}
                         />
-                      </svg>
-                    </button>
-                  )}
-
-                  <div className="relative aspect-[3/4] w-full bg-gray-100 overflow-hidden">
-                    <AssetThumbnail token={token} asset={asset} />
-                  </div>
-
-                  <div className="border-t border-[#21a447]/60 p-2 flex items-center justify-center gap-1.5 bg-white">
-                    <span className="text-[#21a447] flex items-center justify-center">
-                      <AssetIcon className="h-4 w-4 shrink-0" strokeWidth={2.2} />
-                    </span>
-                    <span className="font-serif text-[10px] font-medium text-[#21a447] truncate">
-                      {asset.name}
-                    </span>
-                  </div>
-                </div>
-              );
-            })}
+                      </span>
+                      <span className="font-serif text-[10px] font-medium text-[#21a447] truncate">
+                        {asset.name}
+                      </span>
+                    </div>
+                  </Link>
+                );
+              })}
 
               {token && (
                 <div
@@ -522,6 +526,14 @@ export default function TopicsLibrary() {
           contentId={selectedContentId}
           onClose={() => setSelectedContentId(null)}
         />
+
+        <Suspense fallback={null}>
+          <AssetDeepLink
+            assets={assets}
+            ready={!loadingAssets}
+            onOpen={setSelectedAsset}
+          />
+        </Suspense>
       </main>
     </div>
   );
