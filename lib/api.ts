@@ -2,6 +2,16 @@ export const API_URL = (
   process.env.NEXT_PUBLIC_API_URL || "https://backend-smartagrixr-production.up.railway.app"
 ).replace(/\/+$/, "");
 
+export class ApiError extends Error {
+  status: number;
+
+  constructor(message: string, status: number) {
+    super(message);
+    this.name = "ApiError";
+    this.status = status;
+  }
+}
+
 export interface User {
   id: number;
   name: string;
@@ -303,9 +313,10 @@ export async function fetchClassrooms(
   const data = res.status !== 204 ? await res.json().catch(() => null) : null;
 
   if (!res.ok) {
-    throw new Error(
+    throw new ApiError(
       (data as { message?: string } | null)?.message ||
-        "Gagal mengambil daftar kelas."
+        "Gagal mengambil daftar kelas.",
+      res.status
     );
   }
 
@@ -422,11 +433,18 @@ export async function fetchClassroom(
 
   if (!res.ok) {
     const message = (data as { message?: string } | null)?.message;
-    throw new Error(
+    if (res.status >= 500) {
+      throw new ApiError(
+        "Server kelas sedang bermasalah. Silakan coba lagi.",
+        res.status
+      );
+    }
+    throw new ApiError(
       res.status === 404 ||
         (message && message.includes("No query results for model"))
         ? "Kelas tidak ditemukan atau sudah dihapus."
-        : message || "Gagal mengambil detail kelas."
+        : message || "Gagal mengambil detail kelas.",
+      res.status
     );
   }
 
@@ -817,10 +835,13 @@ async function socialRequest<T>(
 
   if (!res.ok) {
     const message = (body as { message?: string } | null)?.message;
-    throw new Error(
+    throw new ApiError(
       res.status === 401
         ? "Sesi berakhir. Silakan masuk kembali."
-        : message || `Gagal memuat data (status ${res.status}).`
+        : res.status >= 500
+          ? `Server sedang bermasalah (HTTP ${res.status}). Silakan coba lagi.`
+          : message || `Gagal memuat data (status ${res.status}).`,
+      res.status
     );
   }
   return { status: res.status, data: body as T | null };
@@ -894,29 +915,9 @@ export async function createClassroomPost(
 
 export async function deleteClassroomPost(
   token: string,
-  classroomId: number | string,
   postId: number | string
 ): Promise<void> {
-  const res = await fetch(`${API_URL}/api/classrooms/${classroomId}/posts`, {
-    method: "DELETE",
-    headers: {
-      Accept: "application/json",
-      "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    },
-    body: JSON.stringify({ id: postId }),
-  });
-
-  let data: Record<string, unknown> | null = null;
-  if (res.status !== 204) {
-    data = await res.json().catch(() => null);
-  }
-
-  if (!res.ok) {
-    throw new Error(
-      (data as { message?: string } | null)?.message || "Gagal menghapus post."
-    );
-  }
+  await socialRequest(`/api/posts/${postId}`, token, { method: "DELETE" });
 }
 
 export async function likePost(
@@ -1268,6 +1269,7 @@ export async function fetchPaymentHistory(
 export interface TutorialTeaching {
   id: number;
   category_id: number;
+  asset_id: number | null;
   title: string;
   slug: string;
   badge: string | null;
@@ -1331,6 +1333,7 @@ function normalizeTutorialTeaching(raw: unknown): TutorialTeaching {
   const t = (raw ?? {}) as {
     id?: unknown;
     tutorial_category_id?: unknown;
+    asset_id?: unknown;
     title?: string;
     slug?: string;
     badge?: string | null;
@@ -1347,6 +1350,7 @@ function normalizeTutorialTeaching(raw: unknown): TutorialTeaching {
   return {
     id: Number(t?.id ?? 0),
     category_id: Number(t?.tutorial_category_id ?? 0),
+    asset_id: t?.asset_id != null ? Number(t.asset_id) : null,
     title: String(t?.title ?? ""),
     slug: String(t?.slug ?? ""),
     badge: t?.badge ?? null,

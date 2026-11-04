@@ -44,18 +44,24 @@ export default function InterceptedAssetModal() {
           try {
             const detail = await getAssetDetails(numericId);
             found = {
-              id: detail.id,
+              id: Number(detail.id),
               name: detail.name,
-              category: (detail as any).category ?? null,
-              category_id: (detail as any).category_id ?? null,
-              is_pro: (detail as any).is_pro ?? false,
-              is_public: (detail as any).is_public ?? false,
-              file_size: (detail as any).file_size ?? 0,
-              thumbnail_url: (detail as any).thumbnail_url ?? null,
-              file_url: (detail as any).file_url ?? (detail as any).url ?? "",
-              type: (detail as any).type ?? "glb",
-              locked: (detail as any).locked ?? false,
-            } as ApiAsset;
+              category:
+                typeof detail.category === "string"
+                  ? detail.category
+                  : (detail.category?.name ?? null),
+              category_id:
+                detail.category_id != null
+                  ? Number(detail.category_id)
+                  : null,
+              is_pro: false,
+              is_public: false,
+              file_size: Number(detail.file_size ?? 0),
+              thumbnail_url: detail.thumbnail_url ?? null,
+              file_url: detail.file_url ?? detail.url ?? "",
+              type: detail.type ?? "glb",
+              locked: false,
+            };
           } catch {
             // ignore
           }

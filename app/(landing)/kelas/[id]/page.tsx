@@ -7,7 +7,9 @@ import { Navbar } from "@/components/layout/navbar";
 import Footer from "@/components/layout/footer";
 import { useAuthStore } from "@/stores/useAuthStore";
 import {
+  ApiError,
   fetchClassroom,
+  fetchClassrooms,
   updateClassroom,
   deleteClassroom,
   fetchClassroomFeed,
@@ -24,9 +26,12 @@ import { FileViewer, PostCard } from "./components/post-card";
 import { CreatePostComposer } from "./components/create-post-composer";
 import {
   ArrowLeft,
+  Check,
+  Copy,
   Eye,
   FileText,
   MoreHorizontal,
+  RefreshCw,
   Share2,
   Pencil,
   Trash2,
@@ -67,6 +72,19 @@ function postToMateriItem(
   };
 }
 
+function RetryButton({ onClick }: { onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="mt-2 inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-[#21a447] px-3 py-1 font-serif text-[11px] font-semibold text-[#145a2b] transition hover:bg-[#f4faf5]"
+    >
+      <RefreshCw className="h-3 w-3" />
+      Coba lagi
+    </button>
+  );
+}
+
 export const DetailKelas = () => {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
@@ -96,19 +114,55 @@ export const DetailKelas = () => {
   });
   const [saving, setSaving] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [detailFallback, setDetailFallback] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
+  const [codeCopied, setCodeCopied] = useState(false);
 
   useEffect(() => {
     if (!token || !id) return;
 
     let cancelled = false;
+
+    const applyListFallback = async () => {
+      try {
+        const list = await fetchClassrooms(token);
+        const found = [...list.as_teacher, ...list.as_student].find(
+          (c) => String(c.id) === String(id),
+        );
+        if (cancelled || !found) return false;
+        setClassroom({
+          ...found,
+          teacher: {
+            id: found.teacher_id,
+            name: "Guru pengampu",
+            username: null,
+            email: "",
+            phone: null,
+            status: "",
+            unej_role: "",
+            avatar: null,
+          },
+          students: [],
+        });
+        setDetailFallback(true);
+        return true;
+      } catch {
+        return false;
+      }
+    };
+
     fetchClassroom(token, id)
       .then((detail) => {
         if (cancelled) return;
         setClassroom(detail);
       })
-      .catch((err) => {
-        if (!cancelled)
-          setError(err instanceof Error ? err.message : "Gagal memuat kelas.");
+      .catch(async (err) => {
+        if (cancelled) return;
+        if (err instanceof ApiError && err.status >= 500) {
+          const recovered = await applyListFallback();
+          if (cancelled || recovered) return;
+        }
+        setError(err instanceof Error ? err.message : "Gagal memuat kelas.");
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -117,12 +171,13 @@ export const DetailKelas = () => {
     return () => {
       cancelled = true;
     };
-  }, [token, id]);
+  }, [token, id, reloadKey]);
 
   useEffect(() => {
     if (!token || !id) return;
 
     let cancelled = false;
+
     fetchClassroomFeed(token, id)
       .then((posts) => {
         if (cancelled) return;
@@ -141,7 +196,27 @@ export const DetailKelas = () => {
     return () => {
       cancelled = true;
     };
-  }, [token, id]);
+  }, [token, id, reloadKey]);
+
+  const retryLoad = () => {
+    setError(null);
+    setFeedError(null);
+    setDetailFallback(false);
+    setLoading(true);
+    setFeedLoading(true);
+    setReloadKey((v) => v + 1);
+  };
+
+  const handleCopyCode = async () => {
+    if (!classroom?.invite_code) return;
+    try {
+      await navigator.clipboard.writeText(classroom.invite_code);
+      setCodeCopied(true);
+      setTimeout(() => setCodeCopied(false), 2000);
+    } catch {
+      setCodeCopied(false);
+    }
+  };
 
   const students: ClassroomStudent[] = classroom?.students ?? [];
   const teacher = classroom?.teacher ?? null;
@@ -218,7 +293,7 @@ export const DetailKelas = () => {
   const handlePostDeleted = async (post: FeedPost) => {
     if (!token || !id) return;
     try {
-      await deleteClassroomPost(token, id, post.id);
+      await deleteClassroomPost(token, post.id);
       setFeedPosts((prev) => prev.filter((p) => p.id !== post.id));
     } catch (err) {
       alert(err instanceof Error ? err.message : "Gagal menghapus post.");
@@ -294,15 +369,23 @@ export const DetailKelas = () => {
                 Memuat kelas...
               </p>
             ) : error ? (
-              <div className="text-center">
+              <div className="pointer-events-auto text-center">
                 <h1 className="font-serif text-2xl sm:text-3xl font-bold text-white drop-shadow-md">
-                  Kelas Tidak Ditemukan
+                  Kelas Tidak Dapat Dimuat
                 </h1>
                 {error && (
                   <p className="mt-2 font-serif text-sm text-red-200">
                     {error}
                   </p>
                 )}
+                <button
+                  type="button"
+                  onClick={retryLoad}
+                  className="mt-3 inline-flex cursor-pointer items-center gap-1.5 rounded-full bg-white/90 px-4 py-1.5 font-serif text-xs font-semibold text-[#145a2b] shadow transition hover:bg-white"
+                >
+                  <RefreshCw className="h-3.5 w-3.5" />
+                  Coba lagi
+                </button>
               </div>
             ) : (
               <div className="text-center px-4">
@@ -378,6 +461,13 @@ export const DetailKelas = () => {
           </nav>
         </div>
 
+        {detailFallback && (
+          <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 font-serif text-xs text-amber-700">
+            Sebagian informasi kelas tidak dapat dimuat dari server. Data yang
+            tampil mungkin belum lengkap.
+          </div>
+        )}
+
         {activeTab === "beranda" && (
           <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-3">
             <div className="lg:col-span-2 space-y-6">
@@ -403,6 +493,7 @@ export const DetailKelas = () => {
               {!feedLoading && feedError && (
                 <div className="rounded-xl border border-red-200 bg-red-50 p-4">
                   <p className="font-serif text-xs text-red-600">{feedError}</p>
+                  <RetryButton onClick={retryLoad} />
                 </div>
               )}
 
@@ -428,6 +519,34 @@ export const DetailKelas = () => {
             </div>
 
             <div className="space-y-6">
+              {isTeacher && classroom?.invite_code && (
+                <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+                  <h3 className="font-serif text-sm font-bold text-gray-900 mb-3">
+                    Kode Kelas
+                  </h3>
+                  <div className="flex items-center gap-2">
+                    <code className="min-w-0 flex-1 truncate rounded-lg border border-dashed border-[#21a447] bg-[#f4faf5] px-3 py-2 font-mono text-sm font-bold tracking-widest text-[#145a2b]">
+                      {classroom.invite_code}
+                    </code>
+                    <button
+                      type="button"
+                      onClick={handleCopyCode}
+                      aria-label="Salin kode kelas"
+                      className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-gray-200 text-gray-600 transition hover:border-[#21a447] hover:bg-[#f4faf5] hover:text-[#145a2b]"
+                    >
+                      {codeCopied ? (
+                        <Check className="h-4 w-4 text-[#21a447]" />
+                      ) : (
+                        <Copy className="h-4 w-4" />
+                      )}
+                    </button>
+                  </div>
+                  <p className="mt-2 font-serif text-[11px] text-gray-500">
+                    Bagikan kode ini agar siswa dapat bergabung ke kelas.
+                  </p>
+                </div>
+              )}
+
               <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
                 <h3 className="font-serif text-sm font-bold text-gray-900 mb-3">
                   Materi Kelas
@@ -506,6 +625,7 @@ export const DetailKelas = () => {
             {!feedLoading && feedError && (
               <div className="col-span-full rounded-xl border border-red-200 bg-red-50 p-4">
                 <p className="font-serif text-xs text-red-600">{feedError}</p>
+                <RetryButton onClick={retryLoad} />
               </div>
             )}
 
@@ -595,6 +715,7 @@ export const DetailKelas = () => {
             {!feedLoading && feedError && (
               <div className="rounded-xl border border-red-200 bg-red-50 p-4">
                 <p className="font-serif text-xs text-red-600">{feedError}</p>
+                <RetryButton onClick={retryLoad} />
               </div>
             )}
 
@@ -858,8 +979,8 @@ export const DetailKelas = () => {
               Hapus Kelas?
             </h2>
             <p className="mt-2 font-serif text-xs text-gray-600 leading-relaxed">
-              Kelas "{classroom?.name}" akan dihapus permanen. Tindakan ini
-              tidak dapat dibatalkan.
+              Kelas &ldquo;{classroom?.name}&rdquo; akan dihapus permanen.
+              Tindakan ini tidak dapat dibatalkan.
             </p>
 
             {actionError && (

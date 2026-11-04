@@ -68,7 +68,7 @@ export function TutorialDetailModal({
         <div className="flex flex-wrap items-center justify-between gap-3 border-t border-gray-100 px-6 py-4">
           {selection.kind === "ajar" ? (
             <Link
-              href={`/bahan-ajar/id/${selection.teaching.id}`}
+              href={`/bahan-ajar/id/${selection.teaching.asset_id ?? selection.teaching.id}`}
               className="inline-flex items-center gap-2 rounded-full bg-[#21a447] px-5 py-2 font-serif text-sm font-semibold text-white transition hover:bg-[#1b8b3b]"
             >
               <MoveRight className="h-4 w-4" />
