@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useEditorStore } from "../store/useEditorStore";
 import { getEditorInstance, useEditorInstance } from "../engine/editorInstance";
+import { useAuthStore } from "@/stores/useAuthStore";
 import { 
   createTextTo3DTask, 
   queryTripoTask, 
@@ -10,6 +11,16 @@ import {
   extractPreviewImageUrl,
   TripoTaskData 
 } from "@/lib/api/tripo";
+import {
+  fetchAiQuota,
+  verifyAiTicket,
+  consumeAiTicket,
+  refundAiTicket,
+  fetchAiHistory,
+  saveAiHistory,
+  type AiQuotaData,
+  type AiHistoryRecord,
+} from "@/lib/api/aiQuota";
 import { 
   Wand2, 
   Loader2, 
@@ -28,7 +39,10 @@ import {
   Zap,
   Sparkles,
   ShieldCheck,
-  Cpu
+  Cpu,
+  Crown,
+  RefreshCw,
+  ExternalLink
 } from "lucide-react";
 
 interface GenerationHistoryItem {
@@ -52,17 +66,24 @@ const SMART_AGRI_PROMPTS = [
 export function TextTo3DDrawer() {
   const { setActiveLeftTab } = useEditorStore();
   const editor = getEditorInstance();
+  const token = useAuthStore((s) => s.token);
+  const user = useAuthStore((s) => s.user);
 
-  // Form states
+  // Form states - Mode Terbaru P2-20260801 sebagai default ("hd")
   const [prompt, setPrompt] = useState("");
   const [negativePrompt, setNegativePrompt] = useState("blurry, low quality, broken mesh, distorted geometry");
-  const [qualityMode, setQualityMode] = useState<"fast" | "hd">("fast");
+  const [qualityMode, setQualityMode] = useState<"fast" | "hd">("hd");
   const [detailLevel, setDetailLevel] = useState<"low" | "medium" | "high">("medium");
   const [texture, setTexture] = useState<boolean>(true);
   const [pbr, setPbr] = useState<boolean>(true);
   const [textureQuality, setTextureQuality] = useState<"standard" | "detailed" | "extreme">("standard");
   const [autoSize, setAutoSize] = useState<boolean>(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
+
+  // Quota states (api/ai/quota, api/ai/consume, api/ai/verify-ticket, api/ai/refund)
+  const [quota, setQuota] = useState<AiQuotaData | null>(null);
+  const [loadingQuota, setLoadingQuota] = useState<boolean>(true);
+  const [activeTicketId, setActiveTicketId] = useState<string | null>(null);
 
   // Task generation & polling states
   const [isGenerating, setIsGenerating] = useState(false);
@@ -82,8 +103,29 @@ export function TextTo3DDrawer() {
   // Polling ref
   const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Load history from localStorage
-  useEffect(() => {
+  // Load quota from backend / API
+  const refreshQuota = async () => {
+    try {
+      setLoadingQuota(true);
+      const q = await fetchAiQuota(token);
+      setQuota(q);
+    } catch (e) {
+      console.error("Failed to load AI quota", e);
+    } finally {
+      setLoadingQuota(false);
+    }
+  };
+
+  // Load history from API with localStorage fallback
+  const refreshHistory = async () => {
+    try {
+      const remoteHistory = await fetchAiHistory(token);
+      if (remoteHistory && remoteHistory.length > 0) {
+        setHistory(remoteHistory);
+        return;
+      }
+    } catch {}
+
     try {
       const saved = localStorage.getItem("tripo3d_generation_history");
       if (saved) {
@@ -92,7 +134,12 @@ export function TextTo3DDrawer() {
     } catch (e) {
       console.error("Failed to load generation history", e);
     }
-  }, []);
+  };
+
+  useEffect(() => {
+    refreshQuota();
+    refreshHistory();
+  }, [token]);
 
   // Save history to localStorage
   const saveToHistory = (item: GenerationHistoryItem) => {
@@ -127,7 +174,7 @@ export function TextTo3DDrawer() {
   }, []);
 
   // Poll task status
-  const startPolling = (taskId: string) => {
+  const startPolling = (taskId: string, ticketId?: string | null) => {
     if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
 
     let checkCount = 0;
@@ -165,14 +212,27 @@ export function TextTo3DDrawer() {
 
           if (modelUrl) {
             const assetName = prompt.trim().slice(0, 30) || "Model 3D AI";
-            saveToHistory({
+            const historyItem: GenerationHistoryItem = {
               id: taskId,
               prompt: prompt || "Model 3D AI",
-              model: qualityMode === "fast" ? "Cepat & Ringan" : "Kualitas HD",
+              model: qualityMode === "fast" ? "P1-20260311 (Ringan)" : "P2-20260801 (HD Terbaru)",
               modelUrl: modelUrl,
               previewUrl: previewImg,
               createdAt: new Date().toISOString(),
-            });
+            };
+            saveToHistory(historyItem);
+
+            // Simpan riwayat ke backend API
+            saveAiHistory({
+              ticket_id: ticketId || undefined,
+              prompt: prompt || "Model 3D AI",
+              model: qualityMode === "fast" ? "P1-20260311" : "P2-20260801",
+              model_url: modelUrl,
+              preview_url: previewImg,
+              task_id: taskId,
+            }, token);
+
+            refreshQuota();
 
             // Auto-insert directly into Babylon 3D Scene Viewport!
             handleInsertIntoScene(modelUrl, assetName);
@@ -184,7 +244,14 @@ export function TextTo3DDrawer() {
           clearInterval(pollIntervalRef.current!);
           pollIntervalRef.current = null;
           setIsGenerating(false);
-          setErrorMessage("Pembuatan 3D gagal. Silakan coba sesuaikan deskripsi prompt Anda.");
+
+          // Refund tiket kuota karena pembuatan gagal
+          if (ticketId) {
+            await refundAiTicket({ ticket_id: ticketId, reason: "Pembuatan model AI 3D gagal" }, token);
+            refreshQuota();
+          }
+
+          setErrorMessage("Pembuatan 3D gagal. Kuota generate Anda telah dikembalikan secara otomatis.");
           setStatusMessage("Gagal");
         }
       } catch (err: any) {
@@ -200,7 +267,7 @@ export function TextTo3DDrawer() {
     return 4500; // medium / balanced
   };
 
-  // Trigger text to 3D generation
+  // Trigger text to 3D generation dengan pengecekan kuota & tiket
   const handleGenerate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!prompt.trim()) {
@@ -208,17 +275,51 @@ export function TextTo3DDrawer() {
       return;
     }
 
+    // Cek batas kuota untuk akun gratisan
+    if (quota && !quota.is_pro && quota.remaining_quota <= 0) {
+      setErrorMessage(
+        "Kuota generate AI gratis Anda telah habis (3/3 kali). Silakan upgrade ke paket Pro untuk membuat model tanpa batas."
+      );
+      return;
+    }
+
     setErrorMessage(null);
     setIsGenerating(true);
     setProgressPct(5);
-    setStatusMessage("Mengirim permintaan ke AI...");
+    setStatusMessage("Memvalidasi tiket & kuota AI...");
     setGeneratedModelUrl(null);
     setPreviewImageUrl(null);
 
+    // Ambil mode terbaru secara konsisten: hd = P2-20260801, fast = P1-20260311
     const modelVersion = qualityMode === "fast" ? "P1-20260311" : "P2-20260801";
     const calculatedFaces = getCalculatedFaceLimit();
 
+    let ticketId: string | null = null;
+
     try {
+      // 1. Verifikasi tiket izin generate (api/ai/verify-ticket)
+      const ticketRes = await verifyAiTicket(prompt.trim(), modelVersion, token);
+      ticketId = ticketRes.ticket_id;
+      setActiveTicketId(ticketId);
+
+      // 2. Gunakan / potong kuota tiket (api/ai/consume)
+      await consumeAiTicket({
+        ticket_id: ticketId,
+        prompt: prompt.trim(),
+        model: modelVersion,
+      }, token);
+
+      // Update kuota tampilan lokal secara responsif
+      setQuota((prev) => prev ? {
+        ...prev,
+        used_quota: prev.used_quota + 1,
+        remaining_quota: Math.max(0, prev.remaining_quota - 1),
+        can_generate: prev.is_pro || (prev.remaining_quota - 1 > 0),
+      } : prev);
+
+      setStatusMessage("Mengirim permintaan ke AI Tripo3D...");
+
+      // 3. Buat task generasi 3D
       const taskId = await createTextTo3DTask({
         prompt: prompt.trim(),
         negative_prompt: negativePrompt.trim() || undefined,
@@ -232,11 +333,18 @@ export function TextTo3DDrawer() {
       });
 
       setCurrentTaskId(taskId);
-      startPolling(taskId);
+      startPolling(taskId, ticketId);
     } catch (err: any) {
       console.error("Failed to start text-to-3d generation", err);
       setIsGenerating(false);
-      const msg = err?.message || "Gagal memulai pembuatan model 3D";
+
+      // Kembalikan kuota jika inisiasi task gagal (api/ai/refund)
+      if (ticketId) {
+        await refundAiTicket({ ticket_id: ticketId, reason: "Gagal inisiasi task AI" }, token);
+        refreshQuota();
+      }
+
+      const msg = err?.message || "Gagal memulai pembuatan model 3D. Kuota Anda telah dikembalikan.";
       setErrorMessage(msg);
     }
   };
@@ -311,6 +419,101 @@ export function TextTo3DDrawer() {
       <div className="flex-1 overflow-y-auto p-3.5 space-y-4">
         {activeTab === "generate" ? (
           <form onSubmit={handleGenerate} className="space-y-3.5">
+            {/* AI Quota & Plan Card */}
+            <div className="p-3 rounded-2xl bg-gradient-to-br from-emerald-50/80 via-white to-emerald-50/40 border border-emerald-200/80 shadow-xs space-y-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-1.5">
+                  {quota?.is_pro ? (
+                    <span className="flex items-center gap-1 text-[11px] font-bold text-amber-800 bg-amber-100 px-2 py-0.5 rounded-full border border-amber-300/60 shadow-2xs">
+                      <Crown className="w-3 h-3 text-amber-600 fill-amber-500" /> Paket Pro
+                    </span>
+                  ) : (
+                    <span className="flex items-center gap-1 text-[11px] font-bold text-emerald-800 bg-emerald-100/80 px-2 py-0.5 rounded-full border border-emerald-300/60 shadow-2xs">
+                      <Sparkles className="w-3 h-3 text-emerald-600" /> Kuota AI Gratis
+                    </span>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[11px] font-mono font-bold text-slate-800">
+                    {quota?.is_pro ? (
+                      <span className="text-emerald-700 font-extrabold">Akses Tanpa Batas</span>
+                    ) : (
+                      <span>
+                        <strong className={quota && quota.remaining_quota <= 0 ? "text-rose-600" : "text-emerald-700"}>
+                          {quota?.remaining_quota ?? 3}
+                        </strong> / {quota?.total_quota ?? 3} kali
+                      </span>
+                    )}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={refreshQuota}
+                    className="p-1 hover:bg-slate-200/60 rounded text-slate-400 hover:text-slate-700 transition"
+                    title="Perbarui Kuota"
+                  >
+                    <RefreshCw className={`w-3 h-3 ${loadingQuota ? "animate-spin" : ""}`} />
+                  </button>
+                </div>
+              </div>
+
+              {/* Progress bar untuk akun free */}
+              {!quota?.is_pro && (
+                <div className="space-y-1 pt-0.5">
+                  <div className="w-full bg-slate-200/80 rounded-full h-1.5 overflow-hidden">
+                    <div
+                      className={`h-full transition-all duration-500 ${
+                        (quota?.remaining_quota ?? 3) <= 0
+                          ? "bg-rose-500"
+                          : (quota?.remaining_quota ?? 3) === 1
+                          ? "bg-amber-500"
+                          : "bg-emerald-600"
+                      }`}
+                      style={{
+                        width: `${Math.min(100, (((quota?.used_quota ?? 0) / (quota?.total_quota ?? 3)) * 100))}%`,
+                      }}
+                    />
+                  </div>
+                  <div className="flex items-center justify-between text-[10px] text-slate-500">
+                    <span>{quota?.reset_info || "3 kali generate gratis per akun"}</span>
+                    {(quota?.remaining_quota ?? 3) <= 1 && (
+                      <a
+                        href="/dashboard/pembayaran"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-emerald-700 font-bold hover:underline inline-flex items-center gap-0.5"
+                      >
+                        Upgrade Pro <ExternalLink className="w-2.5 h-2.5" />
+                      </a>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Warning jika kuota habis */}
+            {quota && !quota.is_pro && quota.remaining_quota <= 0 && (
+              <div className="p-3 rounded-xl bg-amber-50 border border-amber-300 text-amber-900 text-xs space-y-2">
+                <div className="flex items-start gap-2">
+                  <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                  <div>
+                    <div className="font-bold">Kuota Gratis Anda Telah Habis</div>
+                    <div className="text-[11px] text-amber-800 mt-0.5">
+                      Anda telah menggunakan batas 3 kali generasi model 3D AI. Tingkatkan ke paket Pro untuk membuat model tanpa batas.
+                    </div>
+                  </div>
+                </div>
+                <a
+                  href="/dashboard/pembayaran"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-center gap-1.5 w-full py-1.5 bg-amber-600 hover:bg-amber-500 text-white rounded-lg font-bold text-xs shadow-xs transition"
+                >
+                  <Crown className="w-3.5 h-3.5" /> Buka Halaman Pembayaran
+                </a>
+              </div>
+            )}
+
             {/* Error banner */}
             {errorMessage && (
               <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-start gap-2">
@@ -357,12 +560,40 @@ export function TextTo3DDrawer() {
               </div>
             </div>
 
-            {/* Quality & Speed Mode */}
+            {/* Quality & Speed Mode — Mode Terbaru P2-20260801 */}
             <div>
-              <label className="text-xs font-bold text-slate-800 block mb-1.5">
-                Mode Pembuatan
-              </label>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="text-xs font-bold text-slate-800">
+                  Mode Pembuatan AI
+                </label>
+                <span className="text-[10px] text-emerald-700 font-bold bg-emerald-100 px-1.5 py-0.5 rounded">
+                  P2 Aktif (Terbaru)
+                </span>
+              </div>
               <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setQualityMode("hd")}
+                  className={`bouncy-hover p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
+                    qualityMode === "hd"
+                      ? "bg-emerald-50 border-emerald-500 text-emerald-950 shadow-xs ring-1 ring-emerald-500/30"
+                      : "bg-slate-50 border-slate-200 text-slate-600 hover:text-slate-900"
+                  }`}
+                >
+                  <div className="flex items-center justify-between gap-1 text-xs font-bold">
+                    <div className="flex items-center gap-1.5">
+                      <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
+                      <span>Mode HD</span>
+                    </div>
+                    <span className="text-[8px] bg-emerald-600 text-white font-extrabold px-1 rounded">
+                      TERBARU
+                    </span>
+                  </div>
+                  <div className="text-[10px] text-slate-500 mt-1 leading-tight font-medium">
+                    Model P2-20260801 Quad Mesh
+                  </div>
+                </button>
+
                 <button
                   type="button"
                   onClick={() => setQualityMode("fast")}
@@ -374,28 +605,10 @@ export function TextTo3DDrawer() {
                 >
                   <div className="flex items-center gap-1.5 text-xs font-bold">
                     <Zap className="w-3.5 h-3.5 text-amber-500" />
-                    <span>Cepat & Ringan</span>
+                    <span>Mode Cepat</span>
                   </div>
-                  <div className="text-[10px] text-slate-500 mt-1 leading-tight">
-                    Cocok untuk WebGL & HP
-                  </div>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setQualityMode("hd")}
-                  className={`bouncy-hover p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
-                    qualityMode === "hd"
-                      ? "bg-emerald-50 border-emerald-500 text-emerald-950 shadow-xs"
-                      : "bg-slate-50 border-slate-200 text-slate-600 hover:text-slate-900"
-                  }`}
-                >
-                  <div className="flex items-center gap-1.5 text-xs font-bold">
-                    <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
-                    <span>Detail Tinggi</span>
-                  </div>
-                  <div className="text-[10px] text-slate-500 mt-1 leading-tight">
-                    Format Quad Mesh halus
+                  <div className="text-[10px] text-slate-500 mt-1 leading-tight font-medium">
+                    Model P1-20260311 Ringan
                   </div>
                 </button>
               </div>
@@ -587,16 +800,24 @@ export function TextTo3DDrawer() {
             {/* Submit Button */}
             <button
               type="submit"
-              disabled={isGenerating || !prompt.trim()}
-              className="bouncy-hover w-full py-2.5 bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-200 disabled:text-slate-400 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer shadow-sm"
+              disabled={isGenerating || !prompt.trim() || Boolean(quota && !quota.is_pro && quota.remaining_quota <= 0)}
+              className={`bouncy-hover w-full py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all shadow-sm ${
+                quota && !quota.is_pro && quota.remaining_quota <= 0
+                  ? "bg-slate-200 text-slate-400 cursor-not-allowed"
+                  : "bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-200 disabled:text-slate-400 text-white cursor-pointer"
+              }`}
             >
               {isGenerating ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" /> Sedang Membuat Model 3D...
                 </>
+              ) : quota && !quota.is_pro && quota.remaining_quota <= 0 ? (
+                <>
+                  <Crown className="w-4 h-4 text-amber-500" /> Kuota Gratis Habis (3/3) — Upgrade Pro
+                </>
               ) : (
                 <>
-                  <Wand2 className="w-4 h-4 stroke-[2.5]" /> Buat Model 3D
+                  <Wand2 className="w-4 h-4 stroke-[2.5]" /> Buat Model 3D (Mode P2 Terbaru)
                 </>
               )}
             </button>
