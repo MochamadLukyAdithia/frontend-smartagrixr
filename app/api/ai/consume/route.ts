@@ -22,13 +22,23 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(data, { status: res.status });
   } catch (err) {}
 
+  // Fallback standalone simulator
+  const usageId = Math.floor(Date.now() / 1000);
+  const ticketToken = `tok_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+
   return NextResponse.json({
-    success: true,
-    data: {
-      ticket_id: body?.ticket_id,
-      consumed: 1,
-      remaining_quota: 1,
+    allowed: true,
+    message: "Kuota berhasil dipotong.",
+    usage_id: usageId,
+    ticket_token: ticketToken,
+    quota: {
+      allowed: true,
+      feature: body?.feature || "ai_2d_to_3d",
+      plan: "free",
+      limit: 3,
+      used_today: 1,
+      remaining: 2,
+      can_generate: true,
     },
   });
 }
-

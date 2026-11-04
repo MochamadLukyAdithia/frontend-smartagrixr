@@ -24,11 +24,15 @@ export async function POST(req: NextRequest) {
 
   return NextResponse.json({
     success: true,
-    data: {
-      ticket_id: body?.ticket_id,
-      refunded: 1,
-      remaining_quota: 2,
+    message: "Kuota berhasil dikembalikan.",
+    quota: {
+      allowed: true,
+      feature: "ai_2d_to_3d",
+      plan: "free",
+      limit: 3,
+      used_today: 0,
+      remaining: 3,
+      can_generate: true,
     },
   });
 }
-

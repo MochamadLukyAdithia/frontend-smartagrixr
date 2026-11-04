@@ -22,16 +22,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(data, { status: res.status });
   } catch (err) {}
 
-  // Fallback simulator
-  const ticketId = `tkt_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
   return NextResponse.json({
-    success: true,
-    data: {
-      ticket_id: ticketId,
-      valid: true,
-      remaining_quota: 2,
-      plan: "free",
-    },
+    valid: true,
+    message: "Tiket valid (simulator).",
   });
 }
-

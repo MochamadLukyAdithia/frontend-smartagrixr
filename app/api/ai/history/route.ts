@@ -16,7 +16,6 @@ export async function GET(req: NextRequest) {
   } catch (err) {}
 
   return NextResponse.json({
-    success: true,
     data: [],
   });
 }
@@ -33,7 +32,8 @@ export async function POST(req: NextRequest) {
     };
     if (authHeader) headers.Authorization = authHeader;
 
-    const res = await fetch(`${backendUrl}/api/ai/history`, {
+    // Coba save-result di smartagrixr-dev
+    const res = await fetch(`${backendUrl}/api/ai/save-result`, {
       method: "POST",
       headers,
       body: JSON.stringify(body),
@@ -45,7 +45,5 @@ export async function POST(req: NextRequest) {
 
   return NextResponse.json({
     success: true,
-    data: { ticket_id: body?.ticket_id },
   });
 }
-
