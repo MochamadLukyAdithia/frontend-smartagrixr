@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { Navbar } from "@/components/layout/navbar";
@@ -15,6 +15,7 @@ import {
   fetchClassroomFeed,
   deleteClassroomPost,
   classroomFileUrl,
+  classroomCoverUrl,
 } from "@/lib/api";
 import type {
   ClassroomDetail,
@@ -30,6 +31,7 @@ import {
   Copy,
   Eye,
   FileText,
+  ImagePlus,
   MoreHorizontal,
   RefreshCw,
   Share2,
@@ -117,6 +119,9 @@ export const DetailKelas = () => {
   const [detailFallback, setDetailFallback] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
   const [codeCopied, setCodeCopied] = useState(false);
+  const [editImage, setEditImage] = useState<File | null>(null);
+  const [editImagePreview, setEditImagePreview] = useState<string | null>(null);
+  const editPreviewUrl = useRef<string | null>(null);
 
   useEffect(() => {
     if (!token || !id) return;
@@ -198,6 +203,12 @@ export const DetailKelas = () => {
     };
   }, [token, id, reloadKey]);
 
+  useEffect(() => {
+    return () => {
+      if (editPreviewUrl.current) URL.revokeObjectURL(editPreviewUrl.current);
+    };
+  }, []);
+
   const retryLoad = () => {
     setError(null);
     setFeedError(null);
@@ -221,6 +232,20 @@ export const DetailKelas = () => {
   const students: ClassroomStudent[] = classroom?.students ?? [];
   const teacher = classroom?.teacher ?? null;
 
+  const handleEditImageChange = (file: File | null) => {
+    if (editPreviewUrl.current) {
+      URL.revokeObjectURL(editPreviewUrl.current);
+      editPreviewUrl.current = null;
+    }
+    if (file) {
+      editPreviewUrl.current = URL.createObjectURL(file);
+      setEditImagePreview(editPreviewUrl.current);
+    } else {
+      setEditImagePreview(classroom ? classroomCoverUrl(classroom) : null);
+    }
+    setEditImage(file);
+  };
+
   const openEdit = () => {
     if (!classroom) return;
     setEditForm({
@@ -230,6 +255,7 @@ export const DetailKelas = () => {
       is_active: classroom.is_active,
     });
     setActionError(null);
+    handleEditImageChange(null);
     setMenuOpen(false);
     setEditOpen(true);
   };
@@ -239,7 +265,10 @@ export const DetailKelas = () => {
     setSaving(true);
     setActionError(null);
     try {
-      const updated = await updateClassroom(token, id, editForm);
+      const updated = await updateClassroom(token, id, {
+        ...editForm,
+        image: editImage,
+      });
       setClassroom((prev) => (prev ? { ...prev, ...updated } : prev));
       setEditOpen(false);
     } catch (err) {
@@ -311,8 +340,11 @@ export const DetailKelas = () => {
       <main className="relative z-10 flex w-full container mx-auto flex-col flex-1 px-6 pb-32 pt-32 sm:px-10">
         <div className="relative h-[180px] sm:h-[240px] w-full overflow-hidden rounded-2xl shadow-sm">
           <img
-            src="https://images.unsplash.com/photo-1500382017468-9049fed747ef?q=80&w=1600&auto=format&fit=crop"
-            alt="Banner Pertanian Industrial"
+            src={
+              classroomCoverUrl(classroom) ??
+              "https://images.unsplash.com/photo-1500382017468-9049fed747ef?q=80&w=1600&auto=format&fit=crop"
+            }
+            alt={classroom?.name ?? "Banner Pertanian Industrial"}
             className="h-full w-full object-cover"
           />
           <div className="absolute inset-0 bg-black/20" />
@@ -931,6 +963,44 @@ export const DetailKelas = () => {
                   }
                   className="mt-1 w-full resize-none rounded-lg border border-gray-200 bg-white px-3 py-2 font-serif text-sm text-gray-800 outline-none focus:border-[#21a447] min-h-[90px]"
                 />
+              </div>
+              <div>
+                <label className="font-serif text-xs font-semibold text-gray-700">
+                  Gambar Kelas
+                </label>
+                <div className="mt-1 flex flex-wrap items-center gap-2">
+                  <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-dashed border-gray-300 px-3 py-2 font-serif text-xs font-semibold text-gray-700 transition hover:border-[#21a447] hover:text-[#145a2b]">
+                    <ImagePlus className="h-4 w-4" />
+                    {editImage ? "Ganti Gambar" : "Pilih Gambar"}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onClick={(e) => {
+                        e.currentTarget.value = "";
+                      }}
+                      onChange={(e) =>
+                        handleEditImageChange(e.target.files?.[0] ?? null)
+                      }
+                    />
+                  </label>
+                  {editImage && (
+                    <button
+                      type="button"
+                      onClick={() => handleEditImageChange(null)}
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-2 font-serif text-xs font-semibold text-gray-600 transition hover:border-red-300 hover:bg-red-50 hover:text-red-600"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                      Batalkan
+                    </button>
+                  )}
+                </div>
+                {editImagePreview && (
+                  <div
+                    className="mt-2 h-32 w-full overflow-hidden rounded-lg border border-gray-200 bg-cover bg-center"
+                    style={{ backgroundImage: `url(${editImagePreview})` }}
+                  />
+                )}
               </div>
               <label className="flex cursor-pointer items-center gap-2">
                 <input

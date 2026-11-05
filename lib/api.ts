@@ -285,6 +285,8 @@ export interface Classroom {
   description: string | null;
   subject: string | null;
   invite_code: string;
+  image?: string | null;
+  image_url?: string | null;
   is_active: boolean;
   created_at: string;
   updated_at: string;
@@ -301,6 +303,20 @@ export interface CreateClassroomParams {
   name: string;
   description: string;
   subject: string;
+  image?: File | null;
+}
+
+export function classroomCoverUrl(
+  classroom:
+    | Pick<Classroom, "image" | "image_url">
+    | null
+    | undefined
+): string | null {
+  const raw = classroom?.image_url || classroom?.image || null;
+  if (!raw) return null;
+  if (/^https?:\/\//i.test(raw)) return raw;
+  const path = raw.startsWith("/") ? raw : `/storage/${raw}`;
+  return `${API_URL}${path}`;
 }
 
 export async function fetchClassrooms(
@@ -329,15 +345,34 @@ export async function createClassroom(
   token: string,
   params: CreateClassroomParams
 ): Promise<Classroom> {
-  const res = await fetch(`${API_URL}/api/classrooms`, {
-    method: "POST",
-    headers: {
-      Accept: "application/json",
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    },
-    body: JSON.stringify(params),
-  });
+  const { image, ...fields } = params;
+
+  let res: Response;
+  if (image) {
+    const formData = new FormData();
+    formData.append("name", fields.name);
+    formData.append("description", fields.description);
+    formData.append("subject", fields.subject);
+    formData.append("image", image);
+    res = await fetch(`${API_URL}/api/classrooms`, {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: formData,
+    });
+  } else {
+    res = await fetch(`${API_URL}/api/classrooms`, {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(fields),
+    });
+  }
 
   const data = res.status !== 204 ? await res.json().catch(() => null) : null;
 
@@ -458,6 +493,7 @@ export interface UpdateClassroomParams {
   description: string;
   subject: string;
   is_active: boolean;
+  image?: File | null;
 }
 
 export async function updateClassroom(
@@ -465,15 +501,36 @@ export async function updateClassroom(
   id: number | string,
   params: UpdateClassroomParams
 ): Promise<Classroom> {
-  const res = await fetch(`${API_URL}/api/classrooms/${id}`, {
-    method: "PUT",
-    headers: {
-      Accept: "application/json",
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    },
-    body: JSON.stringify(params),
-  });
+  const { image, ...fields } = params;
+
+  let res: Response;
+  if (image) {
+    const formData = new FormData();
+    formData.append("name", fields.name);
+    formData.append("description", fields.description);
+    formData.append("subject", fields.subject);
+    formData.append("is_active", fields.is_active ? "1" : "0");
+    formData.append("image", image);
+    formData.append("_method", "PUT");
+    res = await fetch(`${API_URL}/api/classrooms/${id}`, {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: formData,
+    });
+  } else {
+    res = await fetch(`${API_URL}/api/classrooms/${id}`, {
+      method: "PUT",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(fields),
+    });
+  }
 
   const data = res.status !== 204 ? await res.json().catch(() => null) : null;
 

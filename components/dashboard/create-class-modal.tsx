@@ -1,18 +1,26 @@
 "use client";
 
-import { useState } from "react";
-import { X, GraduationCap, Loader2, CheckCircle2 } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import {
+  X,
+  GraduationCap,
+  Loader2,
+  CheckCircle2,
+  ImagePlus,
+} from "lucide-react";
 
 type FormState = {
   name: string;
   description: string;
   subject: string;
+  image: File | null;
 };
 
 const initialForm: FormState = {
   name: "",
   description: "",
   subject: "",
+  image: null,
 };
 
 type Props = {
@@ -26,11 +34,32 @@ export function CreateClassModal({ open, onClose, onSubmit }: Props) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const imagePreviewUrl = useRef<string | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (imagePreviewUrl.current) URL.revokeObjectURL(imagePreviewUrl.current);
+    };
+  }, []);
 
   if (!open) return null;
 
-  const update = (key: keyof FormState, value: string) => {
+  const update = (key: "name" | "description" | "subject", value: string) => {
     setForm((prev) => ({ ...prev, [key]: value }));
+    setError(null);
+  };
+
+  const updateImage = (file: File | null) => {
+    if (imagePreviewUrl.current) {
+      URL.revokeObjectURL(imagePreviewUrl.current);
+      imagePreviewUrl.current = null;
+    }
+    if (file) {
+      imagePreviewUrl.current = URL.createObjectURL(file);
+    }
+    setImagePreview(imagePreviewUrl.current);
+    setForm((prev) => ({ ...prev, image: file }));
     setError(null);
   };
 
@@ -46,6 +75,7 @@ export function CreateClassModal({ open, onClose, onSubmit }: Props) {
       setSuccess(true);
       setTimeout(() => {
         setSuccess(false);
+        updateImage(null);
         setForm(initialForm);
         onClose();
       }, 1200);
@@ -129,6 +159,43 @@ export function CreateClassModal({ open, onClose, onSubmit }: Props) {
                 rows={3}
                 className={`${fieldClass} resize-none`}
               />
+            </div>
+
+            <div>
+              <label className="font-serif text-[13px] font-semibold text-[#4a4a4a]">
+                Gambar Kelas
+              </label>
+              <div className="mt-1.5 flex flex-wrap items-center gap-3">
+                <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-dashed border-gray-300 px-4 py-2.5 font-serif text-[13px] font-semibold text-[#4a4a4a] transition-colors hover:border-[#21a447] hover:text-[#145a2b]">
+                  <ImagePlus className="h-4 w-4" />
+                  {form.image ? "Ganti Gambar" : "Pilih Gambar"}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onClick={(e) => {
+                      e.currentTarget.value = "";
+                    }}
+                    onChange={(e) => updateImage(e.target.files?.[0] ?? null)}
+                  />
+                </label>
+                {form.image && (
+                  <button
+                    type="button"
+                    onClick={() => updateImage(null)}
+                    className="inline-flex items-center gap-1.5 rounded-xl border border-gray-200 px-3 py-2.5 font-serif text-[13px] font-semibold text-gray-600 transition-colors hover:border-red-300 hover:bg-red-50 hover:text-red-600"
+                  >
+                    <X className="h-4 w-4" />
+                    Hapus
+                  </button>
+                )}
+              </div>
+              {imagePreview && (
+                <div
+                  className="relative mt-3 h-36 w-full overflow-hidden rounded-xl border border-gray-200 bg-cover bg-center"
+                  style={{ backgroundImage: `url(${imagePreview})` }}
+                />
+              )}
             </div>
           </div>
 

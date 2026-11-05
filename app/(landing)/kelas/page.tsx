@@ -1,14 +1,18 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Search } from "lucide-react";
 import { Navbar } from "@/components/layout/navbar";
 import Footer from "@/components/layout/footer";
 import { useAuthStore } from "@/stores/useAuthStore";
-import { fetchClassrooms, createClassroom, joinClassroom } from "@/lib/api";
+import {
+  fetchClassrooms,
+  createClassroom,
+  joinClassroom,
+  classroomCoverUrl,
+} from "@/lib/api";
 import type { Classroom } from "@/lib/api";
 import { CreateClassModal } from "@/components/dashboard/create-class-modal";
 import { JoinClassModal } from "@/components/dashboard/join-class-modal";
@@ -46,6 +50,7 @@ export default function KelasPage() {
   };
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     refreshClassrooms();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
@@ -55,6 +60,7 @@ export default function KelasPage() {
     name: string;
     description: string;
     subject: string;
+    image: File | null;
   }) => {
     if (!token) return;
     await createClassroom(token, values);
@@ -144,11 +150,14 @@ export default function KelasPage() {
                     href={`/kelas/${cls.id}`}
                     className="group relative h-[180px] w-full cursor-pointer overflow-hidden rounded-2xl bg-gray-200 shadow-sm transition-all hover:shadow-md"
                   >
-                    <Image
-                      src="/images/dashboard/beranda/1.png"
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={
+                        classroomCoverUrl(cls) ??
+                        "/images/dashboard/beranda/1.png"
+                      }
                       alt={cls.name}
-                      fill
-                      className="object-cover transition-transform duration-500 group-hover:scale-105"
+                      className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
                     />
                     <div className="absolute inset-0 flex items-end bg-gradient-to-t from-black/85 via-black/20 to-transparent p-5">
                       <div className="w-full">
@@ -171,7 +180,7 @@ export default function KelasPage() {
                 filteredClasses.length === 0 && (
                   <div className="col-span-full py-8 text-center">
                     <p className="font-serif text-[14px] text-gray-500">
-                      Pencarian untuk "{searchQuery}" tidak ditemukan.
+                      Pencarian untuk &quot;{searchQuery}&quot; tidak ditemukan.
                     </p>
                   </div>
                 )}
